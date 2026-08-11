@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Login | StakeTruth</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body style="min-height:100vh;display:flex;align-items:center;justify-content:center;">
+<div class="card card-pad watermark" style="max-width:380px;width:100%;margin:16px;">
+  <div style="text-align:center;margin-bottom:20px;">
+    <img src="/images/logo.png" alt="StakeTruth" data-fallback-hide style="height:56px;margin:0 auto 10px;">
+    <div style="font-family:var(--font-head);font-weight:800;font-size:1.4rem;">STAKETRUTH</div>
+    <div class="text-soft" style="font-size:0.85rem;">Admin Panel</div>
+  </div>
+  <form id="login-form">
+    <div class="form-group"><label class="form-label">Email</label><input required type="email" name="email" class="form-control" autofocus></div>
+    <div class="form-group"><label class="form-label">Password</label><input required type="password" name="password" class="form-control"></div>
+    <button class="btn btn-primary btn-block" type="submit">Log In</button>
+  </form>
+  <p class="text-soft text-center" style="margin-top:16px;font-size:0.8rem;"><a href="/">&larr; Back to StakeTruth</a></p>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  document.getElementById('login-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    try {
+      var res = await fetch('/api/auth/login', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: fd.get('email'), password: fd.get('password') }),
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Login failed');
+      if (data.data.user.role !== 'admin') throw new Error('This account does not have admin access.');
+      localStorage.setItem('st_admin', JSON.stringify(data.data.user));
+      window.location.href = '/admin/dashboard.html';
+    } catch (err) {
+      AD.showToast(err.message, 'error');
+    }
+  });
+  // If already logged in as admin, skip straight to dashboard.
+  fetch('/api/auth/me', { credentials: 'include' }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success && d.data.user && d.data.user.role === 'admin') window.location.href = '/admin/dashboard.html';
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>

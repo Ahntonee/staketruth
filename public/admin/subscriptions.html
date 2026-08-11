@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subscriptions | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Subscriptions</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="kpi-grid" id="kpi-grid" style="margin-bottom:16px;"></div>
+      <div class="flex gap-8" style="margin-bottom:14px;">
+        <select id="filter-status" class="form-control" style="width:auto;"><option value="">Any Status</option><option value="active">Active</option><option value="cancelled">Cancelled</option><option value="expired">Expired</option></select>
+        <button class="btn btn-outline btn-sm" id="export-csv-btn">Export CSV</button>
+      </div>
+      <div class="table-scroll"><table class="data-table">
+        <thead><tr><th>User</th><th>Email</th><th>Plan</th><th>Status</th><th>Started</th><th>Expires</th><th>Actions</th></tr></thead>
+        <tbody id="subs-tbody"><tr><td colspan="7">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  var rows = [];
+  async function load() {
+    var status = document.getElementById('filter-status').value;
+    var res = await AD.api('/subscriptions/admin/list' + (status ? '?status=' + status : ''));
+    rows = res.data;
+    document.getElementById('subs-tbody').innerHTML = rows.map(function (s) {
+      return '<tr><td data-label="User">' + AD.escapeHtml(s.name) + '</td><td data-label="Email">' + AD.escapeHtml(s.email) + '</td>' +
+        '<td data-label="Plan">' + s.plan + '</td><td data-label="Status"><span class="badge badge-' + (s.status === 'active' ? 'won' : s.status === 'cancelled' ? 'pending' : 'lost') + '">' + s.status + '</span></td>' +
+        '<td data-label="Started">' + AD.formatDate(s.created_at) + '</td><td data-label="Expires">' + AD.formatDate(s.expires_at) + '</td>' +
+        '<td data-label="Actions"><button class="btn btn-outline btn-sm" data-extend="' + s.id + '">+30d</button> <button class="btn btn-outline btn-sm" data-cancel="' + s.id + '">Cancel</button> <button class="btn btn-outline btn-sm" data-notify="' + s.id + '">Notify</button></td></tr>';
+    }).join('') || '<tr><td colspan="7">No subscriptions yet.</td></tr>';
+
+    var active = rows.filter(function (r) { return r.status === 'active'; });
+    var expiringSoon = active.filter(function (r) { return (new Date(r.expires_at) - Date.now()) < 7 * 24 * 60 * 60 * 1000; });
+    document.getElementById('kpi-grid').innerHTML = [
+      { value: active.length, label: 'Active VIP' },
+      { value: expiringSoon.length, label: 'Expiring This Week' },
+      { value: rows.filter(function (r) { return r.status === 'expired'; }).length, label: 'Expired' },
+      { value: '₦' + active.reduce(function (s, r) { return s + Number(r.amount || 0); }, 0).toLocaleString(), label: 'Revenue (Active)' },
+    ].map(function (t) { return '<div class="stat-card"><div class="stat-card__value">' + t.value + '</div><div class="stat-card__label">' + t.label + '</div></div>'; }).join('');
+  }
+  document.getElementById('filter-status').addEventListener('change', load);
+
+  document.getElementById('subs-tbody').addEventListener('click', async function (e) {
+    var extendId = e.target.getAttribute('data-extend');
+    var cancelId = e.target.getAttribute('data-cancel');
+    var notifyId = e.target.getAttribute('data-notify');
+    if (extendId) { await AD.api('/subscriptions/admin/' + extendId + '/extend', { method: 'PUT', body: { days: 30 } }); load(); }
+    if (cancelId) { if (AD.confirmAction('Cancel this subscription?')) { await AD.api('/subscriptions/admin/' + cancelId + '/cancel', { method: 'PUT' }); load(); } }
+    if (notifyId) { await AD.api('/subscriptions/admin/' + notifyId + '/notify-expiry', { method: 'POST' }); AD.showToast('Reminder sent', 'success'); }
+  });
+
+  document.getElementById('export-csv-btn').addEventListener('click', function () {
+    var csv = 'Name,Email,Plan,Status,Expires\n' + rows.map(function (r) { return [r.name, r.email, r.plan, r.status, r.expires_at].join(','); }).join('\n');
+    var blob = new Blob([csv], { type: 'text/csv' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'staketruth-subscribers.csv'; a.click();
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('subscriptions', user, 'Subscriptions');
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

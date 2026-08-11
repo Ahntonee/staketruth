@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Users | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Users</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="flex gap-8" style="margin-bottom:14px;">
+        <select id="filter-role" class="form-control" style="width:auto;"><option value="">Any Role</option><option value="user">Registered</option><option value="vip">VIP</option><option value="admin">Admin</option></select>
+        <select id="filter-status" class="form-control" style="width:auto;"><option value="">Any Status</option><option value="active">Active</option><option value="banned">Banned</option></select>
+      </div>
+      <div class="table-scroll"><table class="data-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Country</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="users-tbody"><tr><td colspan="7">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  async function load() {
+    var params = new URLSearchParams();
+    if (document.getElementById('filter-role').value) params.set('role', document.getElementById('filter-role').value);
+    if (document.getElementById('filter-status').value) params.set('status', document.getElementById('filter-status').value);
+    var res = await AD.api('/admin/users?' + params.toString());
+    document.getElementById('users-tbody').innerHTML = res.data.map(function (u) {
+      return '<tr><td data-label="Name">' + AD.escapeHtml(u.name) + '</td><td data-label="Email">' + AD.escapeHtml(u.email) + '</td>' +
+        '<td data-label="Role"><span class="badge ' + (u.role === 'vip' ? 'badge-vip' : u.role === 'admin' ? 'badge-banker' : 'badge-pending') + '">' + u.role + '</span></td>' +
+        '<td data-label="Country">' + AD.escapeHtml(u.country || '—') + '</td><td data-label="Joined">' + AD.formatDate(u.created_at) + '</td>' +
+        '<td data-label="Status">' + (u.is_banned ? '<span class="badge badge-lost">Banned</span>' : '<span class="badge badge-won">Active</span>') + (u.is_comment_banned ? ' <span class="badge badge-pending">No Comments</span>' : '') + '</td>' +
+        '<td data-label="Actions">' +
+          '<button class="btn btn-outline btn-sm" data-toggle-ban="' + u.id + '" data-banned="' + u.is_banned + '">' + (u.is_banned ? 'Unban' : 'Ban') + '</button> ' +
+          '<button class="btn btn-outline btn-sm" data-toggle-comment-ban="' + u.id + '" data-comment-banned="' + u.is_comment_banned + '">' + (u.is_comment_banned ? 'Unban Comments' : 'Ban Comments') + '</button> ' +
+          (u.role === 'user' ? '<button class="btn btn-vip btn-sm" data-grant-vip="' + u.id + '">Grant VIP</button>' : '') +
+        '</td></tr>';
+    }).join('') || '<tr><td colspan="7">No users found.</td></tr>';
+  }
+  ['filter-role', 'filter-status'].forEach(function (id) { document.getElementById(id).addEventListener('change', load); });
+
+  document.getElementById('users-tbody').addEventListener('click', async function (e) {
+    var banId = e.target.getAttribute('data-toggle-ban');
+    var commentBanId = e.target.getAttribute('data-toggle-comment-ban');
+    var vipId = e.target.getAttribute('data-grant-vip');
+    if (banId) {
+      var isBanned = e.target.getAttribute('data-banned') === '1' || e.target.getAttribute('data-banned') === 'true';
+      await AD.api('/admin/users/' + banId + '/' + (isBanned ? 'unban' : 'ban'), { method: 'PUT' });
+      load();
+    }
+    if (commentBanId) {
+      var isCommentBanned = e.target.getAttribute('data-comment-banned') === '1' || e.target.getAttribute('data-comment-banned') === 'true';
+      await AD.api('/admin/users/' + commentBanId + '/' + (isCommentBanned ? 'comment-unban' : 'comment-ban'), { method: 'PUT' });
+      load();
+    }
+    if (vipId) {
+      if (!AD.confirmAction('Grant this user 30 days of free VIP access?')) return;
+      await AD.api('/admin/users/' + vipId + '/grant-vip', { method: 'POST', body: { days: 30 } });
+      AD.showToast('VIP granted', 'success');
+      load();
+    }
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('users', user, 'Users');
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

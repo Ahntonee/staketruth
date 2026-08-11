@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Website Analytics | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Website Analytics</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <p class="text-soft">For full GA4 integration, add your Measurement ID's <code>gtag.js</code> snippet via Settings &rarr; Site Settings. The charts below are powered by StakeTruth's own lightweight first-party analytics.</p>
+      <div class="grid-2" style="grid-template-columns:2fr 1fr;margin-bottom:16px;">
+        <div class="card card-pad"><h3 class="section-title" style="font-size:1rem;">Daily Visitors (30d)</h3><canvas id="chart-daily" height="200"></canvas></div>
+        <div class="card card-pad"><h3 class="section-title" style="font-size:1rem;">Devices</h3><canvas id="chart-devices" height="200"></canvas></div>
+      </div>
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">description</span>Analytics by Page</h3>
+        <div class="table-scroll"><table class="data-table">
+          <thead><tr><th>#</th><th>Page</th><th>Views</th><th>Share</th></tr></thead>
+          <tbody id="top-pages-tbody"><tr><td colspan="4">Loading…</td></tr></tbody>
+        </table></div>
+      </div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:16px;">
+        <div class="card card-pad"><h3 class="section-title" style="font-size:1rem;">Top Countries</h3><div id="top-countries"></div></div>
+        <div class="card card-pad"><h3 class="section-title" style="font-size:1rem;">Referrers</h3><div id="top-referrers"></div></div>
+      </div>
+      <div class="card card-pad">
+        <h3 class="section-title" style="font-size:1rem;">Peak Hours</h3><canvas id="chart-hours" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  function simpleList(el, rows, keyField, valueField) {
+    document.getElementById(el).innerHTML = rows.length ? rows.map(function (r) {
+      return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);"><span>' + AD.escapeHtml(String(r[keyField])) + '</span><strong>' + r[valueField] + '</strong></div>';
+    }).join('') : '<p class="text-soft">No data yet.</p>';
+  }
+
+  async function load() {
+    var overview = await AD.api('/admin/analytics/overview');
+    new Chart(document.getElementById('chart-daily'), {
+      type: 'line',
+      data: { labels: overview.data.map(function (r) { return r.day; }), datasets: [{ label: 'Views', data: overview.data.map(function (r) { return r.views; }), borderColor: '#ff6b35', tension: 0.3 }] },
+      options: { responsive: true },
+    });
+
+    var devices = await AD.api('/admin/analytics/devices');
+    new Chart(document.getElementById('chart-devices'), {
+      type: 'doughnut',
+      data: { labels: devices.data.map(function (r) { return r.device_type; }), datasets: [{ data: devices.data.map(function (r) { return r.views; }), backgroundColor: ['#ff6b35', '#b39ddb', '#7e57c2'] }] },
+    });
+
+    var pages = await AD.api('/admin/analytics/pages');
+    var totalViews = pages.data.reduce(function (sum, r) { return sum + r.views; }, 0);
+    document.getElementById('top-pages-tbody').innerHTML = pages.data.length ? pages.data.map(function (r, i) {
+      var pct = totalViews ? Math.round((r.views / totalViews) * 100) : 0;
+      return '<tr><td data-label="#"><span class="rank-badge">' + (i + 1) + '</span></td>' +
+        '<td data-label="Page"><code>' + AD.escapeHtml(r.path) + '</code></td>' +
+        '<td data-label="Views">' + r.views + '</td>' +
+        '<td data-label="Share"><div class="confidence-bar-track" style="width:100px;display:inline-block;vertical-align:middle;margin-right:8px;"><div class="confidence-bar-fill high" style="width:' + pct + '%"></div></div>' + pct + '%</td></tr>';
+    }).join('') : '<tr><td colspan="4">No page views recorded yet — browse the live site a little, then refresh.</td></tr>';
+
+    var countries = await AD.api('/admin/analytics/countries');
+    simpleList('top-countries', countries.data, 'country', 'views');
+
+    var referrers = await AD.api('/admin/analytics/referrers');
+    simpleList('top-referrers', referrers.data, 'referrer', 'views');
+
+    var hours = await AD.api('/admin/analytics/peak-hours');
+    new Chart(document.getElementById('chart-hours'), {
+      type: 'bar',
+      data: { labels: hours.data.map(function (r) { return r.hour + ':00'; }), datasets: [{ label: 'Views', data: hours.data.map(function (r) { return r.views; }), backgroundColor: '#7e57c2', borderRadius: 4 }] },
+      options: { responsive: true, plugins: { legend: { display: false } } },
+    });
+  }
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('analytics', user, 'Website Analytics');
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

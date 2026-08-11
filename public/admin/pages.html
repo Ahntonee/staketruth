@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Static Pages | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6/css/all.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Static Pages</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="tab-row" id="page-tabs" style="margin-bottom:14px;">
+        <button class="category-tab active" data-page="home">Home</button>
+        <button class="category-tab" data-page="about">About</button>
+        <button class="category-tab" data-page="terms">Terms</button>
+        <button class="category-tab" data-page="privacy">Privacy</button>
+        <button class="category-tab" data-page="contact">Contact</button>
+      </div>
+      <div class="form-group"><label class="form-label">Page Title</label><input id="page-title-input" class="form-control"></div>
+      <textarea id="content-editor"></textarea>
+      <div class="form-group" style="margin-top:16px;"><label class="form-label">Extra (JSON, e.g. home hero stat overrides)</label><textarea id="extra-json" class="form-control" rows="4"></textarea></div>
+      <button class="btn btn-primary" id="save-btn" style="margin-top:12px;">Save Page</button>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  var mde;
+  var currentSlug = 'home';
+
+  async function loadPage(slug) {
+    currentSlug = slug;
+    try {
+      var res = await AD.api('/pages/' + slug);
+      document.getElementById('page-title-input').value = res.data.title || '';
+      mde.value(res.data.content || '');
+      document.getElementById('extra-json').value = res.data.extra ? JSON.stringify(res.data.extra, null, 2) : '';
+    } catch (e) {
+      document.getElementById('page-title-input').value = '';
+      mde.value('');
+    }
+  }
+
+  document.getElementById('page-tabs').addEventListener('click', function (e) {
+    var btn = e.target.closest('.category-tab');
+    if (!btn) return;
+    document.querySelectorAll('#page-tabs .category-tab').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    loadPage(btn.getAttribute('data-page'));
+  });
+
+  document.getElementById('save-btn').addEventListener('click', async function () {
+    var extra = null;
+    var extraRaw = document.getElementById('extra-json').value.trim();
+    if (extraRaw) { try { extra = JSON.parse(extraRaw); } catch (e) { AD.showToast('Extra field must be valid JSON', 'error'); return; } }
+    try {
+      await AD.api('/pages/' + currentSlug, { method: 'PUT', body: { title: document.getElementById('page-title-input').value, content: mde.value(), extra: extra } });
+      AD.showToast('Page saved', 'success');
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('pages', user, 'Static Pages');
+    mde = new EasyMDE({ element: document.getElementById('content-editor'), spellChecker: false, minHeight: '260px', autoDownloadFontAwesome: false });
+    loadPage('home');
+  }
+  init();
+})();
+</script>
+</body>
+</html>

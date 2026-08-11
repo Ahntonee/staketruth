@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Sync | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Data Sync</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="card card-pad" style="margin-bottom:16px;" id="status-card">Loading status…</div>
+
+      <div class="grid-3" id="sync-buttons" style="margin-bottom:20px;">
+        <button class="btn btn-outline" data-sync="fixtures">Sync Today &amp; Tomorrow's Fixtures</button>
+        <button class="btn btn-outline" data-sync="results">Sync Results</button>
+        <button class="btn btn-outline" data-sync="live">Sync Live Scores</button>
+        <button class="btn btn-outline" data-sync="auto-predict">Run Auto-Predict</button>
+        <button class="btn btn-outline" data-sync="odds">Sync Bookie Odds</button>
+        <button class="btn btn-outline" data-sync="statistics">Recalculate Statistics</button>
+        <button class="btn btn-outline" data-sync="accuracy">Recalculate Accuracy</button>
+        <button class="btn btn-outline" data-sync="profitability">Recalculate Profitability</button>
+      </div>
+
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <h3 class="section-title" style="font-size:1rem;">Sync Fixtures by Date</h3>
+        <p class="text-soft">Sync fixtures for any specific date, past or future — not just "today and tomorrow." Useful for catching up after downtime or pre-loading a date range ahead of time.</p>
+        <div class="flex gap-8" style="flex-wrap:wrap;">
+          <input type="date" id="sync-date" class="form-control" style="width:auto;">
+          <button class="btn btn-primary" id="sync-date-btn">Sync This Date</button>
+        </div>
+      </div>
+
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <h3 class="section-title" style="font-size:1rem;">Backfill Historical Data</h3>
+        <p class="text-soft">Pulls finished fixtures from API-Football into permanent match history (used for H2H + learning). Most API-Football plans expose about 2 seasons of history — going back further usually just returns nothing extra.</p>
+        <div class="flex gap-8" style="flex-wrap:wrap;margin-bottom:12px;">
+          <select id="backfill-league" class="form-control" style="width:auto;"></select>
+          <input type="number" id="backfill-seasons" class="form-control" style="width:100px;" value="2" min="1" max="5">
+          <button class="btn btn-outline" id="backfill-btn">Backfill This League</button>
+        </div>
+        <div class="flex gap-8" style="flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-primary" id="backfill-bulk-btn"><span class="material-icons-round" style="font-size:1rem;">cloud_download</span> Backfill All Popular Leagues (2 Years)</button>
+          <span class="text-soft" style="font-size:0.8rem;" id="backfill-bulk-hint"></span>
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <h3 class="section-title" style="font-size:1rem;">Log</h3>
+        <pre id="log-output" style="background:var(--card-2);padding:12px;border-radius:8px;max-height:300px;overflow:auto;font-size:0.8rem;">Ready.</pre>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  function log(msg) {
+    var el = document.getElementById('log-output');
+    el.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + el.textContent;
+  }
+
+  async function loadStatus() {
+    var res = await AD.api('/sync/status');
+    var d = res.data;
+    document.getElementById('status-card').innerHTML = Object.keys(d.lastRuns).map(function (k) {
+      return '<div>' + k.replace('last_', '').replace(/_/g, ' ') + ': <strong>' + AD.formatDate(d.lastRuns[k]) + '</strong></div>';
+    }).join('') + '<div style="margin-top:8px;">API-Football: ' + (d.apiFootballBudget.configured ? (d.apiFootballBudget.remaining ?? '—') + ' calls remaining' : 'not configured') + ' &middot; Odds API calls today: ' + d.oddsApiCallsToday + '</div>';
+  }
+
+  document.getElementById('sync-buttons').addEventListener('click', async function (e) {
+    var action = e.target.getAttribute('data-sync');
+    if (!action) return;
+    e.target.disabled = true;
+    log('Running ' + action + '…');
+    try {
+      var res = await AD.api('/sync/' + action, { method: 'POST' });
+      log(action + ' complete: ' + JSON.stringify(res.data));
+      AD.showToast(action + ' complete', 'success');
+    } catch (err) { log(action + ' failed: ' + err.message); AD.showToast(err.message, 'error'); }
+    e.target.disabled = false;
+    loadStatus();
+  });
+
+  document.getElementById('sync-date-btn').addEventListener('click', async function (e) {
+    var date = document.getElementById('sync-date').value;
+    if (!date) { AD.showToast('Pick a date first', 'error'); return; }
+    e.target.disabled = true;
+    log('Syncing fixtures for ' + date + '…');
+    try {
+      var res = await AD.api('/sync/fixtures-by-date', { method: 'POST', body: { date: date } });
+      log('Sync for ' + date + ' complete: ' + JSON.stringify(res.data));
+      AD.showToast('Synced fixtures for ' + date, 'success');
+    } catch (err) { log('Sync for ' + date + ' failed: ' + err.message); AD.showToast(err.message, 'error'); }
+    e.target.disabled = false;
+    loadStatus();
+  });
+
+  document.getElementById('backfill-btn').addEventListener('click', async function () {
+    var leagueId = document.getElementById('backfill-league').value;
+    var seasons = document.getElementById('backfill-seasons').value;
+    if (!leagueId) return;
+    log('Backfilling league ' + leagueId + ' (' + seasons + ' seasons)…');
+    try {
+      var res = await AD.api('/sync/historical', { method: 'POST', body: { api_league_id: Number(leagueId), seasons_back: Number(seasons) } });
+      log('Backfill complete: ' + JSON.stringify(res.data));
+      AD.showToast('Backfill complete', 'success');
+    } catch (err) { log('Backfill failed: ' + err.message); AD.showToast(err.message, 'error'); }
+  });
+
+  document.getElementById('backfill-bulk-btn').addEventListener('click', async function (e) {
+    if (!AD.confirmAction('Backfill 2 years of history for every popular league? This can use a large chunk of your API-Football daily budget.')) return;
+    e.target.disabled = true;
+    document.getElementById('backfill-bulk-hint').textContent = 'Running — this can take a while…';
+    log('Bulk backfill started for all popular leagues…');
+    try {
+      var res = await AD.api('/sync/historical-bulk', { method: 'POST', body: { seasons_back: 2 } });
+      res.data.results.forEach(function (r) {
+        log(r.league + ': ' + (r.skipped ? 'skipped (' + (r.reason || 'budget/config') + ')' : r.inserted + ' fixtures inserted'));
+      });
+      AD.showToast('Bulk backfill finished for ' + res.data.leaguesProcessed + ' leagues', 'success');
+      document.getElementById('backfill-bulk-hint').textContent = 'Last run: ' + res.data.leaguesProcessed + ' leagues processed.';
+    } catch (err) { log('Bulk backfill failed: ' + err.message); AD.showToast(err.message, 'error'); document.getElementById('backfill-bulk-hint').textContent = ''; }
+    e.target.disabled = false;
+  });
+
+  async function loadLeagueOptions() {
+    var res = await AD.api('/leagues');
+    document.getElementById('backfill-league').innerHTML = res.data.map(function (l) { return '<option value="' + l.api_league_id + '">' + l.name + '</option>'; }).join('');
+  }
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('sync', user, 'Data Sync');
+    loadStatus(); loadLeagueOptions();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

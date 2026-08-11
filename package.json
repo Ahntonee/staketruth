@@ -1,0 +1,33 @@
+{
+  "name": "staketruth",
+  "version": "1.0.0",
+  "description": "StakeTruth — Data-driven football predictions, VIP picks, and statistical intelligence engine.",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node config/migrate.js && node config/migrate_auth.js && node server.js",
+    "migrate": "node config/migrate.js && node config/migrate_auth.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "axios": "^1.16.0",
+    "bcryptjs": "^3.0.2",
+    "compression": "^1.8.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "mysql2": "^3.22.0",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^9.0.5",
+    "slugify": "^1.6.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}

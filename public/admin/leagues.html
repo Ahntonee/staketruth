@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leagues | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Leagues</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="table-scroll"><table class="data-table">
+        <thead><tr><th>Name</th><th>Country</th><th>Continent</th><th>Popular</th><th>Active</th><th>Actions</th></tr></thead>
+        <tbody id="leagues-tbody"><tr><td colspan="6">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  async function load() {
+    var res = await AD.api('/leagues');
+    document.getElementById('leagues-tbody').innerHTML = res.data.map(function (l) {
+      return '<tr><td data-label="Name">' + AD.escapeHtml(l.name) + '</td><td data-label="Country">' + AD.escapeHtml(l.country || '') + '</td><td data-label="Continent">' + AD.escapeHtml(l.continent || '') + '</td>' +
+        '<td data-label="Popular"><input type="checkbox" data-toggle-popular="' + l.id + '" ' + (l.is_popular ? 'checked' : '') + '></td>' +
+        '<td data-label="Active"><input type="checkbox" data-toggle-active="' + l.id + '" ' + (l.is_active ? 'checked' : '') + '></td>' +
+        '<td data-label="Actions">&mdash;</td></tr>';
+    }).join('');
+  }
+  document.getElementById('leagues-tbody').addEventListener('change', async function (e) {
+    var popId = e.target.getAttribute('data-toggle-popular');
+    var actId = e.target.getAttribute('data-toggle-active');
+    if (popId) await AD.api('/leagues/' + popId, { method: 'PUT', body: { is_popular: e.target.checked } });
+    if (actId) await AD.api('/leagues/' + actId, { method: 'PUT', body: { is_active: e.target.checked } });
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('leagues', user, 'Leagues');
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ad Slots | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Ad Slot Manager</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <p class="text-soft" style="margin:0;">Apply for Google AdSense at <a href="https://www.google.com/adsense" target="_blank" rel="noopener">google.com/adsense</a>. Once approved, paste your publisher ID (<code>ca-pub-XXXXXXXXXXXX</code>) and each ad unit's slot ID below. Each placement stays hidden on the live site until you enable it here.</p>
+      </div>
+      <div id="slots-list"></div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  var PLACEMENT_LABELS = {
+    homepage_top: 'Homepage — Top Banner', homepage_sidebar: 'Homepage — Sidebar', homepage_infeed: 'Homepage — In-Feed',
+    predictions_infeed: 'Predictions Page — In-Feed', prediction_detail_bottom: 'Prediction Detail — Bottom',
+    blog_infeed: 'Blog — In-Feed', blog_post_bottom: 'Blog Post — Bottom',
+  };
+
+  async function load() {
+    var res = await AD.api('/ads/admin');
+    document.getElementById('slots-list').innerHTML = res.data.map(function (s) {
+      return '<div class="card card-pad" style="margin-bottom:12px;">' +
+        '<div class="flex justify-between items-center" style="margin-bottom:10px;flex-wrap:wrap;gap:8px;">' +
+        '<strong>' + (PLACEMENT_LABELS[s.placement] || s.placement) + '</strong>' +
+        '<label class="flex items-center gap-8"><input type="checkbox" data-enabled="' + s.id + '" ' + (s.is_enabled ? 'checked' : '') + '> Enabled</label></div>' +
+        '<div class="grid-2" style="grid-template-columns:1fr 1fr 1fr;">' +
+        '<input class="form-control" placeholder="ca-pub-XXXXXXXXXXXX" value="' + (s.ad_client_id || '') + '" data-client="' + s.id + '">' +
+        '<input class="form-control" placeholder="Ad Slot ID" value="' + (s.ad_slot_id || '') + '" data-slot="' + s.id + '">' +
+        '<select class="form-control" data-format="' + s.id + '"><option ' + (s.ad_format === 'auto' ? 'selected' : '') + '>auto</option><option ' + (s.ad_format === 'rectangle' ? 'selected' : '') + '>rectangle</option><option ' + (s.ad_format === 'horizontal' ? 'selected' : '') + '>horizontal</option><option ' + (s.ad_format === 'vertical' ? 'selected' : '') + '>vertical</option></select>' +
+        '</div>' +
+        '<button class="btn btn-primary btn-sm" style="margin-top:10px;" data-save="' + s.id + '">Save</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  document.getElementById('slots-list').addEventListener('click', async function (e) {
+    var saveId = e.target.getAttribute('data-save');
+    if (!saveId) return;
+    var body = {
+      ad_client_id: document.querySelector('[data-client="' + saveId + '"]').value,
+      ad_slot_id: document.querySelector('[data-slot="' + saveId + '"]').value,
+      ad_format: document.querySelector('[data-format="' + saveId + '"]').value,
+      is_enabled: document.querySelector('[data-enabled="' + saveId + '"]').checked,
+    };
+    try { await AD.api('/ads/admin/' + saveId, { method: 'PUT', body: body }); AD.showToast('Ad slot saved', 'success'); }
+    catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('ads', user, 'Ad Slot Manager');
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

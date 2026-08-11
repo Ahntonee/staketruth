@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leaderboard | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Leaderboard</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="kpi-grid" id="top-performers" style="margin-bottom:18px;"></div>
+
+      <div class="flex gap-8" style="margin-bottom:14px;flex-wrap:wrap;">
+        <select id="period" class="form-control" style="width:auto;"><option value="7d">Last 7 days</option><option value="30d" selected>Last 30 days</option><option value="all">All time</option></select>
+        <select id="group-by" class="form-control" style="width:auto;"><option value="market">By Market</option><option value="league">By League</option><option value="team">By Team</option></select>
+        <select id="sort-by" class="form-control" style="width:auto;"><option value="win_rate">Sort: Win Rate</option><option value="most_won">Sort: Most Won</option><option value="confidence">Sort: Confidence</option></select>
+      </div>
+      <div class="grid-2" style="grid-template-columns:2fr 1fr;">
+        <div class="table-scroll">
+          <table class="data-table" id="leaderboard-table">
+            <thead><tr><th>#</th><th>Group</th><th>Won</th><th>Lost</th><th>Sample</th><th>Win Rate</th><th>Avg Confidence</th></tr></thead>
+            <tbody id="leaderboard-tbody"><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <canvas id="leaderboard-chart" height="260"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  var chart;
+  async function load() {
+    var params = new URLSearchParams({ period: document.getElementById('period').value, group_by: document.getElementById('group-by').value, sort_by: document.getElementById('sort-by').value });
+    var res = await AD.api('/admin/leaderboard?' + params.toString());
+    var tbody = document.getElementById('leaderboard-tbody');
+    tbody.innerHTML = res.data.map(function (r, i) {
+      return '<tr><td data-label="#"><span class="rank-badge">' + (i + 1) + '</span></td>' +
+        '<td data-label="Group">' + AD.escapeHtml(String(r.group_label || 'Unknown')) + '</td>' +
+        '<td data-label="Won"><span class="badge badge-won">' + r.wins + '</span></td>' +
+        '<td data-label="Lost"><span class="badge badge-lost">' + r.losses + '</span></td>' +
+        '<td data-label="Sample">' + r.total + '</td>' +
+        '<td data-label="Win Rate"><div class="confidence-bar-track" style="width:70px;display:inline-block;vertical-align:middle;margin-right:6px;"><div class="confidence-bar-fill ' + (r.win_rate >= 80 ? 'high' : r.win_rate >= 60 ? 'mid' : r.win_rate >= 40 ? 'low' : 'poor') + '" style="width:' + r.win_rate + '%"></div></div>' + r.win_rate + '%</td>' +
+        '<td data-label="Confidence">' + Math.round(r.avg_confidence || 0) + '</td></tr>';
+    }).join('') || '<tr><td colspan="7">No graded data yet.</td></tr>';
+
+    var ctx = document.getElementById('leaderboard-chart');
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: res.data.slice(0, 8).map(function (r) { return r.group_label; }), datasets: [{ label: 'Win Rate %', data: res.data.slice(0, 8).map(function (r) { return Number(r.win_rate); }), backgroundColor: '#ff6b35', borderRadius: 6 }] },
+      options: { responsive: true, plugins: { legend: { display: false } } },
+    });
+  }
+  ['period', 'group-by', 'sort-by'].forEach(function (id) { document.getElementById(id).addEventListener('change', load); });
+
+  async function loadTopPerformers() {
+    try {
+      var res = await AD.api('/admin/intelligence/patterns');
+      var d = res.data;
+      var bestMarket = d.byMarket[0], bestLeague = d.byLeague[0], bestTeam = d.byTeam[0];
+      function pct(r) { return r ? Math.round((r.correct / r.total) * 100) : null; }
+      document.getElementById('top-performers').innerHTML = [
+        { icon: 'military_tech', label: 'Best Market/Tip Type', value: bestMarket ? bestMarket.market + ' / ' + bestMarket.category : '—', sub: bestMarket ? pct(bestMarket) + '% (n=' + bestMarket.total + ')' : 'Not enough data' },
+        { icon: 'emoji_events', label: 'Best League', value: bestLeague ? (bestLeague.league_name || 'Unknown') : '—', sub: bestLeague ? pct(bestLeague) + '% (n=' + bestLeague.total + ')' : 'Not enough data' },
+        { icon: 'groups', label: 'Best Team Pattern', value: bestTeam ? bestTeam.team + ' (' + bestTeam.market + ')' : '—', sub: bestTeam ? pct(bestTeam) + '% (n=' + bestTeam.total + ')' : 'Not enough data' },
+      ].map(function (t) {
+        return '<div class="stat-card"><span class="material-icons-round">' + t.icon + '</span><div class="stat-card__value" style="font-size:1.05rem;">' + AD.escapeHtml(t.value) + '</div><div class="stat-card__label">' + t.label + ' &middot; ' + t.sub + '</div></div>';
+      }).join('');
+    } catch (e) { document.getElementById('top-performers').innerHTML = ''; }
+  }
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('leaderboard', user, 'Leaderboard');
+    loadTopPerformers();
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

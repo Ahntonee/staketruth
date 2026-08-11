@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title id="page-title">Blog | StakeTruth</title>
+<meta id="meta-description" name="description" content="StakeTruth blog article.">
+<meta id="meta-keywords" name="keywords" content="">
+<link rel="canonical" id="canonical-link" href="https://www.staketruth.com/blog.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="StakeTruth">
+<meta id="og-title" property="og:title" content="StakeTruth Blog">
+<meta id="og-image" property="og:image" content="https://www.staketruth.com/images/logo.png">
+<link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap-reboot.min.css" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+
+<main>
+  <section style="padding-bottom:0;">
+    <div class="container" style="max-width:760px;">
+      <nav style="font-size:0.8rem;color:var(--text-soft);margin-bottom:12px;">
+        <a href="/">Home</a> &rsaquo; <a href="/blog.html">Blog</a> &rsaquo; <span id="breadcrumb-current">Article</span>
+      </nav>
+      <div id="post-container"><div class="skeleton" style="height:400px;border-radius:14px;"></div></div>
+    </div>
+  </section>
+
+  <div class="ad-slot" data-placement="blog_post_bottom" style="max-width:760px;margin:20px auto;"></div>
+
+  <section>
+    <div class="container" style="max-width:760px;">
+      <h2 class="section-title" style="font-size:1.1rem;">Related Articles</h2>
+      <div class="grid-3" id="related-posts"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@4/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/content-protection.js"></script>
+<script>
+(function () {
+  var slugMatch = window.location.pathname.match(/\/blog\/([^/?#]+)/);
+  var slug = slugMatch ? slugMatch[1] : null;
+
+  async function load() {
+    var container = document.getElementById('post-container');
+    if (!slug) { container.innerHTML = '<div class="empty-state">Article not found.</div>'; return; }
+    try {
+      var res = await ST.api('/blog/' + slug);
+      var post = res.data;
+
+      document.title = post.meta_title || (post.title + ' | StakeTruth');
+      document.getElementById('page-title').textContent = document.title;
+      document.getElementById('meta-description').setAttribute('content', post.meta_description || post.excerpt || '');
+      document.getElementById('meta-keywords').setAttribute('content', post.keywords || '');
+      document.getElementById('og-title').setAttribute('content', post.title);
+      if (post.featured_image) document.getElementById('og-image').setAttribute('content', post.featured_image);
+      document.getElementById('canonical-link').setAttribute('href', window.location.href);
+      document.getElementById('breadcrumb-current').textContent = post.title;
+
+      var ldJson = document.createElement('script');
+      ldJson.type = 'application/ld+json';
+      ldJson.textContent = JSON.stringify({
+        '@context': 'https://schema.org', '@type': 'Article',
+        headline: post.title, image: post.featured_image ? [post.featured_image] : undefined,
+        datePublished: post.published_at, author: { '@type': 'Organization', name: post.author_name || 'StakeTruth' },
+      });
+      document.head.appendChild(ldJson);
+
+      var rawHtml = window.marked ? marked.parse(post.content || '') : (post.content || '');
+      var safeHtml = window.DOMPurify ? DOMPurify.sanitize(rawHtml) : rawHtml;
+
+      container.innerHTML =
+        '<h1>' + ST.escapeHtml(post.title) + '</h1>' +
+        '<div class="text-soft" style="margin-bottom:16px;">By ' + ST.escapeHtml(post.author_name || 'StakeTruth Team') + ' &middot; ' + ST.formatDate(post.published_at, { day: '2-digit', month: 'short', year: 'numeric' }) + '</div>' +
+        (post.featured_image ? '<img src="' + post.featured_image + '" alt="' + ST.escapeHtml(post.title) + '" style="width:100%;border-radius:14px;margin-bottom:20px;">' : '') +
+        '<div class="article-content">' + safeHtml + '</div>';
+
+      var related = document.getElementById('related-posts');
+      related.innerHTML = (post.related || []).map(function (r) {
+        return '<a href="/blog/' + r.slug + '" class="blog-card" style="display:block;">' +
+          (r.featured_image ? '<img src="' + r.featured_image + '" alt="">' : '') +
+          '<div class="blog-card__body"><h3 style="font-size:0.95rem;">' + ST.escapeHtml(r.title) + '</h3></div></a>';
+      }).join('') || '<p class="text-soft">No related articles yet.</p>';
+    } catch (e) {
+      container.innerHTML = '<div class="empty-state">This article could not be found.</div>';
+    }
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

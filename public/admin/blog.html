@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blog CMS | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6/css/all.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Blog CMS</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="text-center" style="text-align:right;margin-bottom:14px;">
+        <button class="btn btn-primary btn-sm" id="add-btn"><span class="material-icons-round" style="font-size:1rem;">add</span> New Post</button>
+      </div>
+      <div class="table-scroll"><table class="data-table">
+        <thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody id="posts-tbody"><tr><td colspan="5">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal" style="max-width:720px;">
+    <div class="modal-header"><h3 id="modal-title">New Post</h3><button class="modal-close" id="modal-close">&times;</button></div>
+    <form id="post-form">
+      <input type="hidden" name="id">
+      <div class="form-group"><label class="form-label">Title</label><input required name="title" class="form-control"></div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+        <div class="form-group"><label class="form-label">Category</label><input name="category" class="form-control" placeholder="Strategy"></div>
+        <div class="form-group"><label class="form-label">Author</label><input name="author_name" class="form-control" value="StakeTruth Team"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Excerpt</label><textarea name="excerpt" class="form-control"></textarea></div>
+      <div class="form-group"><label class="form-label">Content (Markdown)</label><textarea id="content-editor" name="content"></textarea></div>
+      <div class="form-group"><label class="form-label">Featured Image</label>
+        <img id="image-preview" style="display:none;max-width:200px;border-radius:8px;margin-bottom:8px;">
+        <input type="file" id="image-input" accept="image/*"><input type="hidden" name="featured_image">
+      </div>
+      <h4 style="margin-top:16px;">SEO</h4>
+      <div class="form-group"><label class="form-label">Meta Title</label><input name="meta_title" class="form-control"></div>
+      <div class="form-group"><label class="form-label">Meta Description</label><textarea name="meta_description" class="form-control"></textarea></div>
+      <div class="form-group"><label class="form-label">Keywords</label><input name="keywords" class="form-control"></div>
+      <label class="flex items-center gap-8" style="margin-bottom:16px;"><input type="checkbox" name="is_published"> Published</label>
+      <button class="btn btn-primary btn-block">Save Post</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  var mde;
+
+  async function load() {
+    var res = await AD.api('/blog/admin/list');
+    document.getElementById('posts-tbody').innerHTML = res.data.map(function (p) {
+      return '<tr><td data-label="Title">' + AD.escapeHtml(p.title) + '</td><td data-label="Category">' + AD.escapeHtml(p.category || '') + '</td>' +
+        '<td data-label="Status">' + (p.is_published ? '<span class="badge badge-won">Published</span>' : '<span class="badge badge-pending">Draft</span>') + '</td>' +
+        '<td data-label="Date">' + AD.formatDate(p.published_at || p.created_at) + '</td>' +
+        '<td data-label="Actions">' +
+          (p.is_published ? '<a href="/blog/' + p.slug + '" target="_blank" class="btn btn-outline btn-sm">View</a> ' : '') +
+          '<button class="btn btn-outline btn-sm" data-toggle-publish="' + p.id + '" data-published="' + p.is_published + '">' + (p.is_published ? 'Unpublish' : 'Publish') + '</button> ' +
+          '<button class="btn btn-outline btn-sm" data-edit="' + p.id + '">Edit</button> ' +
+          '<button class="btn btn-danger btn-sm" data-delete="' + p.id + '">Delete</button>' +
+        '</td></tr>';
+    }).join('') || '<tr><td colspan="5">No posts yet — click "New Post" to write your first article.</td></tr>';
+  }
+
+  function resetImagePreview() {
+    var preview = document.getElementById('image-preview');
+    preview.style.display = 'none'; preview.src = '';
+  }
+
+  function openModal() {
+    document.getElementById('edit-modal').classList.add('open');
+    setTimeout(function () { if (mde) mde.codemirror.refresh(); }, 10);
+  }
+  function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
+
+  document.getElementById('add-btn').addEventListener('click', function () {
+    document.getElementById('post-form').reset();
+    document.getElementById('post-form').id.value = '';
+    document.getElementById('modal-title').textContent = 'New Post';
+    resetImagePreview();
+    if (mde) mde.value('');
+    openModal();
+  });
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+
+  document.getElementById('image-input').addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      document.querySelector('[name="featured_image"]').value = reader.result;
+      var preview = document.getElementById('image-preview');
+      preview.src = reader.result; preview.style.display = 'block';
+      AD.showToast('Image attached', 'success');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('posts-tbody').addEventListener('click', async function (e) {
+    var editId = e.target.getAttribute('data-edit');
+    var deleteId = e.target.getAttribute('data-delete');
+    var publishId = e.target.getAttribute('data-toggle-publish');
+    if (editId) {
+      try {
+        var res = await AD.api('/blog/admin/' + editId);
+        var p = res.data;
+        var form = document.getElementById('post-form');
+        form.id.value = p.id; form.title.value = p.title; form.category.value = p.category || '';
+        form.author_name.value = p.author_name || ''; form.excerpt.value = p.excerpt || '';
+        form.meta_title.value = p.meta_title || ''; form.meta_description.value = p.meta_description || ''; form.keywords.value = p.keywords || '';
+        form.is_published.checked = !!p.is_published;
+        form.featured_image.value = p.featured_image || '';
+        var preview = document.getElementById('image-preview');
+        if (p.featured_image) { preview.src = p.featured_image; preview.style.display = 'block'; } else resetImagePreview();
+        if (mde) mde.value(p.content || '');
+        document.getElementById('modal-title').textContent = 'Edit Post';
+        openModal();
+      } catch (err) { AD.showToast(err.message, 'error'); }
+    }
+    if (deleteId) {
+      if (!AD.confirmAction('Delete this post?')) return;
+      await AD.api('/blog/' + deleteId, { method: 'DELETE' });
+      load();
+    }
+    if (publishId) {
+      var isPublished = e.target.getAttribute('data-published') === '1' || e.target.getAttribute('data-published') === 'true';
+      await AD.api('/blog/' + publishId + '/publish', { method: 'POST', body: { is_published: !isPublished } });
+      AD.showToast(isPublished ? 'Post unpublished' : 'Post published', 'success');
+      load();
+    }
+  });
+
+  document.getElementById('post-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    var id = fd.get('id');
+    var body = {
+      title: fd.get('title'), category: fd.get('category'), author_name: fd.get('author_name'),
+      excerpt: fd.get('excerpt'), content: mde.value(), featured_image: fd.get('featured_image') || null,
+      meta_title: fd.get('meta_title'), meta_description: fd.get('meta_description'), keywords: fd.get('keywords'),
+      is_published: fd.get('is_published') === 'on',
+    };
+    try {
+      if (id) await AD.api('/blog/' + id, { method: 'PUT', body: body });
+      else await AD.api('/blog', { method: 'POST', body: body });
+      closeModal();
+      AD.showToast('Saved', 'success');
+      load();
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('blog', user, 'Blog CMS');
+    mde = new EasyMDE({ element: document.getElementById('content-editor'), spellChecker: false, minHeight: '200px', autoDownloadFontAwesome: false });
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

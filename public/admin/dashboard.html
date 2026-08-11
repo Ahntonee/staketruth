@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  .kpi-pro { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; position: relative; overflow: hidden; }
+  .kpi-pro::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--kpi-accent, var(--primary)); }
+  .kpi-pro__icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: var(--kpi-accent-bg, rgba(255,107,53,0.12)); color: var(--kpi-accent, var(--primary)); margin-bottom: 12px; }
+  .kpi-pro__value { font-size: 1.7rem; font-weight: 800; font-family: var(--font-head); line-height: 1.1; }
+  .kpi-pro__label { font-size: 0.8rem; color: var(--text-soft); margin-top: 4px; }
+  .kpi-pro__trend { position: absolute; top: 18px; right: 18px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 2px; padding: 2px 8px; border-radius: 20px; }
+  .kpi-pro__trend.up { color: var(--success-dim); background: rgba(76,175,109,0.14); }
+  .kpi-pro__trend.down { color: var(--danger); background: rgba(214,69,90,0.12); }
+  .dash-greeting { font-size: 1.5rem; font-weight: 800; font-family: var(--font-head); margin-bottom: 2px; }
+  .quick-action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .quick-action-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 8px; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--card-2); font-weight: 700; font-size: 0.8rem; text-align: center; min-height: 44px; }
+  .quick-action-btn .material-icons-round { color: var(--primary); font-size: 1.4rem; }
+  .quick-action-btn:hover { border-color: var(--primary); }
+  .health-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem; }
+  .health-row:last-child { border-bottom: none; }
+  .health-row strong { font-weight: 700; }
+  .insight-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem; }
+  .insight-row:last-child { border-bottom: none; }
+  .insight-row .material-icons-round { color: var(--accent); font-size: 1.1rem; margin-top: 2px; }
+  .activity-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .activity-row:last-child { border-bottom: none; }
+  .activity-row__teams { font-weight: 700; font-size: 0.88rem; }
+  .activity-row__meta { font-size: 0.78rem; color: var(--text-soft); }
+</style>
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Dashboard</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+
+      <div style="margin-bottom:20px;">
+        <div class="dash-greeting" id="greeting-text">Welcome back</div>
+        <div class="text-soft" id="greeting-date" style="font-size:0.9rem;"></div>
+      </div>
+
+      <div class="kpi-grid" id="kpi-grid" style="margin-bottom:20px;">
+        <div class="kpi-pro skeleton" style="height:110px;"></div><div class="kpi-pro skeleton" style="height:110px;"></div>
+        <div class="kpi-pro skeleton" style="height:110px;"></div><div class="kpi-pro skeleton" style="height:110px;"></div>
+      </div>
+
+      <div class="grid-2" style="grid-template-columns:2fr 1fr;align-items:start;">
+        <div>
+          <div class="card card-pad" style="margin-bottom:16px;">
+            <h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">insights</span>Performance Trend (14 Days)</h3>
+            <canvas id="trend-chart" height="220"></canvas>
+          </div>
+
+          <div class="card card-pad">
+            <div class="flex justify-between items-center" style="margin-bottom:12px;">
+              <h3 class="section-title" style="font-size:1rem;margin-bottom:0;"><span class="material-icons-round">history</span>Recent Predictions</h3>
+              <a href="predictions.html" class="text-soft" style="font-size:0.8rem;font-weight:700;">View all &rarr;</a>
+            </div>
+            <div id="recent-predictions"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card card-pad" style="margin-bottom:16px;">
+            <h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">bolt</span>Quick Actions</h3>
+            <div class="quick-action-grid">
+              <a href="predictions.html" class="quick-action-btn"><span class="material-icons-round">add_circle</span>Add Prediction</a>
+              <button class="quick-action-btn" id="run-intel-btn"><span class="material-icons-round">psychology</span>Run Intelligence</button>
+              <button class="quick-action-btn" id="sync-now-btn"><span class="material-icons-round">sync</span>Sync Now</button>
+              <a href="blog.html" class="quick-action-btn"><span class="material-icons-round">edit_note</span>Add Blog Post</a>
+            </div>
+          </div>
+
+          <div class="card card-pad" style="margin-bottom:16px;">
+            <h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">psychology</span>Intelligence Snapshot</h3>
+            <div id="intel-snapshot"><div class="skeleton" style="height:60px;"></div></div>
+          </div>
+
+          <div class="card card-pad" style="margin-bottom:16px;">
+            <h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">monitor_heart</span>System Health</h3>
+            <div id="system-health"></div>
+          </div>
+
+          <div class="card card-pad">
+            <div class="flex justify-between items-center" style="margin-bottom:4px;">
+              <h3 class="section-title" style="font-size:1rem;margin-bottom:0;"><span class="material-icons-round">campaign</span>Ad Slots</h3>
+              <a href="ads.html" class="text-soft" style="font-size:0.8rem;font-weight:700;">Manage &rarr;</a>
+            </div>
+            <div id="ad-slots-summary" class="text-soft" style="font-size:0.85rem;margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  function trendChip(pct, invert) {
+    if (pct === null || pct === undefined) return '';
+    var isUp = invert ? pct < 0 : pct > 0;
+    var cls = pct === 0 ? '' : (isUp ? 'up' : 'down');
+    var arrow = pct > 0 ? '▲' : pct < 0 ? '▼' : '';
+    return '<span class="kpi-pro__trend ' + cls + '">' + arrow + ' ' + Math.abs(pct) + '%</span>';
+  }
+
+  function kpiCard(opts) {
+    return '<div class="kpi-pro" style="--kpi-accent:' + opts.accent + ';--kpi-accent-bg:' + opts.accentBg + ';">' +
+      (opts.trend !== undefined ? trendChip(opts.trend, opts.invertTrend) : '') +
+      '<div class="kpi-pro__icon"><span class="material-icons-round">' + opts.icon + '</span></div>' +
+      '<div class="kpi-pro__value">' + opts.value + '</div>' +
+      '<div class="kpi-pro__label">' + opts.label + '</div>' +
+    '</div>';
+  }
+
+  function setGreeting() {
+    var user = JSON.parse(localStorage.getItem('st_admin') || '{}');
+    var hour = new Date().getHours();
+    var greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    document.getElementById('greeting-text').textContent = greeting + (user.name ? ', ' + user.name.split(' ')[0] : '') + ' 👋';
+    document.getElementById('greeting-date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  async function loadOverview() {
+    var res = await AD.api('/admin/dashboard');
+    var d = res.data;
+
+    document.getElementById('kpi-grid').innerHTML =
+      kpiCard({ icon: 'sports_soccer', value: d.totalPredictions, label: 'Total Predictions', accent: 'var(--primary)', accentBg: 'rgba(255,107,53,0.12)', trend: d.trends.predictions }) +
+      kpiCard({ icon: 'trending_up', value: Number(d.winRate).toFixed(1) + '%', label: '30-Day Win Rate', accent: 'var(--success)', accentBg: 'rgba(76,175,109,0.12)', trend: d.trends.winRate }) +
+      kpiCard({ icon: 'group', value: d.totalUsers, label: 'Users (+' + d.newUsersThisWeek + ' this week)', accent: 'var(--accent)', accentBg: 'rgba(179,157,219,0.18)' }) +
+      kpiCard({ icon: 'payments', value: '₦' + Number(d.revenueThisMonth).toLocaleString(), label: 'Revenue This Month', accent: 'var(--info)', accentBg: 'rgba(108,99,181,0.14)', trend: d.trends.revenue });
+
+    document.getElementById('recent-predictions').innerHTML = d.recentPredictions.length ? d.recentPredictions.map(function (p) {
+      var badgeClass = p.result === 'won' ? 'badge-won' : p.result === 'lost' ? 'badge-lost' : 'badge-pending';
+      return '<div class="activity-row"><div><div class="activity-row__teams">' + AD.escapeHtml(p.home_team) + ' vs ' + AD.escapeHtml(p.away_team) + '</div><div class="activity-row__meta">' + AD.escapeHtml(p.tip) + ' &middot; ' + AD.formatDate(p.match_date) + '</div></div><span class="badge ' + badgeClass + '">' + p.result + '</span></div>';
+    }).join('') : '<div class="empty-state">No predictions yet — add your first one.</div>';
+
+    document.getElementById('system-health').innerHTML =
+      '<div class="health-row"><span>API-Football Budget</span><strong>' + (d.apiBudget.apiFootball.configured ? (d.apiBudget.apiFootball.remaining ?? '—') + ' left' : 'Not configured') + '</strong></div>' +
+      '<div class="health-row"><span>Odds API Calls Today</span><strong>' + d.apiBudget.oddsApiCallsToday + '</strong></div>' +
+      '<div class="health-row"><span>Intelligence Last Run</span><strong>' + (d.intelligence.lastRun ? AD.formatDate(d.intelligence.lastRun) : 'Never') + '</strong></div>' +
+      '<div class="health-row"><span>Daily Auto-Push Last Run</span><strong>' + (d.intelligence.lastAutoPush ? AD.formatDate(d.intelligence.lastAutoPush) : 'Never') + '</strong></div>' +
+      '<div class="health-row"><span>Review Queue</span><strong>' + d.reviewQueueCount + ' pending</strong></div>';
+
+    document.getElementById('ad-slots-summary').textContent = d.adSlots.enabled + ' of ' + d.adSlots.total + ' placements enabled';
+
+    return d;
+  }
+
+  async function loadIntelSnapshot(d) {
+    try {
+      var patterns = await AD.api('/admin/intelligence/patterns');
+      var bestMarket = patterns.data.byMarket[0];
+      var bestLeague = patterns.data.byLeague[0];
+      document.getElementById('intel-snapshot').innerHTML =
+        '<div class="insight-row"><span class="material-icons-round">workspace_premium</span><span>VIP Picks today: <strong>' + d.intelligence.vipPicksToday + '</strong>, pushed to registered users: <strong>' + d.intelligence.pushedToday + '</strong></span></div>' +
+        (bestMarket ? '<div class="insight-row"><span class="material-icons-round">military_tech</span><span>Best tip type: <strong>' + bestMarket.market + ' / ' + bestMarket.category + '</strong> (' + Math.round((bestMarket.correct / bestMarket.total) * 100) + '%)</span></div>' : '') +
+        (bestLeague ? '<div class="insight-row"><span class="material-icons-round">emoji_events</span><span>Best league: <strong>' + (bestLeague.league_name || 'Unknown') + '</strong> (' + Math.round((bestLeague.correct / bestLeague.total) * 100) + '%)</span></div>' : '') +
+        '<a href="intelligence.html" class="btn btn-outline btn-sm btn-block" style="margin-top:10px;">Open Intelligence Engine</a>';
+    } catch (e) {
+      document.getElementById('intel-snapshot').innerHTML = '<p class="text-soft">Not enough graded data yet.</p><a href="intelligence.html" class="btn btn-outline btn-sm btn-block">Open Intelligence Engine</a>';
+    }
+  }
+
+  async function loadTrendChart() {
+    var res = await AD.api('/admin/dashboard/trend');
+    var days = [];
+    var today = new Date();
+    for (var i = 13; i >= 0; i--) {
+      var d = new Date(today.getTime() - i * 86400000);
+      days.push(d.toISOString().slice(0, 10));
+    }
+    var volumeMap = {}; res.data.volume.forEach(function (r) { volumeMap[r.day] = r.cnt; });
+    var accuracyMap = {}; res.data.accuracy.forEach(function (r) { accuracyMap[r.day] = r.total ? (r.correct / r.total) * 100 : null; });
+
+    new Chart(document.getElementById('trend-chart'), {
+      data: {
+        labels: days.map(function (d) { return d.slice(5); }),
+        datasets: [
+          { type: 'bar', label: 'Predictions Created', data: days.map(function (d) { return volumeMap[d] || 0; }), backgroundColor: 'rgba(255,107,53,0.55)', borderRadius: 4, yAxisID: 'y' },
+          { type: 'line', label: 'Win Rate %', data: days.map(function (d) { return accuracyMap[d]; }), borderColor: '#7e57c2', backgroundColor: '#7e57c2', tension: 0.35, yAxisID: 'y1', spanGaps: true },
+        ],
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          y: { beginAtZero: true, position: 'left', title: { display: true, text: 'Predictions' } },
+          y1: { beginAtZero: true, max: 100, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Win Rate %' } },
+        },
+      },
+    });
+  }
+
+  document.getElementById('run-intel-btn').addEventListener('click', async function (e) {
+    e.target.disabled = true;
+    try { var r = await AD.api('/admin/intelligence/run', { method: 'POST' }); AD.showToast('Generated ' + r.data.generated + ' predictions', 'success'); boot(); }
+    catch (err) { AD.showToast(err.message, 'error'); }
+    e.target.disabled = false;
+  });
+  document.getElementById('sync-now-btn').addEventListener('click', async function (e) {
+    e.target.disabled = true;
+    try { await AD.api('/sync/fixtures', { method: 'POST' }); AD.showToast('Sync complete', 'success'); boot(); }
+    catch (err) { AD.showToast(err.message, 'error'); }
+    e.target.disabled = false;
+  });
+
+  async function boot() {
+    setGreeting();
+    try {
+      var d = await loadOverview();
+      loadIntelSnapshot(d);
+      loadTrendChart();
+    } catch (e) { AD.showToast('Could not load dashboard data', 'error'); }
+  }
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('dashboard', user, 'Dashboard');
+    boot();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

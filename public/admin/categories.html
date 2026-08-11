@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Categories | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Categories</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <p class="text-soft">Predictions today and all-time win rate per category.</p>
+      <div class="grid-3" id="category-grid"></div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  var CATEGORIES = ['free', 'vip', 'banker', 'over_1_5', 'over_2_5', 'over_3_5', 'under_1_5', 'under_2_5', 'under_3_5', 'gg', 'home_win', 'away_win', 'draw'];
+
+  async function load() {
+    var grid = document.getElementById('category-grid');
+    grid.innerHTML = CATEGORIES.map(function (c) { return '<div class="stat-card skeleton" style="height:100px;"></div>'; }).join('');
+    try {
+      var res = await AD.api('/statistics/markets/reliable');
+      var byKey = {};
+      res.data.forEach(function (r) { byKey[r.category] = r; });
+      var todayRes = await AD.api('/predictions/admin/list?limit=200');
+      var todayStr = new Date().toISOString().slice(0, 10);
+      grid.innerHTML = CATEGORIES.map(function (c) {
+        var stat = byKey[c];
+        var todayCount = todayRes.data.filter(function (p) { return p.category === c && p.match_date.slice(0, 10) === todayStr; }).length;
+        return '<div class="stat-card">' +
+          '<div class="stat-card__value" style="font-size:1.1rem;">' + c.replace(/_/g, ' ') + '</div>' +
+          '<div class="stat-card__label">' + todayCount + ' today &middot; ' + (stat ? stat.win_rate + '% all-time' : 'no data yet') + '</div>' +
+          '</div>';
+      }).join('');
+    } catch (e) { grid.innerHTML = '<div class="empty-state">Could not load category stats.</div>'; }
+  }
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('categories', user, 'Categories');
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

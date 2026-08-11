@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Predictions | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Predictions</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="flex justify-between items-center" style="margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div class="flex gap-8" style="flex-wrap:wrap;">
+          <select id="filter-date" class="form-control" style="width:auto;"><option value="">Any Date</option><option value="today">Today</option></select>
+          <select id="filter-category" class="form-control" style="width:auto;"><option value="">Any Category</option>
+            <option value="free">Free</option><option value="vip">VIP</option><option value="banker">Banker</option>
+            <option value="over_2_5">Over 2.5</option><option value="under_2_5">Under 2.5</option><option value="gg">BTTS</option>
+          </select>
+          <select id="filter-result" class="form-control" style="width:auto;"><option value="">Any Result</option><option value="pending">Pending</option><option value="won">Won</option><option value="lost">Lost</option></select>
+        </div>
+        <button class="btn btn-primary btn-sm" id="add-btn"><span class="material-icons-round" style="font-size:1rem;">add</span> Add Prediction</button>
+      </div>
+
+      <div class="table-scroll">
+        <table class="data-table" id="predictions-table">
+          <thead><tr>
+            <th><input type="checkbox" data-select-all></th>
+            <th>Date</th><th>Match</th><th>Category</th><th>Tip</th><th>Score</th><th>Status</th><th>Result</th><th>Source</th><th>Pushed</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="predictions-tbody"><tr><td colspan="11">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="bulk-toolbar" id="bulk-toolbar">
+        <span><span data-selected-count>0</span> selected</span>
+        <button class="btn btn-primary btn-sm" data-bulk="publish">Publish</button>
+        <button class="btn btn-outline btn-sm" data-bulk="unpublish">Unpublish</button>
+        <button class="btn btn-outline btn-sm" data-bulk="push">Push to Registered</button>
+        <button class="btn btn-danger btn-sm" data-bulk="delete">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-title">Add Prediction</h3><button class="modal-close" id="modal-close">&times;</button></div>
+    <div class="text-soft" style="font-size:0.82rem;background:var(--card-2);border-radius:var(--radius);padding:10px 12px;margin-bottom:16px;">
+      <span class="material-icons-round" style="font-size:1rem;vertical-align:-2px;color:var(--primary);">info</span>
+      Manually-entered predictions publish immediately and don't depend on API-Football at all — use this any time your API subscription is expired, rate-limited, or down.
+    </div>
+    <form id="prediction-form">
+      <input type="hidden" name="id">
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+        <div class="form-group"><label class="form-label">Home Team</label><input required name="home_team" class="form-control"></div>
+        <div class="form-group"><label class="form-label">Away Team</label><input required name="away_team" class="form-control"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Match Date/Time</label><input required type="datetime-local" name="match_date" class="form-control"></div>
+      <div class="form-group"><label class="form-label">League</label><select name="league_id" class="form-control"><option value="">Unassigned</option></select></div>
+      <div class="form-group"><label class="form-label">Tip</label><input required name="tip" class="form-control" placeholder="e.g. Over 2.5 Goals"></div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+        <div class="form-group"><label class="form-label">Market</label><select name="market" class="form-control">
+          <option>1X2</option><option>Over/Under</option><option>BTTS</option><option>Draw No Bet</option><option>Correct Score</option><option>Accumulator</option>
+        </select></div>
+        <div class="form-group"><label class="form-label">Category</label><select name="category" class="form-control">
+          <option value="free">Free</option><option value="vip">VIP</option><option value="banker">Banker</option>
+          <option value="over_1_5">Over 1.5</option><option value="over_2_5">Over 2.5</option><option value="over_3_5">Over 3.5</option>
+          <option value="under_1_5">Under 1.5</option><option value="under_2_5">Under 2.5</option><option value="under_3_5">Under 3.5</option>
+          <option value="gg">BTTS</option><option value="home_win">Home Win</option><option value="away_win">Away Win</option><option value="draw">Draw</option>
+        </select></div>
+      </div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+        <div class="form-group"><label class="form-label">Odds</label><input type="number" step="0.01" name="odds" class="form-control"></div>
+        <div class="form-group"><label class="form-label">Confidence Score</label><input type="number" min="1" max="99" name="confidence_score" class="form-control"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Analysis</label><textarea name="analysis" class="form-control"></textarea></div>
+      <div class="form-group"><label class="form-label">Bookies Available (comma-separated)</label><input name="bookies_available" class="form-control" placeholder="Bet365, 1xBet"></div>
+      <div class="flex gap-12" style="margin-bottom:16px;flex-wrap:wrap;">
+        <label class="flex items-center gap-8"><input type="checkbox" name="is_vip"> VIP</label>
+        <label class="flex items-center gap-8"><input type="checkbox" name="is_banker"> Banker</label>
+        <label class="flex items-center gap-8"><input type="checkbox" name="is_featured"> Featured</label>
+        <label class="flex items-center gap-8"><input type="checkbox" name="is_vip_pick_of_day"> VIP Pick of Day</label>
+      </div>
+      <button class="btn btn-primary btn-block">Save Prediction</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="result-modal">
+  <div class="modal">
+    <div class="modal-header"><h3>Set Result</h3><button class="modal-close" id="result-modal-close">&times;</button></div>
+    <form id="result-form">
+      <input type="hidden" name="id">
+      <div class="form-group"><label class="form-label">Result</label><select name="result" class="form-control"><option value="pending">Pending</option><option value="won">Won</option><option value="lost">Lost</option><option value="void">Void</option><option value="cancelled">Cancelled</option></select></div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+        <div class="form-group"><label class="form-label">Home Score</label><input type="number" name="home_score" class="form-control"></div>
+        <div class="form-group"><label class="form-label">Away Score</label><input type="number" name="away_score" class="form-control"></div>
+      </div>
+      <button class="btn btn-primary btn-block">Save Result</button>
+    </form>
+  </div>
+</div>
+
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  var bulkSelect;
+  var state = { date: '', category: '', result: '' };
+
+  function rowHtml(p) {
+    return '<tr>' +
+      '<td data-label=""><input type="checkbox" data-row-check="' + p.id + '"></td>' +
+      '<td data-label="Date">' + AD.formatDate(p.match_date) + '</td>' +
+      '<td data-label="Match">' + AD.escapeHtml(p.home_team) + ' vs ' + AD.escapeHtml(p.away_team) + '</td>' +
+      '<td data-label="Category">' + p.category + '</td>' +
+      '<td data-label="Tip">' + AD.escapeHtml(p.tip) + (p.is_vip ? ' <span class="badge badge-vip">VIP</span>' : '') + (p.is_banker ? ' <span class="badge badge-banker">B</span>' : '') + '</td>' +
+      '<td data-label="Score">' + (p.home_score ?? '') + (p.home_score !== null ? '-' + p.away_score : '') + '</td>' +
+      '<td data-label="Status">' + (p.is_published ? '<span class="badge badge-won">Live</span>' : '<span class="badge badge-pending">Draft</span>') + '</td>' +
+      '<td data-label="Result"><button class="result-badge-btn ' + p.result + '" data-set-result="' + p.id + '">' + p.result + '</button></td>' +
+      '<td data-label="Source">' + p.source + '</td>' +
+      '<td data-label="Pushed">' + (p.pushed_to_registered ? '✅' : '—') + '</td>' +
+      '<td data-label="Actions"><button class="btn btn-outline btn-sm" data-edit="' + p.id + '">Edit</button> <button class="btn btn-danger btn-sm" data-delete="' + p.id + '">Delete</button></td>' +
+    '</tr>';
+  }
+
+  async function load() {
+    var tbody = document.getElementById('predictions-tbody');
+    tbody.innerHTML = '<tr><td colspan="11">Loading…</td></tr>';
+    var params = new URLSearchParams({ limit: 50 });
+    if (state.date) params.set('date', new Date().toISOString().slice(0, 10));
+    if (state.category) params.set('category', state.category);
+    if (state.result) params.set('result', state.result);
+    try {
+      var res = await AD.api('/predictions/admin/list?' + params.toString());
+      tbody.innerHTML = res.data.map(rowHtml).join('') || '<tr><td colspan="11">No predictions found.</td></tr>';
+      bulkSelect.reset();
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="11">Failed to load.</td></tr>'; }
+  }
+
+  document.getElementById('filter-date').addEventListener('change', function () { state.date = this.value; load(); });
+  document.getElementById('filter-category').addEventListener('change', function () { state.category = this.value; load(); });
+  document.getElementById('filter-result').addEventListener('change', function () { state.result = this.value; load(); });
+
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  document.getElementById('add-btn').addEventListener('click', function () {
+    document.getElementById('prediction-form').reset();
+    document.getElementById('prediction-form').id.value = '';
+    document.getElementById('modal-title').textContent = 'Add Prediction';
+    openModal('edit-modal');
+  });
+  document.getElementById('modal-close').addEventListener('click', function () { closeModal('edit-modal'); });
+  document.getElementById('result-modal-close').addEventListener('click', function () { closeModal('result-modal'); });
+
+  document.getElementById('predictions-tbody').addEventListener('click', async function (e) {
+    var editId = e.target.getAttribute('data-edit');
+    var deleteId = e.target.getAttribute('data-delete');
+    var resultId = e.target.getAttribute('data-set-result');
+    if (editId) {
+      var res = await AD.api('/predictions/admin/list?limit=200');
+      var p = res.data.find(function (x) { return String(x.id) === editId; });
+      if (!p) return;
+      var form = document.getElementById('prediction-form');
+      form.id.value = p.id; form.home_team.value = p.home_team; form.away_team.value = p.away_team;
+      form.match_date.value = p.match_date.replace(' ', 'T').slice(0, 16);
+      form.league_id.value = p.league_id || ''; form.tip.value = p.tip; form.market.value = p.market;
+      form.category.value = p.category; form.odds.value = p.odds || ''; form.confidence_score.value = p.confidence_score || '';
+      form.analysis.value = p.analysis || '';
+      form.bookies_available.value = (typeof p.bookies_available === 'string' ? JSON.parse(p.bookies_available || '[]') : (p.bookies_available || [])).join(', ');
+      form.is_vip.checked = !!p.is_vip; form.is_banker.checked = !!p.is_banker; form.is_featured.checked = !!p.is_featured; form.is_vip_pick_of_day.checked = !!p.is_vip_pick_of_day;
+      document.getElementById('modal-title').textContent = 'Edit Prediction';
+      openModal('edit-modal');
+    }
+    if (deleteId) {
+      if (!AD.confirmAction('Delete this prediction?')) return;
+      await AD.api('/predictions/' + deleteId, { method: 'DELETE' });
+      load();
+    }
+    if (resultId) {
+      document.getElementById('result-form').id.value = resultId;
+      openModal('result-modal');
+    }
+  });
+
+  document.getElementById('prediction-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    var id = fd.get('id');
+    var body = {
+      home_team: fd.get('home_team'), away_team: fd.get('away_team'), match_date: fd.get('match_date'),
+      league_id: fd.get('league_id') || null, tip: fd.get('tip'), market: fd.get('market'), category: fd.get('category'),
+      odds: fd.get('odds') || null, confidence_score: fd.get('confidence_score') || null, analysis: fd.get('analysis'),
+      is_vip: fd.get('is_vip') === 'on', is_banker: fd.get('is_banker') === 'on', is_featured: fd.get('is_featured') === 'on',
+      is_vip_pick_of_day: fd.get('is_vip_pick_of_day') === 'on',
+      bookies_available: fd.get('bookies_available') ? fd.get('bookies_available').split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [],
+    };
+    try {
+      if (id) await AD.api('/predictions/' + id, { method: 'PUT', body: body });
+      else await AD.api('/predictions', { method: 'POST', body: body });
+      closeModal('edit-modal');
+      AD.showToast('Saved', 'success');
+      load();
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  document.getElementById('result-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    try {
+      await AD.api('/predictions/' + fd.get('id') + '/result', { method: 'PUT', body: { result: fd.get('result'), home_score: fd.get('home_score') || null, away_score: fd.get('away_score') || null } });
+      closeModal('result-modal');
+      AD.showToast('Result saved', 'success');
+      load();
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  document.getElementById('bulk-toolbar').addEventListener('click', async function (e) {
+    var action = e.target.getAttribute('data-bulk');
+    if (!action) return;
+    var ids = bulkSelect.getSelected().map(Number);
+    if (!ids.length) return;
+    if (action === 'delete' && !AD.confirmAction('Delete ' + ids.length + ' predictions?')) return;
+    var endpoint = { publish: 'bulk-publish', unpublish: 'bulk-unpublish', push: 'bulk-push', delete: 'bulk-delete' }[action];
+    try {
+      await AD.api('/predictions/' + endpoint, { method: 'POST', body: { ids: ids } });
+      AD.showToast('Done', 'success');
+      load();
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  async function loadLeagueOptions() {
+    var res = await AD.api('/leagues');
+    var select = document.querySelector('#prediction-form [name="league_id"]');
+    res.data.forEach(function (l) {
+      var opt = document.createElement('option');
+      opt.value = l.id; opt.textContent = l.name;
+      select.appendChild(opt);
+    });
+  }
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('predictions', user, 'Predictions');
+    bulkSelect = AD.wireBulkSelect(document.getElementById('predictions-table'), document.getElementById('bulk-toolbar'));
+    loadLeagueOptions();
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

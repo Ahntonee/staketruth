@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Revenue | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Revenue</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="kpi-grid" id="kpi-grid" style="margin-bottom:16px;"></div>
+      <div class="grid-2" style="grid-template-columns:2fr 1fr;margin-bottom:16px;">
+        <div class="card card-pad"><h3 class="section-title" style="font-size:1rem;">Revenue by Month</h3><canvas id="chart-revenue" height="220"></canvas></div>
+        <div class="card card-pad"><h3 class="section-title" style="font-size:1rem;">Plan Distribution</h3><canvas id="chart-plans" height="220"></canvas></div>
+      </div>
+      <div class="card card-pad" style="margin-bottom:16px;"><h3 class="section-title" style="font-size:1rem;">Churn</h3><canvas id="chart-churn" height="180"></canvas></div>
+      <div class="card card-pad">
+        <h3 class="section-title" style="font-size:1rem;">AdSense</h3>
+        <p class="text-soft">Manage ad units in <a href="ads.html">Ad Slot Manager</a>. Google AdSense typically requires consistent organic traffic and original content before approval — StakeTruth's blog and statistics pages help meet that bar.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  async function load() {
+    var overview = await AD.api('/admin/revenue/overview');
+    document.getElementById('kpi-grid').innerHTML = [
+      { value: '₦' + Number(overview.data.totalAllTime).toLocaleString(), label: 'Total Revenue (All-Time)' },
+      { value: '₦' + Number(overview.data.thisMonth).toLocaleString(), label: 'Revenue This Month' },
+      { value: overview.data.activeSubscribers, label: 'Active Subscribers' },
+      { value: '₦' + Number(overview.data.averageLtv).toLocaleString(), label: 'Average LTV' },
+    ].map(function (t) { return '<div class="stat-card"><div class="stat-card__value">' + t.value + '</div><div class="stat-card__label">' + t.label + '</div></div>'; }).join('');
+
+    var byMonth = await AD.api('/admin/revenue/by-month');
+    var months = Array.from(new Set(byMonth.data.map(function (r) { return r.month; })));
+    var plans = ['monthly', 'quarterly', 'annual'];
+    new Chart(document.getElementById('chart-revenue'), {
+      type: 'bar',
+      data: { labels: months, datasets: plans.map(function (plan, i) {
+        return { label: plan, backgroundColor: ['#ff6b35', '#b39ddb', '#7e57c2'][i], data: months.map(function (m) {
+          var row = byMonth.data.find(function (r) { return r.month === m && r.plan === plan; });
+          return row ? Number(row.total) : 0;
+        }) };
+      }) },
+      options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } },
+    });
+
+    var planDist = await AD.api('/admin/revenue/plans');
+    new Chart(document.getElementById('chart-plans'), {
+      type: 'doughnut',
+      data: { labels: planDist.data.map(function (r) { return r.plan; }), datasets: [{ data: planDist.data.map(function (r) { return r.cnt; }), backgroundColor: ['#ff6b35', '#b39ddb', '#7e57c2'] }] },
+    });
+
+    var churn = await AD.api('/admin/revenue/churn');
+    new Chart(document.getElementById('chart-churn'), {
+      type: 'line',
+      data: { labels: churn.data.map(function (r) { return r.month; }), datasets: [{ label: 'Churned', data: churn.data.map(function (r) { return r.churned; }), borderColor: '#d6455a', tension: 0.3 }] },
+      options: { responsive: true },
+    });
+  }
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('revenue', user, 'Revenue');
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

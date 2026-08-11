@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title id="page-title">Football Prediction | StakeTruth</title>
+<meta id="meta-description" name="description" content="Detailed football prediction with confidence score, form, and analysis from StakeTruth.">
+<link rel="canonical" id="canonical-link" href="https://www.staketruth.com/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="StakeTruth">
+<meta id="og-title" property="og:title" content="Football Prediction | StakeTruth">
+<link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap-reboot.min.css" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+
+<main>
+  <section style="padding-bottom:0;">
+    <div class="container">
+      <nav style="font-size:0.8rem;color:var(--text-soft);margin-bottom:12px;">
+        <a href="/">Home</a> &rsaquo; <a href="/predictions.html">Predictions</a> &rsaquo; <span id="breadcrumb-current">Match</span>
+      </nav>
+      <div id="detail-container"><div class="skeleton" style="height:320px;border-radius:14px;"></div></div>
+
+      <div class="card card-pad" style="margin-top:20px;">
+        <h2 class="section-title" style="font-size:1.1rem;"><span class="material-icons-round">forum</span>Comments</h2>
+        <div id="comment-form-slot"></div>
+        <div id="comments-list" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="ad-slot" data-placement="prediction_detail_bottom" style="max-width:1200px;margin:20px auto;"></div>
+</main>
+
+<div class="sticky-cta-bar hidden" id="sticky-cta">
+  <span>Unlock this pick</span>
+  <a href="/pricing.html" class="btn btn-vip btn-sm" id="sticky-cta-btn">Join VIP</a>
+</div>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="/js/app.js"></script>
+<script src="/js/content-protection.js"></script>
+<script>
+(function () {
+  var slugMatch = window.location.pathname.match(/\/prediction\/([^/?#]+)/);
+  var slug = slugMatch ? slugMatch[1] : null;
+  var predictionId = null;
+
+  function confidenceClass(score) {
+    if (score === null || score === undefined) return 'poor';
+    if (score >= 80) return 'high'; if (score >= 60) return 'mid'; if (score >= 40) return 'low'; return 'poor';
+  }
+
+  function gaugeSvg(score) {
+    var pct = Math.max(0, Math.min(100, score || 0));
+    var circumference = 2 * Math.PI * 26;
+    var offset = circumference - (pct / 100) * circumference;
+    var color = pct >= 80 ? '#4caf6d' : pct >= 60 ? '#8bc97e' : pct >= 40 ? '#d4a017' : '#d6455a';
+    return '<div class="intelligence-score"><svg width="64" height="64"><circle cx="32" cy="32" r="26" stroke="var(--border)" stroke-width="6" fill="none"/><circle cx="32" cy="32" r="26" stroke="' + color + '" stroke-width="6" fill="none" stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '" stroke-linecap="round"/></svg><div class="intelligence-score__value">' + (score ?? '—') + '</div></div>';
+  }
+
+  function formBadges(form) {
+    if (!form) return '<span class="text-soft">No data yet</span>';
+    return form.split('').map(function (c) {
+      var cls = c === 'W' ? 'badge-won' : c === 'L' ? 'badge-lost' : 'badge-pending';
+      return '<span class="badge ' + cls + '">' + c + '</span>';
+    }).join(' ');
+  }
+
+  async function loadDetail() {
+    var container = document.getElementById('detail-container');
+    if (!slug) { container.innerHTML = '<div class="empty-state">Prediction not found.</div>'; return; }
+    try {
+      var res = await ST.api('/predictions/' + slug);
+      var p = res.data;
+      predictionId = p.id;
+
+      document.title = p.home_team + ' vs ' + p.away_team + ' Prediction — ' + p.tip + ' | StakeTruth';
+      document.getElementById('page-title').textContent = document.title;
+      document.getElementById('meta-description').setAttribute('content', 'StakeTruth prediction for ' + p.home_team + ' vs ' + p.away_team + ': ' + (p.lockReason ? 'full analysis available to members.' : p.analysis || p.tip));
+      document.getElementById('og-title').setAttribute('content', document.title);
+      document.getElementById('canonical-link').setAttribute('href', window.location.href);
+      document.getElementById('breadcrumb-current').textContent = p.home_team + ' vs ' + p.away_team;
+
+      var ldJson = document.createElement('script');
+      ldJson.type = 'application/ld+json';
+      ldJson.textContent = JSON.stringify({
+        '@context': 'https://schema.org', '@type': 'SportsEvent',
+        name: p.home_team + ' vs ' + p.away_team, startDate: p.match_date,
+        homeTeam: { '@type': 'SportsTeam', name: p.home_team },
+        awayTeam: { '@type': 'SportsTeam', name: p.away_team },
+      });
+      document.head.appendChild(ldJson);
+
+      var badges = '';
+      if (p.is_banker) badges += '<span class="badge badge-banker">Banker</span> ';
+      if (p.is_vip) badges += '<span class="badge badge-vip">VIP</span> ';
+
+      var bookieTags = (p.bookies_available || []).map(function (b) { return '<span class="bookie-tag"><span class="odds-live-dot"></span>' + ST.escapeHtml(b) + '</span>'; }).join(' ');
+
+      var body =
+        '<div class="card card-pad ' + (p.is_banker ? 'banker-card' : p.is_vip ? 'vip-card' : '') + '">' +
+          '<div class="prediction-card__league"><span>' + ST.escapeHtml(p.league_name || 'Football') + '</span><span>' + ST.formatDate(p.match_date, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</span></div>' +
+          '<div class="prediction-card__teams" style="margin:16px 0;">' +
+            '<div class="prediction-card__team"><img src="' + (p.home_team_logo || '') + '" data-fallback-hide style="width:48px;height:48px;"><span>' + ST.escapeHtml(p.home_team) + '</span>' + (p.home_form && !p.lockReason ? '<div>' + formBadges(p.home_form) + '</div>' : '') + '</div>' +
+            '<div class="prediction-card__vs">VS</div>' +
+            '<div class="prediction-card__team"><img src="' + (p.away_team_logo || '') + '" data-fallback-hide style="width:48px;height:48px;"><span>' + ST.escapeHtml(p.away_team) + '</span>' + (p.away_form && !p.lockReason ? '<div>' + formBadges(p.away_form) + '</div>' : '') + '</div>' +
+          '</div>' +
+          (p.lockReason ? renderLocked(p) : renderUnlocked(p, badges, bookieTags)) +
+        '</div>' +
+        '<div style="margin-top:16px;" data-vote-poll data-prediction-id="' + p.id + '"></div>' +
+        (!p.lockReason ? renderActions(p) : '');
+
+      container.innerHTML = body;
+      var pollEl = container.querySelector('[data-vote-poll]');
+      if (pollEl) ST.initVotePoll(pollEl, p.id);
+
+      if (p.lockReason) {
+        var bar = document.getElementById('sticky-cta');
+        bar.classList.remove('hidden');
+        document.getElementById('sticky-cta-btn').href = p.lockReason === 'guest' ? '#' : '/pricing.html';
+        if (p.lockReason === 'guest') {
+          document.getElementById('sticky-cta-btn').setAttribute('data-auth-open', 'register');
+          document.getElementById('sticky-cta-btn').textContent = 'Sign Up Free';
+        }
+      }
+
+      wireBookmark(p.id);
+      loadComments(p.id);
+    } catch (e) {
+      container.innerHTML = '<div class="empty-state">This prediction could not be found.</div>';
+    }
+  }
+
+  function renderLocked(p) {
+    var copy = p.lockReason === 'guest'
+      ? { text: 'Sign up free to view the Banker of the Day.', cta: '<button type="button" class="btn btn-vip" data-auth-open="register">Sign Up Free</button>' }
+      : { text: 'Upgrade to VIP to view this pick, the full analysis, and live odds.', cta: '<a href="/pricing.html" class="btn btn-vip">Join VIP</a>' };
+    return '<div class="text-center" style="padding:24px 0;"><span class="material-icons-round" style="font-size:2.2rem;color:var(--primary);">lock</span><p style="font-weight:700;margin-top:8px;">' + copy.text + '</p>' + copy.cta + '</div>';
+  }
+
+  function renderUnlocked(p, badges, bookieTags) {
+    return '' +
+      '<div class="prediction-card__tip" style="font-size:1.4rem;">' + ST.escapeHtml(p.tip) + '</div>' +
+      '<div class="prediction-card__meta">' + badges + (p.odds ? '<span>Odds: ' + ST.formatOdds(p.odds) + '</span>' : '') +
+        (p.result !== 'pending' ? '<span class="badge badge-' + (p.result === 'won' ? 'won' : p.result === 'lost' ? 'lost' : 'pending') + '">' + p.result + '</span>' : '') +
+      '</div>' +
+      '<div class="flex items-center gap-12" style="margin:14px 0;">' +
+        gaugeSvg(p.intelligence_score) +
+        '<div style="flex:1;"><div class="text-soft" style="font-size:0.8rem;margin-bottom:4px;">Confidence Score</div><div class="confidence-bar-track"><div class="confidence-bar-fill ' + confidenceClass(p.intelligence_score) + '" style="width:' + (p.intelligence_score || 0) + '%"></div></div></div>' +
+      '</div>' +
+      (p.analysis ? '<p>' + ST.escapeHtml(p.analysis) + '</p>' : '') +
+      (bookieTags ? '<div class="flex gap-8" style="flex-wrap:wrap;margin-top:10px;">' + bookieTags + '</div>' : '');
+  }
+
+  function renderActions(p) {
+    return '<div class="flex gap-12" style="margin-top:14px;flex-wrap:wrap;">' +
+      '<button class="btn btn-outline btn-sm" id="bookmark-btn"><span class="material-icons-round" style="font-size:1rem;">bookmark_border</span> Bookmark</button>' +
+      '<button class="btn btn-outline btn-sm" id="share-btn"><span class="material-icons-round" style="font-size:1rem;">share</span> Share</button>' +
+    '</div>';
+  }
+
+  function wireBookmark(id) {
+    var btn = document.getElementById('bookmark-btn');
+    if (btn) btn.addEventListener('click', async function () {
+      if (!ST.getUser()) { ST.openAuthModal('login'); return; }
+      try { await ST.api('/users/bookmarks/' + id, { method: 'POST' }); ST.showToast('Bookmarked!', 'success'); } catch (e) { ST.showToast(e.message, 'error'); }
+    });
+    var shareBtn = document.getElementById('share-btn');
+    if (shareBtn) shareBtn.addEventListener('click', async function () {
+      if (navigator.share) { try { await navigator.share({ title: document.title, url: window.location.href }); } catch (e) { /* cancelled */ } }
+      else { await navigator.clipboard.writeText(window.location.href); ST.showToast('Link copied to clipboard', 'success'); }
+    });
+  }
+
+  async function loadComments(id) {
+    var slot = document.getElementById('comment-form-slot');
+    var user = ST.getUser();
+    if (user) {
+      slot.innerHTML = '<form id="comment-form"><div class="form-group"><textarea class="form-control" name="content" maxlength="2000" placeholder="Share your take on this match…" required></textarea></div><button class="btn btn-primary btn-sm">Post Comment</button></form>';
+      document.getElementById('comment-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var content = e.target.content.value.trim();
+        if (!content) return;
+        try {
+          await ST.api('/comments/' + id, { method: 'POST', body: { content: content } });
+          e.target.reset();
+          loadComments(id);
+        } catch (err) { ST.showToast(err.message, 'error'); }
+      });
+    } else {
+      slot.innerHTML = '<p class="text-soft">Please <button type="button" data-auth-open="login" style="background:none;border:none;color:var(--primary);font-weight:700;">log in</button> to comment.</p>';
+    }
+
+    try {
+      var res = await ST.api('/comments/' + id);
+      var list = document.getElementById('comments-list');
+      list.innerHTML = res.data.length ? res.data.map(function (c) {
+        return '<div style="padding:10px 0;border-bottom:1px solid var(--border);"><strong>' + ST.escapeHtml(c.author_name) + '</strong> <span class="text-soft" style="font-size:0.78rem;">' + ST.formatDate(c.created_at) + '</span><p style="margin:4px 0 0;">' + ST.escapeHtml(c.content) + '</p></div>';
+      }).join('') : '<p class="text-soft">No comments yet — be the first to share your take.</p>';
+    } catch (e) { /* silent */ }
+  }
+
+  loadDetail();
+})();
+</script>
+</body>
+</html>

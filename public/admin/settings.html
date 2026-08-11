@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Settings</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <h3 class="section-title" style="font-size:1rem;">Social Media Links</h3>
+        <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+          <div class="form-group"><label class="form-label">X / Twitter</label><input class="form-control" data-social="twitter"></div>
+          <div class="form-group"><label class="form-label">Telegram</label><input class="form-control" data-social="telegram"></div>
+          <div class="form-group"><label class="form-label">Facebook</label><input class="form-control" data-social="facebook"></div>
+          <div class="form-group"><label class="form-label">Reddit</label><input class="form-control" data-social="reddit"></div>
+          <div class="form-group"><label class="form-label">WhatsApp</label><input class="form-control" data-social="whatsapp"></div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="save-social-btn">Save Social Links</button>
+      </div>
+
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <h3 class="section-title" style="font-size:1rem;">Site Stat Overrides</h3>
+        <p class="text-soft">Override a displayed public stat (e.g. <code>win_rate</code>) without waiting for the nightly recalculation.</p>
+        <div class="flex gap-8">
+          <input class="form-control" id="override-key" placeholder="win_rate">
+          <input class="form-control" id="override-value" placeholder="82.5">
+          <button class="btn btn-outline" id="save-override-btn">Set</button>
+        </div>
+        <div id="overrides-list" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <h3 class="section-title" style="font-size:1rem;">Paystack</h3>
+        <p class="text-soft">Plan amounts and API keys are set via <code>.env</code> on the server (<code>PAYSTACK_PUBLIC_KEY</code>, <code>PAYSTACK_SECRET_KEY</code>, <code>PAYSTACK_PLAN_*_AMOUNT</code>). Update the file and restart the server to change them.</p>
+      </div>
+
+      <div class="card card-pad">
+        <h3 class="section-title" style="font-size:1rem;">Telegram VIP Invite Link</h3>
+        <p class="text-soft">Currently set via <code>TELEGRAM_VIP_INVITE_LINK</code> in <code>.env</code>. Update the file and restart the server to change it.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  async function loadSocial() {
+    var res = await AD.api('/admin/settings');
+    ['twitter', 'telegram', 'facebook', 'reddit', 'whatsapp'].forEach(function (k) {
+      document.querySelector('[data-social="' + k + '"]').value = res.data['social_' + k] || '';
+    });
+  }
+  document.getElementById('save-social-btn').addEventListener('click', async function () {
+    try {
+      var keys = ['twitter', 'telegram', 'facebook', 'reddit', 'whatsapp'];
+      await Promise.all(keys.map(function (k) {
+        return AD.api('/admin/settings/social_' + k, { method: 'PUT', body: { value: document.querySelector('[data-social="' + k + '"]').value } });
+      }));
+      AD.showToast('Social links saved', 'success');
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  async function loadOverrides() {
+    var res = await AD.api('/admin/stat-overrides');
+    document.getElementById('overrides-list').innerHTML = res.data.map(function (o) {
+      return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);"><span>' + AD.escapeHtml(o.stat_key) + '</span><strong>' + AD.escapeHtml(o.stat_value) + '</strong></div>';
+    }).join('') || '<p class="text-soft">No overrides set.</p>';
+  }
+  document.getElementById('save-override-btn').addEventListener('click', async function () {
+    var key = document.getElementById('override-key').value.trim();
+    var value = document.getElementById('override-value').value.trim();
+    if (!key || !value) return;
+    await AD.api('/admin/stat-overrides/' + key, { method: 'PUT', body: { value: value } });
+    document.getElementById('override-key').value = ''; document.getElementById('override-value').value = '';
+    AD.showToast('Override saved', 'success');
+    loadOverrides();
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('settings', user, 'Settings');
+    loadSocial(); loadOverrides();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SEO Settings | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">SEO Settings</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <p class="text-soft">These values drive the &lt;title&gt;, meta description, and keywords served for each page — changes here go live immediately, no deploy needed.</p>
+      <div id="seo-list"></div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  async function load() {
+    var res = await AD.api('/pages/seo');
+    document.getElementById('seo-list').innerHTML = res.data.map(function (s) {
+      return '<div class="card card-pad" style="margin-bottom:12px;">' +
+        '<strong style="text-transform:capitalize;">' + s.page_key + '</strong>' +
+        '<div class="form-group" style="margin-top:8px;"><label class="form-label">Title</label><input class="form-control" data-title="' + s.page_key + '" value="' + AD.escapeHtml(s.title || '') + '"></div>' +
+        '<div class="form-group"><label class="form-label">Description</label><textarea class="form-control" data-description="' + s.page_key + '">' + AD.escapeHtml(s.description || '') + '</textarea></div>' +
+        '<div class="form-group"><label class="form-label">Keywords</label><input class="form-control" data-keywords="' + s.page_key + '" value="' + AD.escapeHtml(s.keywords || '') + '"></div>' +
+        '<div class="form-group"><label class="form-label">OG Image URL</label><input class="form-control" data-og="' + s.page_key + '" value="' + AD.escapeHtml(s.og_image || '') + '"></div>' +
+        '<button class="btn btn-primary btn-sm" data-save="' + s.page_key + '">Save</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  document.getElementById('seo-list').addEventListener('click', async function (e) {
+    var key = e.target.getAttribute('data-save');
+    if (!key) return;
+    var body = {
+      title: document.querySelector('[data-title="' + key + '"]').value,
+      description: document.querySelector('[data-description="' + key + '"]').value,
+      keywords: document.querySelector('[data-keywords="' + key + '"]').value,
+      og_image: document.querySelector('[data-og="' + key + '"]').value,
+    };
+    try { await AD.api('/pages/seo/' + key, { method: 'PUT', body: body }); AD.showToast('SEO saved for ' + key, 'success'); }
+    catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('seo', user, 'SEO Settings');
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

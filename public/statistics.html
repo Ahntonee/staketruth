@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Football Statistics & Prediction Track Record | StakeTruth</title>
+<meta name="description" content="Team and league scoring statistics, market reliability, and StakeTruth's own prediction track record.">
+<meta name="keywords" content="football statistics, most reliable betting markets, team goals average, football prediction accuracy">
+<link rel="canonical" href="https://www.staketruth.com/statistics.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="StakeTruth">
+<meta property="og:title" content="Football Statistics & Prediction Track Record | StakeTruth">
+<meta property="og:image" content="https://www.staketruth.com/images/logo.png">
+<link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap-reboot.min.css" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+<style>
+  .accordion-item { border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 12px; overflow: hidden; }
+  .accordion-header { width: 100%; text-align: left; padding: 16px; background: var(--card); border: none; font-weight: 700; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; min-height: 56px; }
+  .accordion-header .material-icons-round { transition: transform 0.2s; }
+  .accordion-header.open .material-icons-round { transform: rotate(180deg); }
+  .accordion-body { display: none; padding: 0 16px 16px; }
+  .accordion-body.open { display: block; }
+  .mode-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+  .mode-toggle button { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card-2); font-weight: 700; font-size: 0.8rem; }
+  .mode-toggle button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+</style>
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+
+<main>
+  <section class="hero" style="padding-bottom:10px;">
+    <div class="container">
+      <h1>Football Statistics &amp; Track Record</h1>
+      <p>Source: API-Football historical data + StakeTruth's own prediction track record.</p>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="container">
+      <div class="kpi-grid" id="stat-tiles" style="margin-bottom:24px;">
+        <div class="stat-card skeleton" style="height:80px;"></div>
+        <div class="stat-card skeleton" style="height:80px;"></div>
+        <div class="stat-card skeleton" style="height:80px;"></div>
+        <div class="stat-card skeleton" style="height:80px;"></div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header" data-section="teams-scoring"><span>Highest / Lowest Scoring Teams</span><span class="material-icons-round">expand_more</span></button>
+        <div class="accordion-body" id="section-teams-scoring">
+          <div class="mode-toggle">
+            <button class="active" data-toggle-mode="teams-scoring" data-mode="highest">Highest Scoring</button>
+            <button data-toggle-mode="teams-scoring" data-mode="lowest">Lowest Scoring</button>
+          </div>
+          <div class="grid-2">
+            <div id="teams-scoring-table"></div>
+            <canvas id="teams-scoring-chart" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header" data-section="leagues-scoring"><span>Highest / Lowest Scoring Leagues</span><span class="material-icons-round">expand_more</span></button>
+        <div class="accordion-body" id="section-leagues-scoring">
+          <div class="mode-toggle">
+            <button class="active" data-toggle-mode="leagues-scoring" data-mode="highest">Highest Scoring</button>
+            <button data-toggle-mode="leagues-scoring" data-mode="lowest">Lowest Scoring</button>
+          </div>
+          <div class="grid-2">
+            <div id="leagues-scoring-table"></div>
+            <canvas id="leagues-scoring-chart" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header" data-section="market-reliability"><span>Market Reliability</span><span class="material-icons-round">expand_more</span></button>
+        <div class="accordion-body" id="section-market-reliability">
+          <div class="grid-2">
+            <div id="market-reliability-table"></div>
+            <canvas id="market-reliability-chart" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header" data-section="teams-by-market"><span>Most Reliable Teams by Market</span><span class="material-icons-round">expand_more</span></button>
+        <div class="accordion-body" id="section-teams-by-market">
+          <div class="form-group" style="max-width:280px;"><select id="teams-by-market-select" class="form-control"></select></div>
+          <div id="teams-by-market-list"></div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header" data-section="leagues-by-market"><span>Most Reliable Leagues by Market</span><span class="material-icons-round">expand_more</span></button>
+        <div class="accordion-body" id="section-leagues-by-market">
+          <div class="form-group" style="max-width:280px;"><select id="leagues-by-market-select" class="form-control"></select></div>
+          <div id="leagues-by-market-list"></div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header" data-section="picks-by-league"><span>Most Effective Picks by League</span><span class="material-icons-round">expand_more</span></button>
+        <div class="accordion-body" id="section-picks-by-league">
+          <div class="form-group" style="max-width:280px;"><select id="picks-by-league-select" class="form-control"></select></div>
+          <div id="picks-by-league-list"></div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header" data-section="picks-by-team"><span>Most Effective Picks by Team</span><span class="material-icons-round">expand_more</span></button>
+        <div class="accordion-body" id="section-picks-by-team">
+          <div class="flex gap-8" style="max-width:400px;">
+            <input type="text" id="picks-by-team-input" class="form-control" placeholder="e.g. Arsenal">
+            <button class="btn btn-primary" id="picks-by-team-btn">Search</button>
+          </div>
+          <div id="picks-by-team-list" style="margin-top:12px;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/content-protection.js"></script>
+<script src="/js/statistics.js"></script>
+</body>
+</html>

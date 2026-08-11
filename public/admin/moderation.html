@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moderation | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Moderation</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="tab-row" style="margin-bottom:14px;">
+        <button class="category-tab active" data-mtab="comments">Comments</button>
+        <button class="category-tab" data-mtab="votes">Vote Polls</button>
+      </div>
+
+      <div id="panel-comments">
+        <div class="table-scroll"><table class="data-table">
+          <thead><tr><th>Author</th><th>Match</th><th>Comment</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="comments-tbody"><tr><td colspan="6">Loading…</td></tr></tbody>
+        </table></div>
+      </div>
+
+      <div id="panel-votes" class="hidden">
+        <div class="table-scroll"><table class="data-table">
+          <thead><tr><th>Match</th><th>Votes</th><th>Voting</th><th>Actions</th></tr></thead>
+          <tbody id="votes-tbody"><tr><td colspan="4">Loading…</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  document.querySelectorAll('[data-mtab]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('[data-mtab]').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var tab = btn.getAttribute('data-mtab');
+      document.getElementById('panel-comments').classList.toggle('hidden', tab !== 'comments');
+      document.getElementById('panel-votes').classList.toggle('hidden', tab !== 'votes');
+      if (tab === 'votes') loadVotes();
+    });
+  });
+
+  async function loadComments() {
+    var res = await AD.api('/comments/admin');
+    document.getElementById('comments-tbody').innerHTML = res.data.map(function (c) {
+      return '<tr><td data-label="Author">' + AD.escapeHtml(c.author_name) + '<br><span class="text-soft" style="font-size:0.75rem;">' + AD.escapeHtml(c.author_email) + '</span></td>' +
+        '<td data-label="Match">' + AD.escapeHtml(c.home_team) + ' vs ' + AD.escapeHtml(c.away_team) + '</td>' +
+        '<td data-label="Comment">' + AD.escapeHtml(c.content) + '</td><td data-label="Date">' + AD.formatDate(c.created_at) + '</td>' +
+        '<td data-label="Status">' + (c.is_approved ? '<span class="badge badge-won">Approved</span>' : '<span class="badge badge-pending">Hidden</span>') + '</td>' +
+        '<td data-label="Actions"><button class="btn btn-outline btn-sm" data-toggle-approve="' + c.id + '" data-approved="' + c.is_approved + '">' + (c.is_approved ? 'Hide' : 'Approve') + '</button> <button class="btn btn-danger btn-sm" data-delete-comment="' + c.id + '">Delete</button></td></tr>';
+    }).join('') || '<tr><td colspan="6">No comments yet.</td></tr>';
+  }
+  document.getElementById('comments-tbody').addEventListener('click', async function (e) {
+    var approveId = e.target.getAttribute('data-toggle-approve');
+    var deleteId = e.target.getAttribute('data-delete-comment');
+    if (approveId) {
+      var approved = e.target.getAttribute('data-approved') === '1' || e.target.getAttribute('data-approved') === 'true';
+      await AD.api('/comments/admin/' + approveId + '/approve', { method: 'PUT', body: { is_approved: !approved } });
+      loadComments();
+    }
+    if (deleteId) { if (AD.confirmAction('Delete this comment?')) { await AD.api('/comments/admin/' + deleteId, { method: 'DELETE' }); loadComments(); } }
+  });
+
+  async function loadVotes() {
+    var res = await AD.api('/predictions/admin/list?limit=50');
+    var rows = await Promise.all(res.data.map(async function (p) {
+      var v = await fetch('/api/predictions/' + p.id + '/votes').then(function (r) { return r.json(); });
+      return { p: p, v: v.data };
+    }));
+    document.getElementById('votes-tbody').innerHTML = rows.filter(function (r) { return r.v.total > 0 || !r.p.voting_disabled; }).map(function (r) {
+      return '<tr><td data-label="Match">' + AD.escapeHtml(r.p.home_team) + ' vs ' + AD.escapeHtml(r.p.away_team) + '</td>' +
+        '<td data-label="Votes">Home ' + r.v.home + '% / Draw ' + r.v.draw + '% / Away ' + r.v.away + '% (' + r.v.total + ' total)</td>' +
+        '<td data-label="Voting">' + (r.p.voting_disabled ? '<span class="badge badge-lost">Disabled</span>' : '<span class="badge badge-won">Open</span>') + '</td>' +
+        '<td data-label="Actions"><button class="btn btn-outline btn-sm" data-reset-votes="' + r.p.id + '">Reset Votes</button> <button class="btn btn-outline btn-sm" data-toggle-voting="' + r.p.id + '" data-disabled="' + r.p.voting_disabled + '">' + (r.p.voting_disabled ? 'Enable' : 'Disable') + '</button></td></tr>';
+    }).join('') || '<tr><td colspan="4">No active polls.</td></tr>';
+  }
+  document.getElementById('votes-tbody').addEventListener('click', async function (e) {
+    var resetId = e.target.getAttribute('data-reset-votes');
+    var toggleId = e.target.getAttribute('data-toggle-voting');
+    if (resetId) { if (AD.confirmAction('Reset all votes for this match?')) { await AD.api('/predictions/' + resetId + '/votes', { method: 'DELETE' }); loadVotes(); } }
+    if (toggleId) {
+      var disabled = e.target.getAttribute('data-disabled') === '1' || e.target.getAttribute('data-disabled') === 'true';
+      await AD.api('/predictions/' + toggleId + '/voting', { method: 'PUT', body: { voting_disabled: !disabled } });
+      loadVotes();
+    }
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('moderation', user, 'Moderation');
+    loadComments();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
