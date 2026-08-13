@@ -130,7 +130,7 @@
       '<td data-label="Result"><button class="result-badge-btn ' + p.result + '" data-set-result="' + p.id + '">' + p.result + '</button></td>' +
       '<td data-label="Source">' + p.source + '</td>' +
       '<td data-label="Pushed">' + (p.pushed_to_registered ? '✅' : '—') + '</td>' +
-      '<td data-label="Actions"><button class="btn btn-outline btn-sm" data-edit="' + p.id + '">Edit</button> <button class="btn btn-danger btn-sm" data-delete="' + p.id + '">Delete</button></td>' +
+      '<td data-label="Actions"><button class="btn btn-outline btn-sm" data-toggle-publish="' + p.id + '" data-published="' + (p.is_published ? '1' : '0') + '">' + (p.is_published ? 'Unpublish' : 'Publish') + '</button> <button class="btn btn-outline btn-sm" data-edit="' + p.id + '">Edit</button> <button class="btn btn-danger btn-sm" data-delete="' + p.id + '">Delete</button></td>' +
     '</tr>';
   }
 
@@ -168,6 +168,16 @@
     var editId = e.target.getAttribute('data-edit');
     var deleteId = e.target.getAttribute('data-delete');
     var resultId = e.target.getAttribute('data-set-result');
+    var publishId = e.target.getAttribute('data-toggle-publish');
+    if (publishId) {
+      var isPublished = e.target.getAttribute('data-published') === '1';
+      try {
+        await AD.api('/predictions/' + publishId + '/publish', { method: 'PUT', body: { is_published: !isPublished } });
+        AD.showToast(isPublished ? 'Prediction unpublished' : 'Prediction published', 'success');
+        load();
+      } catch (err) { AD.showToast(err.message, 'error'); }
+      return;
+    }
     if (editId) {
       var res = await AD.api('/predictions/admin/list?limit=200');
       var p = res.data.find(function (x) { return String(x.id) === editId; });
