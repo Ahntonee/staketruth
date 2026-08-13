@@ -6,8 +6,13 @@ const intelligence = require('./intelligence');
 const accuracy = require('./accuracy');
 const statistics = require('./statistics');
 
+// PM2's `pm_id` is a GLOBAL counter across every app on the daemon (not per-app),
+// so on a shared box running other PM2 apps this app can easily land on pm_id=5
+// and never be "instance 0" even with a single worker. `NODE_APP_INSTANCE` is the
+// per-app-group index PM2 sets specifically for this purpose — always '0' for a
+// lone fork-mode instance, and 0..N-1 within this app's own cluster group.
 function isSchedulerInstance() {
-  return !process.env.pm_id || process.env.pm_id === '0';
+  return process.env.NODE_APP_INSTANCE === undefined || process.env.NODE_APP_INSTANCE === '0';
 }
 
 async function setLastRun(key) {
