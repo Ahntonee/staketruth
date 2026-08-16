@@ -260,6 +260,12 @@
     var drawerOverlay = document.getElementById('st-drawer-overlay');
     if (mobileToggle) mobileToggle.addEventListener('click', function () { drawer.classList.add('open'); });
     if (drawerClose) drawerClose.addEventListener('click', function () { drawer.classList.remove('open'); });
+    // Slide the panel back out when any nav link inside it is tapped, so it
+    // doesn't sit open behind the page that just navigated.
+    var drawerPanel = document.querySelector('.mobile-drawer__panel');
+    if (drawerPanel) drawerPanel.addEventListener('click', function (e) {
+      if (e.target.closest('a')) drawer.classList.remove('open');
+    });
     if (drawerOverlay) drawerOverlay.addEventListener('click', function () { drawer.classList.remove('open'); });
   }
 
