@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backlinks | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Backlinks</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <p class="text-soft" style="font-size:0.85rem;margin:0;">
+          Partner site links shown in the footer's "Other Sites" section for SEO/authority exchange. Each link auto-expires after its duration
+          (hidden from the footer once expired, not deleted) -- renew, deactivate, or delete any time. Links go out with <code>rel="sponsored"</code>
+          per Google's paid-link disclosure guidelines.
+        </p>
+      </div>
+      <div class="flex justify-between items-center" style="margin-bottom:14px;">
+        <div></div>
+        <button class="btn btn-primary btn-sm" id="add-btn"><span class="material-icons-round" style="font-size:1rem;">add</span> Add Backlink</button>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table" id="backlinks-table">
+          <thead><tr><th>Name</th><th>URL</th><th>Duration</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="backlinks-tbody"><tr><td colspan="6">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-title">Add Backlink</h3><button class="modal-close" id="modal-close">&times;</button></div>
+    <form id="backlink-form">
+      <input type="hidden" name="id">
+      <div class="form-group"><label class="form-label">Name / Keyword</label><input required name="name" class="form-control" placeholder="e.g. Best Football Prediction Site"></div>
+      <div class="form-group"><label class="form-label">URL</label><input required type="url" name="url" class="form-control" placeholder="https://example.com"></div>
+      <div class="form-group"><label class="form-label">Duration (days)</label><input required type="number" min="1" name="duration_days" class="form-control" value="30"></div>
+      <button class="btn btn-primary btn-block">Save Backlink</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="renew-modal">
+  <div class="modal">
+    <div class="modal-header"><h3>Renew Backlink</h3><button class="modal-close" id="renew-modal-close">&times;</button></div>
+    <form id="renew-form">
+      <input type="hidden" name="id">
+      <div class="form-group"><label class="form-label">Extend by (days)</label><input required type="number" min="1" name="duration_days" class="form-control" value="30"></div>
+      <button class="btn btn-primary btn-block">Renew</button>
+    </form>
+  </div>
+</div>
+
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  function statusBadge(b) {
+    var expired = new Date(b.expires_at) <= new Date();
+    if (!b.is_active) return '<span class="badge badge-pending">Deactivated</span>';
+    if (expired) return '<span class="badge badge-lost">Expired</span>';
+    return '<span class="badge badge-won">Active</span>';
+  }
+
+  function rowHtml(b) {
+    return '<tr>' +
+      '<td data-label="Name">' + AD.escapeHtml(b.name) + '</td>' +
+      '<td data-label="URL"><a href="' + b.url + '" target="_blank" rel="noopener">' + AD.escapeHtml(b.url) + '</a></td>' +
+      '<td data-label="Duration">' + b.duration_days + 'd</td>' +
+      '<td data-label="Expires">' + AD.formatDate(b.expires_at) + '</td>' +
+      '<td data-label="Status">' + statusBadge(b) + '</td>' +
+      '<td data-label="Actions">' +
+        '<button class="btn btn-outline btn-sm" data-renew="' + b.id + '">Renew</button> ' +
+        '<button class="btn btn-outline btn-sm" data-toggle="' + b.id + '" data-active="' + (b.is_active ? '1' : '0') + '">' + (b.is_active ? 'Deactivate' : 'Activate') + '</button> ' +
+        '<button class="btn btn-outline btn-sm" data-edit="' + b.id + '">Edit</button> ' +
+        '<button class="btn btn-danger btn-sm" data-delete="' + b.id + '">Delete</button>' +
+      '</td>' +
+    '</tr>';
+  }
+
+  var cache = [];
+  async function load() {
+    var tbody = document.getElementById('backlinks-tbody');
+    tbody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
+    try {
+      var res = await AD.api('/backlinks/admin/list');
+      cache = res.data;
+      tbody.innerHTML = cache.map(rowHtml).join('') || '<tr><td colspan="6">No backlinks yet.</td></tr>';
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="6">Failed to load.</td></tr>'; }
+  }
+
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  document.getElementById('add-btn').addEventListener('click', function () {
+    document.getElementById('backlink-form').reset();
+    document.getElementById('backlink-form').id.value = '';
+    document.getElementById('modal-title').textContent = 'Add Backlink';
+    openModal('edit-modal');
+  });
+  document.getElementById('modal-close').addEventListener('click', function () { closeModal('edit-modal'); });
+  document.getElementById('renew-modal-close').addEventListener('click', function () { closeModal('renew-modal'); });
+
+  document.getElementById('backlinks-tbody').addEventListener('click', async function (e) {
+    var editId = e.target.getAttribute('data-edit');
+    var deleteId = e.target.getAttribute('data-delete');
+    var renewId = e.target.getAttribute('data-renew');
+    var toggleId = e.target.getAttribute('data-toggle');
+    if (editId) {
+      var b = cache.find(function (x) { return String(x.id) === editId; });
+      if (!b) return;
+      var form = document.getElementById('backlink-form');
+      form.id.value = b.id; form.name.value = b.name; form.url.value = b.url; form.duration_days.value = b.duration_days;
+      document.getElementById('modal-title').textContent = 'Edit Backlink';
+      openModal('edit-modal');
+    }
+    if (deleteId) {
+      if (!AD.confirmAction('Delete this backlink permanently?')) return;
+      await AD.api('/backlinks/' + deleteId, { method: 'DELETE' });
+      load();
+    }
+    if (renewId) {
+      document.getElementById('renew-form').id.value = renewId;
+      openModal('renew-modal');
+    }
+    if (toggleId) {
+      var isActive = e.target.getAttribute('data-active') === '1';
+      await AD.api('/backlinks/' + toggleId + '/toggle', { method: 'PUT', body: { is_active: !isActive } });
+      load();
+    }
+  });
+
+  document.getElementById('backlink-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    var id = fd.get('id');
+    var body = { name: fd.get('name'), url: fd.get('url'), duration_days: Number(fd.get('duration_days')) };
+    try {
+      if (id) await AD.api('/backlinks/' + id, { method: 'PUT', body: { name: body.name, url: body.url } });
+      else await AD.api('/backlinks', { method: 'POST', body: body });
+      closeModal('edit-modal');
+      AD.showToast('Saved', 'success');
+      load();
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  document.getElementById('renew-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    try {
+      await AD.api('/backlinks/' + fd.get('id') + '/renew', { method: 'POST', body: { duration_days: Number(fd.get('duration_days')) } });
+      closeModal('renew-modal');
+      AD.showToast('Renewed', 'success');
+      load();
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('backlinks', user, 'Backlinks');
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

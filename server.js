@@ -156,7 +156,7 @@ const ADMIN_PAGES = new Set([
   'index.html', 'dashboard.html', 'intelligence.html', 'predictions.html', 'categories.html',
   'leaderboard.html', 'blog.html', 'subscriptions.html', 'users.html', 'leagues.html',
   'moderation.html', 'ads.html', 'sync.html', 'analytics.html', 'revenue.html', 'seo.html',
-  'pages.html', 'settings.html',
+  'seo-pages.html', 'backlinks.html', 'pages.html', 'settings.html',
 ]);
 app.get('/admin/:page', (req, res, next) => {
   if (!ADMIN_PAGES.has(req.params.page)) return res.status(404).send('Not found');
@@ -179,6 +179,8 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin', require('./routes/analytics'));
 app.use('/api/pages', require('./routes/pages'));
 app.use('/api/sync', require('./routes/sync'));
+app.use('/api/backlinks', require('./routes/backlinks'));
+app.use('/api/seo-pages', require('./routes/seoPages'));
 
 app.get('/api/health', (req, res) => res.json({ success: true, status: 'ok', time: new Date().toISOString() }));
 app.get('/api/status', async (req, res) => {
@@ -194,6 +196,30 @@ app.get('/api/status', async (req, res) => {
 // ---- Pretty URLs -----------------------------------------------------------
 app.get('/prediction/:slug', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'prediction-detail.html')));
 app.get('/blog/:slug', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'blog-post.html')));
+// SEO landing pages get real server-side <title>/meta injection per slug (not
+// just client-side document.title) so search engines see the same content in
+// the initial response as everyone else — no cloaking, no JS-dependent SEO.
+app.get('/topic/:slug', (req, res) => {
+  fs.readFile(path.join(PUBLIC_DIR, 'seo-landing.html'), 'utf8', async (err, html) => {
+    if (err) return res.status(500).send('Server error');
+    try {
+      const [rows] = await pool.query(
+        'SELECT title, meta_description FROM seo_landing_pages WHERE slug = ? AND is_published = 1',
+        [req.params.slug]
+      );
+      const page = rows[0];
+      if (page) {
+        html = html.replace(/<title>.*?<\/title>/s, `<title>${page.title}</title>`);
+        if (page.meta_description) {
+          html = html.replace(/(<meta name="description" content=")[^"]*(")/, `$1${page.meta_description.replace(/"/g, '&quot;')}$2`);
+        }
+      }
+    } catch (e) { /* fall back to the static template defaults */ }
+    const inject = extraHeadTags();
+    if (inject) html = html.replace('</head>', `${inject}</head>`);
+    res.type('html').send(html);
+  });
+});
 
 // ---- SEO: robots.txt, sitemap.xml, ads.txt ---------------------------------
 app.get('/robots.txt', (req, res) => {
@@ -220,6 +246,7 @@ app.get('/sitemap.xml', async (req, res) => {
     "SELECT slug, updated_at FROM predictions WHERE is_published = 1 AND slug IS NOT NULL ORDER BY updated_at DESC LIMIT 5000"
   );
   const [posts] = await pool.query("SELECT slug, updated_at FROM blog_posts WHERE is_published = 1 ORDER BY updated_at DESC");
+  const [topics] = await pool.query("SELECT slug, updated_at FROM seo_landing_pages WHERE is_published = 1 ORDER BY updated_at DESC");
 
   const urlXml = (loc, lastmod, priority) =>
     `<url><loc>${site}${loc}</loc>${lastmod ? `<lastmod>${new Date(lastmod).toISOString()}</lastmod>` : ''}<priority>${priority}</priority></url>`;
@@ -228,6 +255,7 @@ app.get('/sitemap.xml', async (req, res) => {
     ...staticUrls.map((u) => urlXml(u, null, u === '/' ? '1.0' : '0.7')),
     ...preds.map((p) => urlXml(`/prediction/${p.slug}`, p.updated_at, '0.6')),
     ...posts.map((p) => urlXml(`/blog/${p.slug}`, p.updated_at, '0.5')),
+    ...topics.map((t) => urlXml(`/topic/${t.slug}`, t.updated_at, '0.7')),
   ].join('');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${body}</urlset>`;

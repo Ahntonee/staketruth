@@ -186,6 +186,10 @@
             '<a href="/privacy.html">Privacy Policy</a>' +
             '<a href="/contact.html">Contact</a>' +
           '</div>' +
+          '<div><h4>Reach Us</h4><div id="st-contact-links"></div></div>' +
+        '</div>' +
+        '<div class="footer-other-sites" id="st-other-sites" style="display:none;">' +
+          '<h4>Other Sites</h4><div class="footer-other-sites__links" id="st-other-sites-links"></div>' +
         '</div>' +
         '<div class="footer-bottom">' +
           '<p>&copy; ' + new Date().getFullYear() + ' StakeTruth. For entertainment only. Please gamble responsibly.</p>' +
@@ -273,6 +277,7 @@
     if (!el) return;
     el.innerHTML = footerHtml();
     fetchSocialLinks();
+    fetchOtherSites();
   };
 
   var SOCIAL_ICONS = { twitter: 'X', telegram: 'TG', facebook: 'FB', reddit: 'RD', whatsapp: 'WA' };
@@ -280,13 +285,36 @@
     try {
       var res = await api('/pages/social-links');
       var container = document.getElementById('st-social-links');
-      if (!container) return;
-      var html = '';
-      Object.keys(res.data || {}).forEach(function (key) {
-        if (res.data[key]) html += '<a href="' + res.data[key] + '" target="_blank" rel="noopener">' + (SOCIAL_ICONS[key] || key) + '</a>';
-      });
-      container.innerHTML = html;
-    } catch (e) { /* footer still works without social links */ }
+      var contactContainer = document.getElementById('st-contact-links');
+      var data = res.data || {};
+      if (container) {
+        var html = '';
+        Object.keys(data).forEach(function (key) {
+          if (SOCIAL_ICONS[key] && data[key]) html += '<a href="' + data[key] + '" target="_blank" rel="noopener">' + SOCIAL_ICONS[key] + '</a>';
+        });
+        container.innerHTML = html;
+      }
+      if (contactContainer) {
+        var contactHtml = '';
+        if (data.contact_whatsapp) contactHtml += '<a href="https://wa.me/' + data.contact_whatsapp.replace(/[^0-9]/g, '') + '" target="_blank" rel="noopener">WhatsApp: ' + ST.escapeHtml(data.contact_whatsapp) + '</a>';
+        if (data.contact_email) contactHtml += '<a href="mailto:' + data.contact_email + '">Email: ' + ST.escapeHtml(data.contact_email) + '</a>';
+        contactContainer.innerHTML = contactHtml || '<a href="/contact.html">Contact Form</a>';
+      }
+    } catch (e) { /* footer still works without social/contact links */ }
+  }
+
+  async function fetchOtherSites() {
+    var wrap = document.getElementById('st-other-sites');
+    var container = document.getElementById('st-other-sites-links');
+    if (!wrap || !container) return;
+    try {
+      var res = await api('/backlinks/active');
+      if (!res.data.length) return;
+      container.innerHTML = res.data.map(function (b, i) {
+        return (i ? '<span class="sep">|</span>' : '') + '<a href="' + b.url + '" target="_blank" rel="sponsored noopener">' + ST.escapeHtml(b.name) + '</a>';
+      }).join('');
+      wrap.style.display = '';
+    } catch (e) { /* footer still works without backlinks */ }
   }
 
   // ---- Leagues / stats caching ----------------------------------------------
@@ -416,7 +444,12 @@
       var res = await api('/predictions/recent-wins?limit=8');
       if (!res.data.length) { container.innerHTML = '<div class="aside-widget"><h3><span class="material-icons-round">military_tech</span>Recent Wins</h3><p class="text-soft">No graded wins yet.</p></div>'; return; }
       var rows = res.data.map(function (w) {
-        return '<div class="recent-win-row"><span>' + ST.escapeHtml(w.home_team) + ' vs ' + ST.escapeHtml(w.away_team) + '<br><span class="text-soft">' + ST.escapeHtml(w.tip) + ' &middot; ' + ST.formatDate(w.match_date) + '</span></span><span class="recent-win-row__score">' + w.home_score + '-' + w.away_score + '</span></div>';
+        return '<div class="recent-win-card">' +
+          '<div class="recent-win-card__stars">★★★★★</div>' +
+          '<div class="recent-win-card__teams">' + ST.escapeHtml(w.home_team) + ' vs ' + ST.escapeHtml(w.away_team) + '</div>' +
+          '<div class="recent-win-card__meta"><span>Pick: ' + ST.escapeHtml(w.tip) + '</span>' + (w.odds ? '<span class="recent-win-card__odds">Odds: ' + ST.formatOdds(w.odds) + '</span>' : '') + '</div>' +
+          '<div class="recent-win-card__outcome"><span class="badge badge-won">WON</span><span class="recent-win-card__score">' + w.home_score + '-' + w.away_score + '</span></div>' +
+        '</div>';
       }).join('');
       container.innerHTML = '<div class="aside-widget"><h3><span class="material-icons-round">military_tech</span>Recent Wins</h3>' + rows + '</div>';
     } catch (e) { container.innerHTML = ''; }
@@ -610,14 +643,43 @@
   });
 
   // ---- Ad slots ---------------------------------------------------------------
+  function adSlotHtml(slot) {
+    if (slot.ad_type === 'banner_image' && slot.image_url) {
+      var img = '<img src="' + slot.image_url + '" alt="Advertisement" style="max-width:100%;border-radius:var(--radius);">';
+      return slot.link_url ? '<a href="' + slot.link_url + '" target="_blank" rel="sponsored noopener">' + img + '</a>' : img;
+    }
+    if (slot.ad_type === 'text_link' && slot.link_url) {
+      return '<a class="ad-slot__text-link" href="' + slot.link_url + '" target="_blank" rel="sponsored noopener">' + ST.escapeHtml(slot.link_text || slot.link_url) + '</a>';
+    }
+    if (slot.ad_type === 'custom_code' && slot.custom_code) {
+      return slot.custom_code;
+    }
+    if (slot.ad_client_id && slot.ad_slot_id) {
+      return '<ins class="adsbygoogle" style="display:block" data-ad-client="' + slot.ad_client_id +
+        '" data-ad-slot="' + slot.ad_slot_id + '" data-ad-format="' + (slot.ad_format || 'auto') + '" data-full-width-responsive="true"></ins>';
+    }
+    return '';
+  }
+
   ST.injectAdSlots = async function () {
     try {
       var res = await api('/ads/active');
       (res.data || []).forEach(function (slot) {
+        var html = adSlotHtml(slot);
+        if (!html) return;
         document.querySelectorAll('.ad-slot[data-placement="' + slot.placement + '"]').forEach(function (el) {
-          el.innerHTML = '<ins class="adsbygoogle" style="display:block" data-ad-client="' + slot.ad_client_id +
-            '" data-ad-slot="' + slot.ad_slot_id + '" data-ad-format="' + (slot.ad_format || 'auto') + '" data-full-width-responsive="true"></ins>';
-          try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { /* AdSense script not loaded in dev */ }
+          el.innerHTML = html;
+          if (slot.ad_type === 'custom_code') {
+            // innerHTML doesn't execute <script> tags -- re-create them so custom ad code actually runs.
+            el.querySelectorAll('script').forEach(function (old) {
+              var s = document.createElement('script');
+              Array.from(old.attributes).forEach(function (a) { s.setAttribute(a.name, a.value); });
+              s.textContent = old.textContent;
+              old.replaceWith(s);
+            });
+          } else if (!slot.ad_type || slot.ad_type === 'adsense') {
+            try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { /* AdSense script not loaded in dev */ }
+          }
         });
       });
     } catch (e) { /* no ad slots configured yet */ }

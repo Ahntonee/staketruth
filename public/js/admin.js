@@ -86,6 +86,8 @@
     { key: 'analytics', href: 'analytics.html', icon: 'insights', label: 'Website Analytics' },
     { key: 'revenue', href: 'revenue.html', icon: 'payments', label: 'Revenue' },
     { key: 'seo', href: 'seo.html', icon: 'search', label: 'SEO' },
+    { key: 'seo-pages', href: 'seo-pages.html', icon: 'article', label: 'SEO Pages' },
+    { key: 'backlinks', href: 'backlinks.html', icon: 'link', label: 'Backlinks' },
     { key: 'pages', href: 'pages.html', icon: 'description', label: 'Pages' },
     { key: 'settings', href: 'settings.html', icon: 'settings', label: 'Settings' },
   ];

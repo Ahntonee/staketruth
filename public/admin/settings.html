@@ -34,6 +34,16 @@
       </div>
 
       <div class="card card-pad" style="margin-bottom:16px;">
+        <h3 class="section-title" style="font-size:1rem;">Footer Contact Info</h3>
+        <p class="text-soft">Shown in the "Reach Us" column of the site footer.</p>
+        <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+          <div class="form-group"><label class="form-label">Contact Email</label><input class="form-control" data-contact="email"></div>
+          <div class="form-group"><label class="form-label">WhatsApp Number</label><input class="form-control" data-contact="whatsapp" placeholder="+2348012345678"></div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="save-contact-btn">Save Contact Info</button>
+      </div>
+
+      <div class="card card-pad" style="margin-bottom:16px;">
         <h3 class="section-title" style="font-size:1rem;">Site Stat Overrides</h3>
         <p class="text-soft">Override a displayed public stat (e.g. <code>win_rate</code>) without waiting for the nightly recalculation.</p>
         <div class="flex gap-8">
@@ -75,6 +85,20 @@
     } catch (err) { AD.showToast(err.message, 'error'); }
   });
 
+  async function loadContact() {
+    var res = await AD.api('/admin/settings');
+    document.querySelector('[data-contact="email"]').value = res.data.contact_email || '';
+    document.querySelector('[data-contact="whatsapp"]').value = res.data.contact_whatsapp || '';
+  }
+  document.getElementById('save-contact-btn').addEventListener('click', async function () {
+    try {
+      await Promise.all(['email', 'whatsapp'].map(function (k) {
+        return AD.api('/admin/settings/contact_' + k, { method: 'PUT', body: { value: document.querySelector('[data-contact="' + k + '"]').value } });
+      }));
+      AD.showToast('Contact info saved', 'success');
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
   async function loadOverrides() {
     var res = await AD.api('/admin/stat-overrides');
     document.getElementById('overrides-list').innerHTML = res.data.map(function (o) {
@@ -95,7 +119,7 @@
     var user = await AD.requireAdmin();
     if (!user) return;
     AD.renderShell('settings', user, 'Settings');
-    loadSocial(); loadOverrides();
+    loadSocial(); loadContact(); loadOverrides();
   }
   init();
 })();

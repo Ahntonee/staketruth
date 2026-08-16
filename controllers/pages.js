@@ -19,11 +19,12 @@ const updatePage = asyncHandler(async (req, res) => {
 
 const getSocialLinks = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(
-    `SELECT setting_key, setting_value FROM site_settings WHERE setting_key LIKE 'social_%'`
+    `SELECT setting_key, setting_value FROM site_settings WHERE setting_key LIKE 'social_%' OR setting_key IN ('contact_email', 'contact_whatsapp')`
   );
   const links = {};
   for (const r of rows) {
-    if (r.setting_value) links[r.setting_key.replace('social_', '')] = r.setting_value;
+    if (!r.setting_value) continue;
+    links[r.setting_key.startsWith('social_') ? r.setting_key.replace('social_', '') : r.setting_key] = r.setting_value;
   }
   return successResponse(res, links);
 });

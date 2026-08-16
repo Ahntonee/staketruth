@@ -33,6 +33,8 @@
   --result-pending:      #ffd60a;
   --result-pending-text: #6b5200;
   --result-lost:         #e53935;
+  --gold:                #f0b90b;
+  --gold-dim:             #8a6600;
 
   --bg:         var(--off-white);
   --bg-2:       var(--cream);
@@ -229,7 +231,15 @@ section { padding: 28px 0; }
 /* ---- Footer -------------------------------------------------------------- */
 .site-footer { background: var(--bg-2); border-top: 1px solid var(--border); padding: 40px 0 20px; margin-top: 40px; }
 .footer-grid { display: grid; grid-template-columns: 1fr; gap: 28px; }
-@media (min-width: 768px) { .footer-grid { grid-template-columns: 2fr 1fr 1fr; } }
+@media (min-width: 768px) { .footer-grid { grid-template-columns: 2fr 1fr 1fr 1fr; } }
+.footer-other-sites { border-top: 1px solid var(--border); margin-top: 28px; padding-top: 20px; }
+.footer-other-sites h4 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-soft); margin-bottom: 12px; }
+.footer-other-sites__links { display: flex; flex-wrap: wrap; gap: 6px 0; font-size: 0.82rem; color: var(--muted); }
+.footer-other-sites__links a { color: var(--text-soft); }
+.footer-other-sites__links a:hover { color: var(--primary); }
+.footer-other-sites__links span.sep { margin: 0 8px; color: var(--border); }
+.ad-slot__text-link { display: block; text-align: center; padding: 8px 12px; font-size: 0.82rem; color: var(--text-soft); background: var(--card-2); border-radius: var(--radius); }
+.ad-slot__text-link:hover { color: var(--primary); }
 .footer-brand img { height: 30px; margin-bottom: 10px; }
 .footer-grid h4 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-soft); margin-bottom: 12px; }
 .footer-grid a { display: block; padding: 4px 0; color: var(--text-soft); }
@@ -306,6 +316,26 @@ section { padding: 28px 0; }
 .recent-win-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem; }
 .recent-win-row:last-child { border-bottom: none; }
 .recent-win-row__score { font-weight: 800; color: var(--primary-dim); }
+
+/* ---- Recent win cards: gold stars + watermarked trophy icon --------------- */
+.recent-win-card {
+  position: relative; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 10px; background: var(--card);
+}
+.recent-win-card:last-child { margin-bottom: 0; }
+.recent-win-card::after {
+  content: 'emoji_events'; font-family: 'Material Icons Round'; position: absolute;
+  right: -10px; bottom: -18px; font-size: 5.5rem; color: var(--gold); opacity: 0.10;
+  z-index: 0; pointer-events: none; line-height: 1;
+}
+[data-theme="dark"] .recent-win-card::after { opacity: 0.16; }
+.recent-win-card__stars { position: relative; z-index: 1; color: var(--gold); font-size: 0.8rem; letter-spacing: 2px; margin-bottom: 4px; }
+.recent-win-card__teams { position: relative; z-index: 1; font-weight: 700; font-size: 0.88rem; }
+.recent-win-card__meta { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.78rem; color: var(--text-soft); }
+.recent-win-card__odds { font-weight: 800; color: var(--gold-dim); }
+[data-theme="dark"] .recent-win-card__odds { color: var(--gold); }
+.recent-win-card__outcome { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; }
+.recent-win-card__score { font-weight: 800; font-family: var(--font-head); }
 
 .pricing-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 24px; position: relative; }
 .pricing-card.featured { border: 2px solid var(--accent); }

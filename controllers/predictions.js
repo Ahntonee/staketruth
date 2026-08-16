@@ -130,7 +130,7 @@ const getVipPicksOfDay = asyncHandler(async (req, res) => {
 const getRecentWins = asyncHandler(async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 10, 30);
   const [rows] = await pool.query(
-    `SELECT id, slug, home_team, away_team, tip, market, match_date, home_score, away_score
+    `SELECT id, slug, home_team, away_team, tip, market, odds, match_date, home_score, away_score
      FROM predictions WHERE result = 'won' ORDER BY match_date DESC LIMIT ?`,
     [limit]
   );

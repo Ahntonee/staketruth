@@ -21,12 +21,44 @@
     </div>
     <div class="admin-content">
       <div class="card card-pad" style="margin-bottom:16px;">
-        <p class="text-soft" style="margin:0;">Apply for Google AdSense at <a href="https://www.google.com/adsense" target="_blank" rel="noopener">google.com/adsense</a>. Once approved, paste your publisher ID (<code>ca-pub-XXXXXXXXXXXX</code>) and each ad unit's slot ID below. Each placement stays hidden on the live site until you enable it here.</p>
+        <p class="text-soft" style="margin:0;">
+          Four ad types supported: <strong>AdSense</strong> (auto ads via Google), <strong>Banner Image</strong> (upload an image + click-through link),
+          <strong>Text Link</strong> (a plain sponsored link), and <strong>Custom Code</strong> (raw HTML/JS snippet, e.g. a third-party ad network tag).
+          Each slot stays hidden on the live site until enabled.
+        </p>
+      </div>
+      <div class="flex justify-between items-center" style="margin-bottom:14px;">
+        <div></div>
+        <button class="btn btn-primary btn-sm" id="add-btn"><span class="material-icons-round" style="font-size:1rem;">add</span> Add Ad Slot</button>
       </div>
       <div id="slots-list"></div>
     </div>
   </div>
 </div>
+
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-header"><h3>Add Ad Slot</h3><button class="modal-close" id="add-modal-close">&times;</button></div>
+    <form id="add-form">
+      <div class="form-group"><label class="form-label">Slot Name</label><input required name="slot_name" class="form-control" placeholder="e.g. homepage_top_banner_2"></div>
+      <div class="form-group"><label class="form-label">Placement</label><select required name="placement" class="form-control">
+        <option value="homepage_top">Homepage — Top Banner</option>
+        <option value="homepage_sidebar">Homepage — Sidebar</option>
+        <option value="homepage_infeed">Homepage — In-Feed</option>
+        <option value="predictions_infeed">Predictions Page — In-Feed</option>
+        <option value="prediction_detail_bottom">Prediction Detail — Bottom</option>
+        <option value="blog_infeed">Blog — In-Feed</option>
+        <option value="blog_post_bottom">Blog Post — Bottom</option>
+      </select></div>
+      <div class="form-group"><label class="form-label">Ad Type</label><select name="ad_type" class="form-control">
+        <option value="adsense">AdSense</option><option value="banner_image">Banner Image</option>
+        <option value="text_link">Text Link</option><option value="custom_code">Custom Code</option>
+      </select></div>
+      <button class="btn btn-primary btn-block">Create Slot</button>
+    </form>
+  </div>
+</div>
+
 <script src="/js/admin.js"></script>
 <script>
 (function () {
@@ -35,35 +67,98 @@
     predictions_infeed: 'Predictions Page — In-Feed', prediction_detail_bottom: 'Prediction Detail — Bottom',
     blog_infeed: 'Blog — In-Feed', blog_post_bottom: 'Blog Post — Bottom',
   };
+  var AD_TYPE_LABELS = { adsense: 'AdSense', banner_image: 'Banner Image', text_link: 'Text Link', custom_code: 'Custom Code' };
 
+  function typeFieldsHtml(s) {
+    if (s.ad_type === 'banner_image') {
+      return '<div class="grid-2" style="grid-template-columns:1fr 1fr;">' +
+        '<input class="form-control" placeholder="Image URL" value="' + (s.image_url || '') + '" data-image-url="' + s.id + '">' +
+        '<input class="form-control" placeholder="Click-through URL" value="' + (s.link_url || '') + '" data-link-url="' + s.id + '">' +
+        '</div>';
+    }
+    if (s.ad_type === 'text_link') {
+      return '<div class="grid-2" style="grid-template-columns:1fr 1fr;">' +
+        '<input class="form-control" placeholder="Link Text" value="' + (s.link_text || '') + '" data-link-text="' + s.id + '">' +
+        '<input class="form-control" placeholder="URL" value="' + (s.link_url || '') + '" data-link-url="' + s.id + '">' +
+        '</div>';
+    }
+    if (s.ad_type === 'custom_code') {
+      return '<textarea class="form-control" rows="4" placeholder="&lt;script&gt;...&lt;/script&gt; or any HTML" data-custom-code="' + s.id + '">' + (s.custom_code || '') + '</textarea>';
+    }
+    return '<div class="grid-2" style="grid-template-columns:1fr 1fr 1fr;">' +
+      '<input class="form-control" placeholder="ca-pub-XXXXXXXXXXXX" value="' + (s.ad_client_id || '') + '" data-client="' + s.id + '">' +
+      '<input class="form-control" placeholder="Ad Slot ID" value="' + (s.ad_slot_id || '') + '" data-slot="' + s.id + '">' +
+      '<select class="form-control" data-format="' + s.id + '"><option ' + (s.ad_format === 'auto' ? 'selected' : '') + '>auto</option><option ' + (s.ad_format === 'rectangle' ? 'selected' : '') + '>rectangle</option><option ' + (s.ad_format === 'horizontal' ? 'selected' : '') + '>horizontal</option><option ' + (s.ad_format === 'vertical' ? 'selected' : '') + '>vertical</option></select>' +
+      '</div>';
+  }
+
+  function slotCard(s) {
+    return '<div class="card card-pad" style="margin-bottom:12px;" data-slot-card="' + s.id + '">' +
+      '<div class="flex justify-between items-center" style="margin-bottom:10px;flex-wrap:wrap;gap:8px;">' +
+      '<div><strong>' + AD.escapeHtml(s.slot_name) + '</strong> <span class="text-soft" style="font-size:0.8rem;">&middot; ' + (PLACEMENT_LABELS[s.placement] || s.placement) + '</span></div>' +
+      '<div class="flex items-center gap-8">' +
+      '<select class="form-control" style="width:auto;" data-type="' + s.id + '">' +
+      Object.keys(AD_TYPE_LABELS).map(function (t) { return '<option value="' + t + '" ' + (s.ad_type === t ? 'selected' : '') + '>' + AD_TYPE_LABELS[t] + '</option>'; }).join('') +
+      '</select>' +
+      '<label class="flex items-center gap-8"><input type="checkbox" data-enabled="' + s.id + '" ' + (s.is_enabled ? 'checked' : '') + '> Enabled</label>' +
+      '</div></div>' +
+      '<div data-type-fields="' + s.id + '">' + typeFieldsHtml(s) + '</div>' +
+      '<div class="flex gap-8" style="margin-top:10px;">' +
+      '<button class="btn btn-primary btn-sm" data-save="' + s.id + '">Save</button>' +
+      '<button class="btn btn-danger btn-sm" data-remove="' + s.id + '">Delete</button>' +
+      '</div></div>';
+  }
+
+  var cache = [];
   async function load() {
     var res = await AD.api('/ads/admin');
-    document.getElementById('slots-list').innerHTML = res.data.map(function (s) {
-      return '<div class="card card-pad" style="margin-bottom:12px;">' +
-        '<div class="flex justify-between items-center" style="margin-bottom:10px;flex-wrap:wrap;gap:8px;">' +
-        '<strong>' + (PLACEMENT_LABELS[s.placement] || s.placement) + '</strong>' +
-        '<label class="flex items-center gap-8"><input type="checkbox" data-enabled="' + s.id + '" ' + (s.is_enabled ? 'checked' : '') + '> Enabled</label></div>' +
-        '<div class="grid-2" style="grid-template-columns:1fr 1fr 1fr;">' +
-        '<input class="form-control" placeholder="ca-pub-XXXXXXXXXXXX" value="' + (s.ad_client_id || '') + '" data-client="' + s.id + '">' +
-        '<input class="form-control" placeholder="Ad Slot ID" value="' + (s.ad_slot_id || '') + '" data-slot="' + s.id + '">' +
-        '<select class="form-control" data-format="' + s.id + '"><option ' + (s.ad_format === 'auto' ? 'selected' : '') + '>auto</option><option ' + (s.ad_format === 'rectangle' ? 'selected' : '') + '>rectangle</option><option ' + (s.ad_format === 'horizontal' ? 'selected' : '') + '>horizontal</option><option ' + (s.ad_format === 'vertical' ? 'selected' : '') + '>vertical</option></select>' +
-        '</div>' +
-        '<button class="btn btn-primary btn-sm" style="margin-top:10px;" data-save="' + s.id + '">Save</button>' +
-      '</div>';
-    }).join('');
+    cache = res.data;
+    document.getElementById('slots-list').innerHTML = cache.map(slotCard).join('');
   }
+
+  document.getElementById('slots-list').addEventListener('change', function (e) {
+    var typeId = e.target.getAttribute('data-type');
+    if (typeId) {
+      var s = cache.find(function (x) { return String(x.id) === typeId; });
+      s.ad_type = e.target.value;
+      document.querySelector('[data-type-fields="' + typeId + '"]').innerHTML = typeFieldsHtml(s);
+    }
+  });
 
   document.getElementById('slots-list').addEventListener('click', async function (e) {
     var saveId = e.target.getAttribute('data-save');
-    if (!saveId) return;
-    var body = {
-      ad_client_id: document.querySelector('[data-client="' + saveId + '"]').value,
-      ad_slot_id: document.querySelector('[data-slot="' + saveId + '"]').value,
-      ad_format: document.querySelector('[data-format="' + saveId + '"]').value,
-      is_enabled: document.querySelector('[data-enabled="' + saveId + '"]').checked,
-    };
-    try { await AD.api('/ads/admin/' + saveId, { method: 'PUT', body: body }); AD.showToast('Ad slot saved', 'success'); }
-    catch (err) { AD.showToast(err.message, 'error'); }
+    var removeId = e.target.getAttribute('data-remove');
+    if (saveId) {
+      var q = function (attr) { var el = document.querySelector('[' + attr + '="' + saveId + '"]'); return el ? el.value : ''; };
+      var body = {
+        ad_type: document.querySelector('[data-type="' + saveId + '"]').value,
+        ad_client_id: q('data-client'), ad_slot_id: q('data-slot'), ad_format: q('data-format') || 'auto',
+        image_url: q('data-image-url'), link_url: q('data-link-url'), link_text: q('data-link-text'), custom_code: q('data-custom-code'),
+        is_enabled: document.querySelector('[data-enabled="' + saveId + '"]').checked,
+      };
+      try { await AD.api('/ads/admin/' + saveId, { method: 'PUT', body: body }); AD.showToast('Ad slot saved', 'success'); }
+      catch (err) { AD.showToast(err.message, 'error'); }
+    }
+    if (removeId) {
+      if (!AD.confirmAction('Delete this ad slot permanently?')) return;
+      await AD.api('/ads/admin/' + removeId, { method: 'DELETE' });
+      load();
+    }
+  });
+
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.getElementById('add-btn').addEventListener('click', function () { document.getElementById('add-form').reset(); openModal('add-modal'); });
+  document.getElementById('add-modal-close').addEventListener('click', function () { closeModal('add-modal'); });
+  document.getElementById('add-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    try {
+      await AD.api('/ads/admin', { method: 'POST', body: { slot_name: fd.get('slot_name'), placement: fd.get('placement'), ad_type: fd.get('ad_type') } });
+      closeModal('add-modal');
+      AD.showToast('Ad slot created', 'success');
+      load();
+    } catch (err) { AD.showToast(err.message, 'error'); }
   });
 
   async function init() {

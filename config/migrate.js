@@ -403,6 +403,39 @@ const TABLES = [
     INDEX idx_viewed_at (viewed_at),
     INDEX idx_country (country)
   ) ENGINE=InnoDB`,
+
+  // Partner/reciprocal backlinks shown in the footer's "Other Sites" section.
+  // Auto-expire via expires_at rather than a cron delete, so an admin can
+  // still see & renew a lapsed link instead of it silently vanishing.
+  `CREATE TABLE IF NOT EXISTS backlinks (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    duration_days INT NOT NULL DEFAULT 30,
+    expires_at DATETIME NOT NULL,
+    is_active TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB`,
+
+  // Real, publicly-visible SEO landing pages (league/market specific) --
+  // shown identically to users and search engines, no cloaking. Content is
+  // just an intro/H1; the actual predictions list is pulled live at render
+  // time from the `predictions` table filtered by league_id/category.
+  `CREATE TABLE IF NOT EXISTS seo_landing_pages (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    slug VARCHAR(200) UNIQUE NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    meta_description VARCHAR(500),
+    h1 VARCHAR(255),
+    intro_content TEXT,
+    league_id INT,
+    category VARCHAR(50),
+    is_published TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE SET NULL
+  ) ENGINE=InnoDB`,
 ];
 
 // NOTE: api_league_id values follow API-Football's well-documented ID scheme.
@@ -461,6 +494,8 @@ const SITE_SETTINGS = [
   ['social_facebook', ''],
   ['social_reddit', ''],
   ['social_whatsapp', ''],
+  ['contact_email', 'support@staketruth.com'],
+  ['contact_whatsapp', ''],
   ['odds_api_calls_today', '0'],
   ['last_sync_fixtures', ''],
   ['last_sync_results', ''],
@@ -511,6 +546,11 @@ async function migrate() {
   // Idempotent column additions for tables that may already exist from an earlier run
   await ensureColumn('predictions', 'is_published', "TINYINT(1) DEFAULT 1");
   await ensureColumn('users', 'is_comment_banned', "TINYINT(1) DEFAULT 0");
+  await ensureColumn('ad_slots', 'ad_type', "ENUM('adsense','banner_image','text_link','custom_code') DEFAULT 'adsense'");
+  await ensureColumn('ad_slots', 'image_url', "VARCHAR(500)");
+  await ensureColumn('ad_slots', 'link_url', "VARCHAR(500)");
+  await ensureColumn('ad_slots', 'link_text', "VARCHAR(255)");
+  await ensureColumn('ad_slots', 'custom_code', "LONGTEXT");
 
   // Seed admin
   const [existingAdmin] = await pool.query('SELECT id FROM users WHERE email = ?', ['admin@staketruth.com']);
