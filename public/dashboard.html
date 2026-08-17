@@ -78,9 +78,9 @@
 
         if (user.role === 'vip' && !user.telegram_invited) {
           document.getElementById('telegram-card').innerHTML =
-            '<div class="card card-pad" style="margin-bottom:20px;background:var(--gradient-green);color:#2b1a3d;">' +
+            '<div class="card card-pad" style="margin-bottom:20px;background:var(--gradient-green);color:#241a0d;">' +
             '<strong>Join the VIP Telegram Channel</strong><p>Get real-time pick alerts.</p>' +
-            '<button class="btn" style="background:#2b1a3d;color:#fff;" id="telegram-btn">Join Now</button></div>';
+            '<button class="btn" style="background:#241a0d;color:#fff;" id="telegram-btn">Join Now</button></div>';
           document.getElementById('telegram-btn').addEventListener('click', async function () {
             await ST.api('/users/telegram-invited', { method: 'PUT' });
             window.open('https://t.me/', '_blank');

@@ -52,7 +52,7 @@
     new Chart(document.getElementById('chart-revenue'), {
       type: 'bar',
       data: { labels: months, datasets: plans.map(function (plan, i) {
-        return { label: plan, backgroundColor: ['#ff6b35', '#b39ddb', '#7e57c2'][i], data: months.map(function (m) {
+        return { label: plan, backgroundColor: ['#ff6b35', '#f0b90b', '#ffca28'][i], data: months.map(function (m) {
           var row = byMonth.data.find(function (r) { return r.month === m && r.plan === plan; });
           return row ? Number(row.total) : 0;
         }) };
@@ -63,7 +63,7 @@
     var planDist = await AD.api('/admin/revenue/plans');
     new Chart(document.getElementById('chart-plans'), {
       type: 'doughnut',
-      data: { labels: planDist.data.map(function (r) { return r.plan; }), datasets: [{ data: planDist.data.map(function (r) { return r.cnt; }), backgroundColor: ['#ff6b35', '#b39ddb', '#7e57c2'] }] },
+      data: { labels: planDist.data.map(function (r) { return r.plan; }), datasets: [{ data: planDist.data.map(function (r) { return r.cnt; }), backgroundColor: ['#ff6b35', '#f0b90b', '#ffca28'] }] },
     });
 
     var churn = await AD.api('/admin/revenue/churn');

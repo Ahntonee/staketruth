@@ -4,21 +4,23 @@
    ========================================================================= */
 
 :root {
-  /* ---- Brand palette: sunset orange + lilac purple + off-white ----------
+  /* ---- Brand palette: white + orange + yellow only — no purple anywhere ---
      Token names below are kept stable from the original design system (so
      every var(--leaf-green) etc. reference across the app updates for free)
-     but now hold the new brand hues, per the rebrand: sunset orange is the
-     primary/CTA colour, lilac purple is the secondary/VIP accent. Semantic
-     status colours (won/lost/confidence tiers) are intentionally kept as
-     dedicated green/amber/red tokens below, independent of the brand accent
-     — so a "won" badge still reads as unambiguously green regardless of
-     what the brand colours are. */
+     but now hold the new brand hues. Sunset orange is the primary/CTA colour,
+     gold/yellow is the secondary/VIP accent, white/off-white is the neutral
+     base. Dark mode uses plain neutral greys (no purple tint) for surfaces —
+     "no purple" applies to hue, not to needing *a* dark neutral to exist.
+     Semantic status colours (won/lost/confidence tiers) are intentionally
+     kept as dedicated green/amber/red tokens below, independent of the
+     brand accent — so a "won" badge still reads as unambiguously green
+     regardless of what the brand colours are. */
   --off-white:    #faf6f2;
   --cream:        #f3e9e0;
   --leaf-green:   #ff6b35;   /* = sunset orange (primary) */
-  --light-green:  #b39ddb;   /* = lilac purple (accent) */
-  --deep-green:   #3a2a4d;   /* dark-mode card background (deep plum) */
-  --charcoal:     #241b2f;   /* dark-mode page background (purple-tinted) */
+  --light-green:  #f0b90b;   /* = gold/yellow (accent) */
+  --deep-green:   #262626;   /* dark-mode card background (neutral, no purple) */
+  --charcoal:     #1a1a1a;   /* dark-mode page background (neutral, no purple) */
   --red-start:    #ff9a56;   /* sunset gradient start — banker/urgent accents */
   --red-end:      #e0501f;   /* sunset gradient end */
 
@@ -40,18 +42,18 @@
   --bg-2:       var(--cream);
   --card:       #ffffff;
   --card-2:     #f7ece1;
-  --border:     rgba(126, 87, 194, 0.16);
-  --text:       #2b2138;
-  --text-soft:  rgba(43, 33, 56, 0.68);
-  --muted:      rgba(43, 33, 56, 0.42);
+  --border:     rgba(0, 0, 0, 0.10);
+  --text:       #242424;
+  --text-soft:  rgba(36, 36, 36, 0.68);
+  --muted:      rgba(36, 36, 36, 0.42);
   --primary:    var(--leaf-green);
   --primary-dim:#e0501f;
   --accent:     var(--light-green);
   --warning:    #d4a017;
   --danger:     #d6455a;
-  --info:       #6c63b5;
+  --info:       var(--light-green);
   --gradient-red:   linear-gradient(135deg, var(--red-start), var(--red-end));      /* sunset — banker/live/urgent */
-  --gradient-green: linear-gradient(135deg, var(--light-green), #7e57c2);           /* lilac — VIP/premium */
+  --gradient-green: linear-gradient(135deg, var(--light-green), var(--leaf-green));  /* gold-to-orange — VIP/premium */
 
   --font-head: 'Inter', -apple-system, sans-serif;
   --font-body: 'Open Sans', -apple-system, sans-serif;
@@ -59,31 +61,31 @@
   --radius-lg: 14px;
   --radius-xl: 20px;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
-  --shadow-md: 0 6px 20px rgba(43,33,56,0.10);
+  --shadow-md: 0 6px 20px rgba(0,0,0,0.10);
   --header-h: 56px;
 }
 
 [data-theme="dark"] {
   --bg:         var(--charcoal);
-  --bg-2:       #2e2138;
+  --bg-2:       #202020;
   --card:       var(--deep-green);
-  --card-2:     #40304f;
-  --border:     rgba(179, 157, 219, 0.18);
-  --text:       #f3ecf7;
-  --text-soft:  rgba(243, 236, 247, 0.72);
-  --muted:      rgba(243, 236, 247, 0.42);
+  --card-2:     #2e2e2e;
+  --border:     rgba(255, 255, 255, 0.14);
+  --text:       #f2f2f0;
+  --text-soft:  rgba(242, 242, 240, 0.72);
+  --muted:      rgba(242, 242, 240, 0.42);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg:         var(--charcoal);
-    --bg-2:       #2e2138;
+    --bg-2:       #202020;
     --card:       var(--deep-green);
-    --card-2:     #40304f;
-    --border:     rgba(179, 157, 219, 0.18);
-    --text:       #f3ecf7;
-    --text-soft:  rgba(243, 236, 247, 0.72);
-    --muted:      rgba(243, 236, 247, 0.42);
+    --card-2:     #2e2e2e;
+    --border:     rgba(255, 255, 255, 0.14);
+    --text:       #f2f2f0;
+    --text-soft:  rgba(242, 242, 240, 0.72);
+    --muted:      rgba(242, 242, 240, 0.42);
   }
 }
 
@@ -272,7 +274,7 @@ section { padding: 28px 0; }
 .btn-primary { background: var(--primary); color: #fff; box-shadow: var(--shadow-sm); }
 .btn-primary:hover { box-shadow: 0 0 0 4px rgba(67,160,71,0.18); }
 .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
-.btn-vip { background: var(--gradient-green); color: #2b1a3d; }
+.btn-vip { background: var(--gradient-green); color: #241a0d; }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-ghost { background: transparent; color: var(--text); }
 .btn-block-mobile { width: 100%; }
@@ -347,7 +349,7 @@ section { padding: 28px 0; }
 
 .pricing-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 24px; position: relative; }
 .pricing-card.featured { border: 2px solid var(--accent); }
-.pricing-card__badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #2b1a3d; font-size: 0.7rem; font-weight: 800; padding: 4px 12px; border-radius: 20px; }
+.pricing-card__badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #241a0d; font-size: 0.7rem; font-weight: 800; padding: 4px 12px; border-radius: 20px; }
 .pricing-card__price { font-size: 2rem; font-weight: 800; font-family: var(--font-head); margin: 12px 0; }
 .pricing-card ul { list-style: none; padding: 0; margin: 16px 0; }
 .pricing-card li { padding: 6px 0; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
@@ -382,7 +384,7 @@ section { padding: 28px 0; }
 .result-badge-btn.pending { background: var(--result-pending); color: var(--result-pending-text); }
 .result-badge-btn.lost { background: var(--result-lost); color: #fff; }
 .result-badge-btn.void, .result-badge-btn.cancelled { background: var(--border); color: var(--text-soft); }
-.badge-vip { background: var(--gradient-green); color: #2b1a3d; }
+.badge-vip { background: var(--gradient-green); color: #241a0d; }
 .badge-banker { background: var(--gradient-red); color: #fff; animation: pulse 2s infinite; }
 .badge-live { background: var(--gradient-red); color: #fff; display: inline-flex; align-items: center; gap: 4px; }
 .badge-live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: pulse 1.4s infinite; }

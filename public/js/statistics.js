@@ -21,7 +21,7 @@
     if (ctx._chart) ctx._chart.destroy();
     ctx._chart = new Chart(ctx, {
       type: 'doughnut',
-      data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#ff6b35', '#b39ddb', '#7e57c2', '#ff9a56', '#e0501f', '#d4a017', '#4caf6d', '#6c63b5', '#3a2a4d', '#d1c4e9'] }] },
+      data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#ff6b35', '#f0b90b', '#ffca28', '#ff9a56', '#e0501f', '#d4a017', '#4caf6d', '#ffb347', '#c9880a', '#ffe082'] }] },
       options: { responsive: true },
     });
   }
@@ -72,7 +72,7 @@
       { key: 'league_name', label: 'League' },
       { key: 'goals_per_game', label: 'Goals/Game', format: function (r) { return Number(r.goals_per_game || 0).toFixed(2); } },
     ]);
-    barChart('leagues-scoring-chart', rows.map(function (r) { return r.league_name; }), rows.map(function (r) { return Number(r.goals_per_game || 0); }), 'Goals/Game', '#7e57c2');
+    barChart('leagues-scoring-chart', rows.map(function (r) { return r.league_name; }), rows.map(function (r) { return Number(r.goals_per_game || 0); }), 'Goals/Game', '#f0b90b');
   }
 
   async function loadMarketReliability() {

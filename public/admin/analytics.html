@@ -63,7 +63,7 @@
     var devices = await AD.api('/admin/analytics/devices');
     new Chart(document.getElementById('chart-devices'), {
       type: 'doughnut',
-      data: { labels: devices.data.map(function (r) { return r.device_type; }), datasets: [{ data: devices.data.map(function (r) { return r.views; }), backgroundColor: ['#ff6b35', '#b39ddb', '#7e57c2'] }] },
+      data: { labels: devices.data.map(function (r) { return r.device_type; }), datasets: [{ data: devices.data.map(function (r) { return r.views; }), backgroundColor: ['#ff6b35', '#f0b90b', '#ffca28'] }] },
     });
 
     var pages = await AD.api('/admin/analytics/pages');
@@ -85,7 +85,7 @@
     var hours = await AD.api('/admin/analytics/peak-hours');
     new Chart(document.getElementById('chart-hours'), {
       type: 'bar',
-      data: { labels: hours.data.map(function (r) { return r.hour + ':00'; }), datasets: [{ label: 'Views', data: hours.data.map(function (r) { return r.views; }), backgroundColor: '#7e57c2', borderRadius: 4 }] },
+      data: { labels: hours.data.map(function (r) { return r.hour + ':00'; }), datasets: [{ label: 'Views', data: hours.data.map(function (r) { return r.views; }), backgroundColor: '#f0b90b', borderRadius: 4 }] },
       options: { responsive: true, plugins: { legend: { display: false } } },
     });
   }

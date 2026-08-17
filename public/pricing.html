@@ -119,7 +119,7 @@
       var res = await ST.api('/subscriptions/status');
       var sub = res.data;
       if (sub && sub.status === 'active') {
-        slot.innerHTML = '<div class="container"><div class="card card-pad text-center" style="background:var(--gradient-green);color:#2b1a3d;"><strong>You\'re VIP!</strong> Your ' + sub.plan + ' plan is active until ' + new Date(sub.expires_at).toDateString() + '. <a href="/dashboard.html" style="text-decoration:underline;">View Dashboard</a></div></div>';
+        slot.innerHTML = '<div class="container"><div class="card card-pad text-center" style="background:var(--gradient-green);color:#241a0d;"><strong>You\'re VIP!</strong> Your ' + sub.plan + ' plan is active until ' + new Date(sub.expires_at).toDateString() + '. <a href="/dashboard.html" style="text-decoration:underline;">View Dashboard</a></div></div>';
         document.getElementById('sticky-cta').classList.add('hidden');
       }
     } catch (e) { /* not subscribed */ }

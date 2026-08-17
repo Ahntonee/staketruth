@@ -192,7 +192,7 @@
         labels: days.map(function (d) { return d.slice(5); }),
         datasets: [
           { type: 'bar', label: 'Predictions Created', data: days.map(function (d) { return volumeMap[d] || 0; }), backgroundColor: 'rgba(255,107,53,0.55)', borderRadius: 4, yAxisID: 'y' },
-          { type: 'line', label: 'Win Rate %', data: days.map(function (d) { return accuracyMap[d]; }), borderColor: '#7e57c2', backgroundColor: '#7e57c2', tension: 0.35, yAxisID: 'y1', spanGaps: true },
+          { type: 'line', label: 'Win Rate %', data: days.map(function (d) { return accuracyMap[d]; }), borderColor: '#f0b90b', backgroundColor: '#f0b90b', tension: 0.35, yAxisID: 'y1', spanGaps: true },
         ],
       },
       options: {
