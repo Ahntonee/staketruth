@@ -150,15 +150,16 @@
 
   document.getElementById('post-form').addEventListener('submit', async function (e) {
     e.preventDefault();
-    var fd = new FormData(e.target);
-    var id = fd.get('id');
-    var body = {
-      title: fd.get('title'), category: fd.get('category'), author_name: fd.get('author_name'),
-      excerpt: fd.get('excerpt'), content: mde.value(), featured_image: fd.get('featured_image') || null,
-      meta_title: fd.get('meta_title'), meta_description: fd.get('meta_description'), keywords: fd.get('keywords'),
-      is_published: fd.get('is_published') === 'on',
-    };
+    if (!mde) { AD.showToast('The editor failed to load — refresh the page and try again.', 'error'); return; }
     try {
+      var fd = new FormData(e.target);
+      var id = fd.get('id');
+      var body = {
+        title: fd.get('title'), category: fd.get('category'), author_name: fd.get('author_name'),
+        excerpt: fd.get('excerpt'), content: mde.value(), featured_image: fd.get('featured_image') || null,
+        meta_title: fd.get('meta_title'), meta_description: fd.get('meta_description'), keywords: fd.get('keywords'),
+        is_published: fd.get('is_published') === 'on',
+      };
       if (id) await AD.api('/blog/' + id, { method: 'PUT', body: body });
       else await AD.api('/blog', { method: 'POST', body: body });
       closeModal();
@@ -171,7 +172,11 @@
     var user = await AD.requireAdmin();
     if (!user) return;
     AD.renderShell('blog', user, 'Blog CMS');
-    mde = new EasyMDE({ element: document.getElementById('content-editor'), spellChecker: false, minHeight: '200px', autoDownloadFontAwesome: false });
+    try {
+      mde = new EasyMDE({ element: document.getElementById('content-editor'), spellChecker: false, minHeight: '200px', autoDownloadFontAwesome: false });
+    } catch (err) {
+      AD.showToast('Editor failed to load — you can still manage existing posts, but new/edited content needs a page refresh first.', 'error');
+    }
     load();
   }
   init();
