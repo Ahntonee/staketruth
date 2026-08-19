@@ -22,7 +22,9 @@
     <div class="admin-content">
       <div class="flex justify-between items-center" style="margin-bottom:14px;flex-wrap:wrap;gap:8px;">
         <div class="flex gap-8" style="flex-wrap:wrap;">
-          <select id="filter-date" class="form-control" style="width:auto;"><option value="">Any Date</option><option value="today">Today</option></select>
+          <input type="text" id="filter-search" class="form-control" style="width:auto;" placeholder="Search team name…">
+          <input type="date" id="filter-date" class="form-control" style="width:auto;">
+          <button class="btn btn-outline btn-sm" id="filter-date-clear" title="Clear date">Clear Date</button>
           <select id="filter-category" class="form-control" style="width:auto;"><option value="">Any Category</option>
             <option value="free">Free</option><option value="vip">VIP</option><option value="banker">Banker</option>
             <option value="over_2_5">Over 2.5</option><option value="under_2_5">Under 2.5</option><option value="gg">BTTS</option>
@@ -116,7 +118,7 @@
 <script>
 (function () {
   var bulkSelect;
-  var state = { date: '', category: '', result: '' };
+  var state = { date: '', category: '', result: '', search: '' };
 
   function rowHtml(p) {
     return '<tr>' +
@@ -130,7 +132,11 @@
       '<td data-label="Result"><button class="result-badge-btn ' + p.result + '" data-set-result="' + p.id + '">' + p.result + '</button></td>' +
       '<td data-label="Source">' + p.source + '</td>' +
       '<td data-label="Pushed">' + (p.pushed_to_registered ? '✅' : '—') + '</td>' +
-      '<td data-label="Actions"><button class="btn btn-outline btn-sm" data-toggle-publish="' + p.id + '" data-published="' + (p.is_published ? '1' : '0') + '">' + (p.is_published ? 'Unpublish' : 'Publish') + '</button> <button class="btn btn-outline btn-sm" data-edit="' + p.id + '">Edit</button> <button class="btn btn-danger btn-sm" data-delete="' + p.id + '">Delete</button></td>' +
+      '<td data-label="Actions"><div class="icon-btn-row">' +
+        '<button class="icon-btn' + (p.is_published ? ' icon-btn-active' : '') + '" data-toggle-publish="' + p.id + '" data-published="' + (p.is_published ? '1' : '0') + '" title="' + (p.is_published ? 'Unpublish' : 'Publish') + '"><span class="material-icons-round">' + (p.is_published ? 'visibility_off' : 'visibility') + '</span></button>' +
+        '<button class="icon-btn" data-edit="' + p.id + '" title="Edit"><span class="material-icons-round">edit</span></button>' +
+        '<button class="icon-btn icon-btn-danger" data-delete="' + p.id + '" title="Delete"><span class="material-icons-round">delete</span></button>' +
+      '</div></td>' +
     '</tr>';
   }
 
@@ -138,9 +144,10 @@
     var tbody = document.getElementById('predictions-tbody');
     tbody.innerHTML = '<tr><td colspan="11">Loading…</td></tr>';
     var params = new URLSearchParams({ limit: 50 });
-    if (state.date) params.set('date', new Date().toISOString().slice(0, 10));
+    if (state.date) params.set('date', state.date);
     if (state.category) params.set('category', state.category);
     if (state.result) params.set('result', state.result);
+    if (state.search) params.set('search', state.search);
     try {
       var res = await AD.api('/predictions/admin/list?' + params.toString());
       tbody.innerHTML = res.data.map(rowHtml).join('') || '<tr><td colspan="11">No predictions found.</td></tr>';
@@ -149,8 +156,17 @@
   }
 
   document.getElementById('filter-date').addEventListener('change', function () { state.date = this.value; load(); });
+  document.getElementById('filter-date-clear').addEventListener('click', function () {
+    document.getElementById('filter-date').value = ''; state.date = ''; load();
+  });
   document.getElementById('filter-category').addEventListener('change', function () { state.category = this.value; load(); });
   document.getElementById('filter-result').addEventListener('change', function () { state.result = this.value; load(); });
+  var searchTimer;
+  document.getElementById('filter-search').addEventListener('input', function () {
+    var value = this.value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () { state.search = value; load(); }, 350);
+  });
 
   function openModal(id) { document.getElementById(id).classList.add('open'); }
   function closeModal(id) { document.getElementById(id).classList.remove('open'); }

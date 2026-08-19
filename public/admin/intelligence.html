@@ -28,6 +28,13 @@
   .weight-item__label-wrap { display: flex; align-items: center; gap: 6px; }
   .weight-item__label { font-weight: 700; font-size: 0.9rem; }
   .weight-item__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--warning); flex-shrink: 0; }
+  .weight-group--advanced { grid-column: 1 / -1; }
+  .weight-group--advanced summary.weight-group__title { cursor: pointer; margin-bottom: 0; list-style: none; }
+  .weight-group--advanced summary.weight-group__title::-webkit-details-marker { display: none; }
+  .weight-group--advanced summary.weight-group__title::after { content: 'expand_more'; font-family: 'Material Icons Round'; margin-left: auto; color: var(--text-soft); }
+  .weight-group--advanced[open] summary.weight-group__title::after { content: 'expand_less'; }
+  .weight-group--advanced[open] summary.weight-group__title { border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 16px; }
+  .weight-group--advanced:not([open]) summary.weight-group__title { border-bottom: none; }
   .weight-item__row { display: flex; align-items: center; gap: 10px; }
   .weight-item__num {
     font-family: var(--font-head); font-weight: 800; font-size: 0.85rem; color: var(--primary);
@@ -115,17 +122,35 @@
 <script>
 (function () {
   var WEIGHT_LABELS = {
-    form_weight: 'Form Weight', h2h_weight: 'H2H Weight', odds_weight: 'Odds Weight',
-    market_weight: 'Market Weight', league_weight: 'League Weight', home_advantage: 'Home Advantage',
-    poisson_k: 'Poisson Max Goals', learning_rate: 'Learning Rate', min_confidence_publish: 'Min Confidence to Publish',
-    auto_publish_threshold: 'Auto-Publish Threshold', team_pattern_weight: 'Team Pattern Weight',
-    vip_pick_threshold: 'VIP Pick of Day Threshold', auto_push_threshold: 'Auto-Push Threshold',
+    form_weight: 'Recent Form', h2h_weight: 'Head-to-Head History', odds_weight: 'Bookmaker Odds',
+    market_weight: 'Bet Type Track Record', league_weight: 'League Track Record', home_advantage: 'Home Advantage Boost',
+    poisson_k: 'Scoring Model Precision', learning_rate: 'Self-Correction Speed',
+    auto_publish_threshold: 'Auto-Publish Score', team_pattern_weight: 'Team-Specific Pattern Learning',
+    vip_pick_threshold: 'VIP Pick of the Day Score', auto_push_threshold: 'Auto-Push to Free Users',
+  };
+  // Plain-language, direction-aware explanations -- replaces the old ML-jargon
+  // descriptions. Every entry says what the setting does AND what "higher"
+  // means in practice, since "what does this number mean" was the exact
+  // confusion reported.
+  var WEIGHT_HINTS = {
+    form_weight: 'How much recent results shape a pick. Higher = today’s confidence leans more on how each team has played in its last few games.',
+    h2h_weight: 'How much past results between these exact two teams matter. Higher = head-to-head history between them counts for more.',
+    odds_weight: 'How closely picks follow what bookmakers already expect. Higher = picks lean closer to the betting market’s own view.',
+    market_weight: 'How much a bet type’s own past accuracy factors in (e.g. how reliable "Over 2.5" tips have been historically). Higher = boosts bet types that have historically held up better.',
+    league_weight: 'How much a league’s own predictability factors in. Higher = boosts leagues that have historically been easier to call.',
+    auto_publish_threshold: 'Predictions scoring at or above this go live automatically — no approval needed. Anything below waits in your Review Queue for you to approve.',
+    vip_pick_threshold: 'Predictions scoring at or above this qualify for the VIP Picks of the Day spotlight on the site.',
+    auto_push_threshold: 'Predictions scoring at or above this get automatically sent to your free registered users at midnight.',
+    home_advantage: 'How much extra credit the home team gets just for playing at home. Higher = home teams are favored more strongly.',
+    poisson_k: 'A technical setting for the scoring model’s math — not something you need to change. The default works for virtually every match.',
+    learning_rate: 'How fast the engine adjusts based on its own recent wins and losses. Higher = it reacts faster to a hot or cold streak, but can overreact to a short run of results.',
+    team_pattern_weight: 'How much a team’s own history with this exact bet type counts (e.g. "this team + Over 2.5" specifically), on top of everything else.',
   };
   var WEIGHT_GROUPS = [
-    { title: 'Confidence Factors', icon: 'insights', keys: ['form_weight', 'h2h_weight', 'odds_weight', 'market_weight', 'league_weight'] },
-    { title: 'Publish & Push Thresholds', icon: 'rule', keys: ['min_confidence_publish', 'auto_publish_threshold', 'vip_pick_threshold', 'auto_push_threshold'] },
-    { title: 'Model Parameters', icon: 'settings_suggest', keys: ['home_advantage', 'poisson_k', 'learning_rate', 'team_pattern_weight'] },
+    { title: 'Publishing Rules', icon: 'rule', keys: ['auto_publish_threshold', 'vip_pick_threshold', 'auto_push_threshold'] },
+    { title: 'What The Engine Considers', icon: 'insights', keys: ['form_weight', 'h2h_weight', 'odds_weight', 'market_weight', 'league_weight'] },
   ];
+  var ADVANCED_GROUP = { title: 'Advanced (rarely needs changing)', icon: 'settings_suggest', keys: ['home_advantage', 'poisson_k', 'learning_rate', 'team_pattern_weight'] };
   // Fixed per-key ranges — NOT derived from the current value. A slider's max
   // used to be picked based on whatever value was already saved, which meant
   // a full drag to the right on h2h_weight/learning_rate silently saved 2.0
@@ -174,27 +199,40 @@
     res.data.forEach(function (w) { byKey[w.weight_key] = w; });
     var container = document.getElementById('weights-form');
 
-    container.innerHTML = WEIGHT_GROUPS.map(function (group) {
-      var items = group.keys.filter(function (k) { return byKey[k]; }).map(function (key) {
-        var w = byKey[key];
-        var range = WEIGHT_RANGES[key] || { min: 0, max: 10, step: 0.01 };
-        var def = WEIGHT_DEFAULTS[key];
-        var isChanged = def !== undefined && Number(w.weight_value) !== def;
-        return '<div class="weight-item" data-weight-item="' + key + '">' +
-          '<div class="weight-item__head">' +
-            '<span class="weight-item__label-wrap"><span class="weight-item__label">' + (WEIGHT_LABELS[key] || key) + '</span>' +
-            '<span class="weight-item__dot" data-dot-for="' + key + '" style="visibility:' + (isChanged ? 'visible' : 'hidden') + '" title="Differs from default"></span></span>' +
-          '</div>' +
-          '<div class="weight-item__row">' +
-            '<input type="range" class="weight-slider" min="' + range.min + '" max="' + range.max + '" step="' + range.step + '" value="' + w.weight_value + '" data-weight-key="' + key + '">' +
-            '<input type="number" class="weight-item__num" min="' + range.min + '" max="' + range.max + '" step="' + range.step + '" value="' + w.weight_value + '" data-weight-num-for="' + key + '">' +
-          '</div>' +
-          (def !== undefined ? '<div class="weight-item__default">Default: ' + def + '</div>' : '') +
-          (w.description ? '<div class="weight-item__desc">' + AD.escapeHtml(w.description) + '</div>' : '') +
-        '</div>';
-      }).join('');
+    function itemHtml(key) {
+      var w = byKey[key];
+      if (!w) return '';
+      var range = WEIGHT_RANGES[key] || { min: 0, max: 10, step: 0.01 };
+      var def = WEIGHT_DEFAULTS[key];
+      var isChanged = def !== undefined && Number(w.weight_value) !== def;
+      var hint = WEIGHT_HINTS[key] || w.description;
+      return '<div class="weight-item" data-weight-item="' + key + '">' +
+        '<div class="weight-item__head">' +
+          '<span class="weight-item__label-wrap"><span class="weight-item__label">' + (WEIGHT_LABELS[key] || key) + '</span>' +
+          '<span class="weight-item__dot" data-dot-for="' + key + '" style="visibility:' + (isChanged ? 'visible' : 'hidden') + '" title="Differs from default"></span></span>' +
+        '</div>' +
+        '<div class="weight-item__row">' +
+          '<input type="range" class="weight-slider" min="' + range.min + '" max="' + range.max + '" step="' + range.step + '" value="' + w.weight_value + '" data-weight-key="' + key + '">' +
+          '<input type="number" class="weight-item__num" min="' + range.min + '" max="' + range.max + '" step="' + range.step + '" value="' + w.weight_value + '" data-weight-num-for="' + key + '">' +
+        '</div>' +
+        (def !== undefined ? '<div class="weight-item__default">Default: ' + def + '</div>' : '') +
+        (hint ? '<div class="weight-item__desc">' + AD.escapeHtml(hint) + '</div>' : '') +
+      '</div>';
+    }
+
+    var mainGroupsHtml = WEIGHT_GROUPS.map(function (group) {
+      var items = group.keys.filter(function (k) { return byKey[k]; }).map(itemHtml).join('');
       return '<div class="weight-group"><div class="weight-group__title"><span class="material-icons-round">' + group.icon + '</span>' + group.title + '</div>' + items + '</div>';
     }).join('');
+
+    var advancedItems = ADVANCED_GROUP.keys.filter(function (k) { return byKey[k]; }).map(itemHtml).join('');
+    var advancedHtml = '<details class="weight-group weight-group--advanced">' +
+      '<summary class="weight-group__title"><span class="material-icons-round">' + ADVANCED_GROUP.icon + '</span>' + ADVANCED_GROUP.title + '</summary>' +
+      '<p class="text-soft" style="font-size:0.78rem;margin:10px 0 16px;">These control the scoring model\'s internal math. The defaults work well for almost every case — only change these if you know what you\'re doing.</p>' +
+      advancedItems +
+    '</details>';
+
+    container.innerHTML = mainGroupsHtml + advancedHtml;
 
     function syncFromValue(key, value) {
       var def = WEIGHT_DEFAULTS[key];

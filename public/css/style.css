@@ -280,6 +280,20 @@ section { padding: 28px 0; }
 .btn-block-mobile { width: 100%; }
 @media (min-width: 640px) { .btn-block-mobile { width: auto; } }
 
+/* Compact icon-only action buttons for dense admin tables -- lets a row of
+   actions (publish/edit/delete etc.) sit on one line instead of wrapping. */
+.icon-btn-row { display: flex; gap: 4px; flex-wrap: nowrap; }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; min-height: 32px; padding: 0; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--card); color: var(--text-soft);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.icon-btn .material-icons-round { font-size: 1.05rem; }
+.icon-btn:hover { background: var(--card-2); color: var(--primary); border-color: var(--primary); }
+.icon-btn.icon-btn-danger:hover { color: var(--danger); border-color: var(--danger); }
+.icon-btn.icon-btn-active { color: var(--primary); border-color: var(--primary); }
+
 /* ---- Cards --------------------------------------------------------------- */
 .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
 .card-pad { padding: 18px; }

@@ -22,6 +22,15 @@
     <div class="admin-content">
       <p class="text-soft">Predictions today and all-time win rate per category.</p>
       <div class="grid-3" id="category-grid"></div>
+
+      <h3 class="section-title" style="font-size:1.05rem;margin-top:28px;"><span class="material-icons-round">military_tech</span>Most Profitable Teams</h3>
+      <p class="text-soft" style="font-size:0.85rem;margin-top:-8px;">Teams our picks have made the most profit on, based on graded results — your favourites to lean on.</p>
+      <div class="table-scroll">
+        <table class="data-table" id="profitable-teams-table">
+          <thead><tr><th>#</th><th>Team</th><th>Best Market</th><th>Record</th><th>Sample</th><th>Profit</th></tr></thead>
+          <tbody id="profitable-teams-tbody"><tr><td colspan="6">Loading…</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -29,6 +38,23 @@
 <script>
 (function () {
   var CATEGORIES = ['free', 'vip', 'banker', 'over_1_5', 'over_2_5', 'over_3_5', 'under_1_5', 'under_2_5', 'under_3_5', 'gg', 'home_win', 'away_win', 'draw'];
+
+  async function loadProfitableTeams() {
+    var tbody = document.getElementById('profitable-teams-tbody');
+    try {
+      var res = await AD.api('/admin/intelligence/profitability?type=team');
+      tbody.innerHTML = res.data.length ? res.data.map(function (r, i) {
+        return '<tr>' +
+          '<td data-label="#"><span class="rank-badge">' + (i + 1) + '</span></td>' +
+          '<td data-label="Team">' + AD.escapeHtml(r.entity_name) + '</td>' +
+          '<td data-label="Best Market">' + AD.escapeHtml(r.market || '—') + '</td>' +
+          '<td data-label="Record"><span class="badge badge-won">' + r.wins + 'W</span> <span class="badge badge-lost">' + r.losses + 'L</span></td>' +
+          '<td data-label="Sample">' + r.total_tips + '</td>' +
+          '<td data-label="Profit"><strong style="color:' + (r.profit_units >= 0 ? 'var(--primary)' : 'var(--danger)') + '">' + Number(r.profit_units).toFixed(1) + 'u</strong></td>' +
+        '</tr>';
+      }).join('') : '<tr><td colspan="6">Not enough graded results yet.</td></tr>';
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="6">Could not load profitability data.</td></tr>'; }
+  }
 
   async function load() {
     var grid = document.getElementById('category-grid');
@@ -55,6 +81,7 @@
     if (!user) return;
     AD.renderShell('categories', user, 'Categories');
     load();
+    loadProfitableTeams();
   }
   init();
 })();

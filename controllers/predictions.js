@@ -331,7 +331,7 @@ const bulkPush = asyncHandler(async (req, res) => {
 
 // Admin list — sees every field, unredacted, with extra filters
 const adminListPredictions = asyncHandler(async (req, res) => {
-  const { date, league_id, category, result, source, vip, banker, pushed } = req.query;
+  const { date, league_id, category, result, source, vip, banker, pushed, search } = req.query;
   const { page, limit, offset } = parsePagination(req.query, 25, 200);
   const where = ['1=1'];
   const params = [];
@@ -343,6 +343,7 @@ const adminListPredictions = asyncHandler(async (req, res) => {
   if (vip === 'true') where.push('p.is_vip = 1');
   if (banker === 'true') where.push('p.is_banker = 1');
   if (pushed === 'true') where.push('p.pushed_to_registered = 1');
+  if (search) { where.push('(p.home_team LIKE ? OR p.away_team LIKE ?)'); params.push(`%${search}%`, `%${search}%`); }
   const whereSql = where.join(' AND ');
 
   const [countRows] = await pool.query(`SELECT COUNT(*) AS cnt FROM predictions p WHERE ${whereSql}`, params);
