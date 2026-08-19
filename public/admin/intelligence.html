@@ -89,8 +89,8 @@
       <div class="card card-pad" style="margin-bottom:16px;">
         <h3 class="section-title" style="font-size:1rem;">Review Queue</h3>
         <div class="table-scroll"><table class="data-table" id="queue-table">
-          <thead><tr><th>Match</th><th>Tip</th><th>Score</th><th>Actions</th></tr></thead>
-          <tbody id="queue-tbody"><tr><td colspan="4">Loading…</td></tr></tbody>
+          <thead><tr><th>Match</th><th>Tip</th><th>Score</th><th style="min-width:280px;">Analysis</th><th>Actions</th></tr></thead>
+          <tbody id="queue-tbody"><tr><td colspan="5">Loading…</td></tr></tbody>
         </table></div>
       </div>
 
@@ -246,11 +246,13 @@
     var res = await AD.api('/admin/intelligence/queue');
     var tbody = document.getElementById('queue-tbody');
     tbody.innerHTML = res.data.map(function (p) {
-      return '<tr><td data-label="Match">' + AD.escapeHtml(p.home_team) + ' vs ' + AD.escapeHtml(p.away_team) + '</td>' +
+      return '<tr><td data-label="Match">' + AD.escapeHtml(p.home_team) + ' vs ' + AD.escapeHtml(p.away_team) +
+          (p.league_name ? '<br><span class="text-soft" style="font-size:0.76rem;">' + AD.escapeHtml(p.league_name) + '</span>' : '') + '</td>' +
         '<td data-label="Tip">' + AD.escapeHtml(p.tip) + '</td>' +
         '<td data-label="Score"><div class="confidence-bar-track" style="width:80px;"><div class="confidence-bar-fill ' + (p.intelligence_score >= 80 ? 'high' : p.intelligence_score >= 60 ? 'mid' : 'low') + '" style="width:' + p.intelligence_score + '%"></div></div>' + p.intelligence_score + '</td>' +
+        '<td data-label="Analysis" style="font-size:0.8rem;color:var(--text-soft);white-space:normal;max-width:360px;">' + (p.analysis ? AD.escapeHtml(p.analysis) : '<em>No analysis text.</em>') + '</td>' +
         '<td data-label="Actions"><button class="btn btn-primary btn-sm" data-approve="' + p.id + '">Approve</button> <button class="btn btn-danger btn-sm" data-reject="' + p.id + '">Reject</button></td></tr>';
-    }).join('') || '<tr><td colspan="4">Review queue is empty.</td></tr>';
+    }).join('') || '<tr><td colspan="5">Review queue is empty.</td></tr>';
   }
   document.getElementById('queue-tbody').addEventListener('click', async function (e) {
     var approveId = e.target.getAttribute('data-approve');

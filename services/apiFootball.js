@@ -41,44 +41,64 @@ async function getActiveLeagueIds() {
   return rows.map((r) => r.api_league_id);
 }
 
+// Excludes youth/reserve/amateur competitions by name pattern -- API-Football's
+// compact fixture payload doesn't carry an age-group flag, so the league name
+// is the only reliable signal available without an extra lookup call per league.
+// Deliberately does NOT exclude women's leagues -- those are senior professional
+// football, just not the same competition as the men's equivalent.
+const NON_SENIOR_LEAGUE_RE = /\b(U1[0-9]|U2[0-3]|U-1[0-9]|U-2[0-3]|Youth|Junior|Academy|Reserve|II$|B-Team|Development)\b/i;
+function isSeniorProfessionalLeague(league) {
+  return !NON_SENIOR_LEAGUE_RE.test(league.name || '');
+}
+
+// Looks up a league by its API id, auto-creating a row (unpopular, active,
+// continent left as 'World' since we don't have a reliable country->continent
+// map) the first time we see a fixture from a league not yet in our table.
+async function ensureLeague(league) {
+  const [existing] = await pool.query('SELECT id FROM leagues WHERE api_league_id = ?', [league.id]);
+  if (existing.length) return existing[0].id;
+  const [result] = await pool.query(
+    `INSERT INTO leagues (api_league_id, name, country, continent, is_popular, is_active) VALUES (?, ?, ?, 'World', 0, 1)`,
+    [league.id, league.name, league.country || null]
+  );
+  return result.insertId;
+}
+
 /**
- * Syncs fixtures for a given date across all active leagues into `predictions`
- * as un-scored placeholders ready for the Intelligence Engine / auto-predict pass.
+ * Syncs fixtures for a given date across every senior professional league
+ * worldwide (not just the leagues already seeded in our table) into
+ * `predictions` as un-scored placeholders ready for the Intelligence Engine.
+ * One API call covers the whole day, regardless of league count.
  */
 async function syncFixturesForDate(date) {
   if (!isConfigured()) return { skipped: true, reason: 'API_FOOTBALL_KEY not configured' };
-  const leagueIds = await getActiveLeagueIds();
   let created = 0;
-  const season = process.env.API_FOOTBALL_SEASON || new Date().getFullYear();
 
-  for (const apiLeagueId of leagueIds) {
-    try {
-      const { data } = await client().get('/fixtures', {
-        params: { league: apiLeagueId, season, date: dateStr(date) },
-      });
-      const [leagueRow] = await pool.query('SELECT id FROM leagues WHERE api_league_id = ?', [apiLeagueId]);
-      const leagueId = leagueRow[0]?.id || null;
+  try {
+    const { data } = await client().get('/fixtures', { params: { date: dateStr(date) } });
 
-      for (const fx of data.response || []) {
-        const [existing] = await pool.query('SELECT id FROM predictions WHERE api_fixture_id = ?', [fx.fixture.id]);
-        if (existing.length) continue;
+    for (const fx of data.response || []) {
+      if (!isSeniorProfessionalLeague(fx.league)) continue;
 
-        const matchDate = new Date(fx.fixture.date).toISOString().slice(0, 19).replace('T', ' ');
-        const slug = generatePredictionSlug(fx.teams.home.name, fx.teams.away.name, matchDate);
+      const [existing] = await pool.query('SELECT id FROM predictions WHERE api_fixture_id = ?', [fx.fixture.id]);
+      if (existing.length) continue;
 
-        await pool.query(
-          `INSERT INTO predictions
-           (slug, league_id, home_team, away_team, home_team_logo, away_team_logo, match_date,
-            tip, market, category, api_fixture_id, source, is_published, result)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending Analysis', '1X2', 'free', ?, 'auto_sync', 0, 'pending')`,
-          [slug, leagueId, fx.teams.home.name, fx.teams.away.name, fx.teams.home.logo, fx.teams.away.logo,
-            matchDate, fx.fixture.id]
-        );
-        created++;
-      }
-    } catch (err) {
-      console.error(`[apiFootball] syncFixturesForDate league=${apiLeagueId} failed:`, err.message);
+      const leagueId = await ensureLeague(fx.league);
+      const matchDate = new Date(fx.fixture.date).toISOString().slice(0, 19).replace('T', ' ');
+      const slug = generatePredictionSlug(fx.teams.home.name, fx.teams.away.name, matchDate);
+
+      await pool.query(
+        `INSERT INTO predictions
+         (slug, league_id, home_team, away_team, home_team_logo, away_team_logo, match_date,
+          tip, market, category, api_fixture_id, source, is_published, result)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending Analysis', '1X2', 'free', ?, 'auto_sync', 0, 'pending')`,
+        [slug, leagueId, fx.teams.home.name, fx.teams.away.name, fx.teams.home.logo, fx.teams.away.logo,
+          matchDate, fx.fixture.id]
+      );
+      created++;
     }
+  } catch (err) {
+    console.error(`[apiFootball] syncFixturesForDate date=${dateStr(date)} failed:`, err.message);
   }
   return { skipped: false, created };
 }
