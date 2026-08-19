@@ -150,10 +150,11 @@ async function runForPrediction(prediction) {
 
   const vipPickThreshold = await getWeight('vip_pick_threshold', 85);
   const autoPublishThreshold = await getWeight('auto_publish_threshold', 78);
-  const minConfidencePublish = await getWeight('min_confidence_publish', 72);
 
-  if (intelligenceScore < minConfidencePublish) return { generated: false, reason: 'below min_confidence_publish' };
-
+  // Every scored fixture is saved regardless of score -- low-confidence ones
+  // just land in the admin Review Queue (is_published=0) instead of being
+  // auto-published, rather than being silently discarded. Only score >=
+  // auto_publish_threshold skips the queue and goes live automatically.
   const isVip = intelligenceScore >= vipPickThreshold;
   const isVipPickOfDay = intelligenceScore >= vipPickThreshold;
   const shouldAutoPublish = intelligenceScore >= autoPublishThreshold;
