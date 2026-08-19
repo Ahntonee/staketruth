@@ -429,7 +429,12 @@
     try {
       var res = await api('/predictions/bankers');
       ST.renderPredictionsInto(container, res.data);
-      container.closest('section') && (container.closest('section').style.display = res.data.length ? '' : 'none');
+      // Scoped to a dedicated wrapper, NOT closest('section') -- on both pages
+      // that use this, the banker block shares its ancestor <section> with the
+      // rest of the page's content (predictions grid, sidebar), so hiding "the
+      // section" when there's no banker pick was hiding everything else too.
+      var wrapper = container.closest('[data-banker-wrapper]');
+      if (wrapper) wrapper.style.display = res.data.length ? '' : 'none';
     } catch (e) { /* silent */ }
   };
 
