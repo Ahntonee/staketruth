@@ -43,6 +43,17 @@
       </div>
 
       <div class="card card-pad" style="margin-bottom:16px;">
+        <h3 class="section-title" style="font-size:1rem;">Sync Fixtures Ahead in Bulk</h3>
+        <p class="text-soft">Pulls fixtures one day at a time starting today, out to however many days ahead you set — e.g. 60 for two months. One API call per day regardless of league count, so this is cheap. Predictions still need a scoring run (Run Auto-Predict) before they're eligible to publish.</p>
+        <div class="flex gap-8" style="flex-wrap:wrap;align-items:center;">
+          <input type="number" id="sync-range-days" class="form-control" style="width:100px;" value="60" min="1" max="180">
+          <span class="text-soft" style="font-size:0.85rem;">days ahead</span>
+          <button class="btn btn-primary" id="sync-range-btn"><span class="material-icons-round" style="font-size:1rem;">event_available</span> Sync Fixtures for This Range</button>
+          <span class="text-soft" style="font-size:0.8rem;" id="sync-range-hint"></span>
+        </div>
+      </div>
+
+      <div class="card card-pad" style="margin-bottom:16px;">
         <h3 class="section-title" style="font-size:1rem;">Backfill Historical Data</h3>
         <p class="text-soft">Pulls finished fixtures from API-Football into permanent match history (used for H2H + learning). Most API-Football plans expose about 2 seasons of history — going back further usually just returns nothing extra.</p>
         <div class="flex gap-8" style="flex-wrap:wrap;margin-bottom:12px;">
@@ -103,6 +114,22 @@
       log('Sync for ' + date + ' complete: ' + JSON.stringify(res.data));
       AD.showToast('Synced fixtures for ' + date, 'success');
     } catch (err) { log('Sync for ' + date + ' failed: ' + err.message); AD.showToast(err.message, 'error'); }
+    e.target.disabled = false;
+    loadStatus();
+  });
+
+  document.getElementById('sync-range-btn').addEventListener('click', async function (e) {
+    var days = Number(document.getElementById('sync-range-days').value) || 60;
+    if (!AD.confirmAction('Sync fixtures for the next ' + days + ' days? This makes ' + days + ' API-Football calls, one per day.')) return;
+    e.target.disabled = true;
+    document.getElementById('sync-range-hint').textContent = 'Running — this can take a while…';
+    log('Bulk range sync started for the next ' + days + ' days…');
+    try {
+      var res = await AD.api('/sync/fixtures-range', { method: 'POST', body: { days: days } });
+      log('Range sync complete: ' + res.data.daysProcessed + ' days processed, ' + res.data.totalCreated + ' new fixtures created.');
+      AD.showToast(res.data.totalCreated + ' new fixtures synced across ' + res.data.daysProcessed + ' days', 'success');
+      document.getElementById('sync-range-hint').textContent = 'Last run: ' + res.data.totalCreated + ' fixtures across ' + res.data.daysProcessed + ' days.';
+    } catch (err) { log('Range sync failed: ' + err.message); AD.showToast(err.message, 'error'); document.getElementById('sync-range-hint').textContent = ''; }
     e.target.disabled = false;
     loadStatus();
   });

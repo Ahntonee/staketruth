@@ -36,6 +36,30 @@ router.post('/fixtures-by-date', asyncHandler(async (req, res) => {
   return successResponse(res, { date, ...result });
 }));
 
+// Bulk future sync: pulls fixtures one day at a time out to `days` days ahead.
+// syncFixturesForDate is a single API call per date regardless of league count,
+// so even 60+ days is cheap against a normal daily budget. Sequential and
+// error-tolerant per-date so one bad day doesn't kill the whole run.
+router.post('/fixtures-range', asyncHandler(async (req, res) => {
+  const days = Math.min(Math.max(Number(req.body.days) || 60, 1), 180);
+  const results = [];
+  for (let i = 0; i < days; i++) {
+    const target = new Date();
+    target.setDate(target.getDate() + i);
+    const dateStr = target.toISOString().slice(0, 10);
+    try {
+      const result = await apiFootball.syncFixturesForDate(target);
+      results.push({ date: dateStr, ...result });
+      if (result.skipped) break; // budget/config exhausted — no point continuing
+    } catch (err) {
+      results.push({ date: dateStr, skipped: true, reason: err.message });
+    }
+  }
+  await setLastRun('last_sync_fixtures');
+  const totalCreated = results.reduce((sum, r) => sum + (r.created || 0), 0);
+  return successResponse(res, { daysProcessed: results.length, totalCreated, results });
+}));
+
 router.post('/results', asyncHandler(async (req, res) => {
   const result = await apiFootball.syncResults();
   await setLastRun('last_sync_results');
