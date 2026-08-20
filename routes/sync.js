@@ -57,7 +57,18 @@ router.post('/fixtures-range', asyncHandler(async (req, res) => {
   }
   await setLastRun('last_sync_fixtures');
   const totalCreated = results.reduce((sum, r) => sum + (r.created || 0), 0);
-  return successResponse(res, { daysProcessed: results.length, totalCreated, results });
+
+  // Score everything just synced (widened window matches the sync range,
+  // not the usual 2-day default) so a bulk range sync doesn't need a separate
+  // manual "Run Auto-Predict" click afterward. NOTE: confidence scores are
+  // computed from today's team form/H2H data -- for fixtures weeks or months
+  // out, form will drift before the match actually happens, so scores this
+  // far ahead are a snapshot, not a final read. Re-running auto-predict closer
+  // to match day will naturally refresh anything not yet scored, but already-
+  // scored rows are not re-evaluated automatically.
+  const scoring = await intelligence.runForAllToday(days);
+
+  return successResponse(res, { daysProcessed: results.length, totalCreated, results, scoring });
 }));
 
 router.post('/results', asyncHandler(async (req, res) => {

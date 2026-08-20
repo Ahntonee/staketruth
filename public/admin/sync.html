@@ -44,7 +44,7 @@
 
       <div class="card card-pad" style="margin-bottom:16px;">
         <h3 class="section-title" style="font-size:1rem;">Sync Fixtures Ahead in Bulk</h3>
-        <p class="text-soft">Pulls fixtures one day at a time starting today, out to however many days ahead you set — e.g. 60 for two months. One API call per day regardless of league count, so this is cheap. Predictions still need a scoring run (Run Auto-Predict) before they're eligible to publish.</p>
+        <p class="text-soft">Pulls fixtures one day at a time starting today, out to however many days ahead you set — e.g. 60 for two months — then automatically scores everything it just synced. One API call per day to sync, no API calls to score (scoring is local). Note: scores this far out reflect today's team form, not form on match day, so treat far-future scores as a first pass rather than final.</p>
         <div class="flex gap-8" style="flex-wrap:wrap;align-items:center;">
           <input type="number" id="sync-range-days" class="form-control" style="width:100px;" value="60" min="1" max="180">
           <span class="text-soft" style="font-size:0.85rem;">days ahead</span>
@@ -127,8 +127,9 @@
     try {
       var res = await AD.api('/sync/fixtures-range', { method: 'POST', body: { days: days } });
       log('Range sync complete: ' + res.data.daysProcessed + ' days processed, ' + res.data.totalCreated + ' new fixtures created.');
-      AD.showToast(res.data.totalCreated + ' new fixtures synced across ' + res.data.daysProcessed + ' days', 'success');
-      document.getElementById('sync-range-hint').textContent = 'Last run: ' + res.data.totalCreated + ' fixtures across ' + res.data.daysProcessed + ' days.';
+      log('Auto-scoring complete: ' + res.data.scoring.scanned + ' scanned, ' + res.data.scoring.generated + ' scored, ' + res.data.scoring.autoPublished + ' auto-published.');
+      AD.showToast(res.data.totalCreated + ' fixtures synced, ' + res.data.scoring.autoPublished + ' auto-published', 'success');
+      document.getElementById('sync-range-hint').textContent = 'Last run: ' + res.data.totalCreated + ' fixtures across ' + res.data.daysProcessed + ' days, ' + res.data.scoring.autoPublished + ' auto-published.';
     } catch (err) { log('Range sync failed: ' + err.message); AD.showToast(err.message, 'error'); document.getElementById('sync-range-hint').textContent = ''; }
     e.target.disabled = false;
     loadStatus();

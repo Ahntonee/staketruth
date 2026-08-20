@@ -196,17 +196,20 @@ async function runForPrediction(prediction) {
   return { generated: true, intelligenceScore, autoPublished: shouldAutoPublish, isVipPickOfDay };
 }
 
-async function runForAllToday() {
+async function runForAllToday(daysAhead = 2) {
   // Scoring is pure local computation (team stats/form/H2H all come from
   // historical_fixtures in our own DB, no live API calls per fixture -- see
   // getTeamGoalAverages/getTeamFormStrings/getH2hSummary), so this cap only
-  // needs to comfortably exceed a day's fixture volume, not respect an
-  // external rate limit. 800 covers today+tomorrow even as league coverage grows.
+  // needs to comfortably exceed the window's fixture volume, not respect an
+  // external rate limit. 800 covers a normal 2-day window; callers scoring a
+  // wider bulk-synced range (e.g. 60 days) should raise it accordingly.
+  const limit = Math.max(800, daysAhead * 400);
   const [pendingRows] = await pool.query(
     `SELECT id, home_team, away_team, league_id, match_date FROM predictions
      WHERE source = 'auto_sync' AND intelligence_score IS NULL
-       AND match_date >= NOW() AND match_date <= DATE_ADD(NOW(), INTERVAL 2 DAY)
-     LIMIT 800`
+       AND match_date >= NOW() AND match_date <= DATE_ADD(NOW(), INTERVAL ? DAY)
+     LIMIT ?`,
+    [daysAhead, limit]
   );
 
   let generated = 0, autoPublished = 0, vipPicks = 0;
