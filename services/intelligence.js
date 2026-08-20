@@ -177,11 +177,17 @@ async function runForPrediction(prediction) {
     teamPatternNote,
   });
 
+  // GREATEST() means a rescore can only ever PROMOTE a prediction to published
+  // (score improved enough to newly clear the threshold), never demote one
+  // that's already live -- runForPrediction is shared by both first-time
+  // scoring (is_published starts at 0, so this is a no-op) and periodic
+  // rescoring of still-open predictions, and silently un-publishing something
+  // a visitor may have already seen would be worse than leaving a stale score.
   await pool.query(
     `UPDATE predictions SET
        tip = ?, market = ?, category = ?, intelligence_score = ?, confidence_score = ?,
        analysis = ?, is_vip = ?, is_vip_pick_of_day = ?, source = 'intelligence',
-       is_published = ?, published_at = IF(? = 1, NOW(), published_at),
+       is_published = GREATEST(is_published, ?), published_at = IF(is_published = 0 AND ? = 1, NOW(), published_at),
        home_form = ?, away_form = ?, home_form_venue = ?, away_form_venue = ?, h2h_summary = ?,
        home_goals_avg = ?, away_goals_avg = ?, home_goals_conceded_avg = ?, away_goals_conceded_avg = ?
      WHERE id = ?`,

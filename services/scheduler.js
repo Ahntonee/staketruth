@@ -93,16 +93,27 @@ function startScheduler() {
     return { notified: expiringSoon.length, expired: expired.length };
   }));
 
-  cron.schedule('15 6 * * *', safeRun('re-score pending predictions', async () => {
+  // Refreshes already-scored, still-open predictions as match day approaches
+  // and today's team form/H2H data has moved on since the original score.
+  // Runs every 6 hours rather than once a day (this is local computation, no
+  // API calls, so it's cheap) and at a raised limit so it can keep pace with
+  // a large bulk-synced backlog (e.g. a 60-day range sync). runForPrediction's
+  // GREATEST()-guarded is_published means this can only ever newly publish a
+  // prediction that's improved past the threshold, never unpublish one already live.
+  cron.schedule('15 */6 * * *', safeRun('re-score open predictions', async () => {
     const [pending] = await pool.query(
       `SELECT id, home_team, away_team, league_id, match_date FROM predictions
-       WHERE result = 'pending' AND source = 'intelligence' AND match_date >= NOW() LIMIT 100`
+       WHERE result = 'pending' AND source = 'intelligence' AND match_date >= NOW() LIMIT 500`
     );
-    let rescored = 0;
+    let rescored = 0, newlyPublished = 0;
     for (const p of pending) {
-      try { await intelligence.runForPrediction(p); rescored++; } catch (e) { /* skip */ }
+      try {
+        const r = await intelligence.runForPrediction(p);
+        rescored++;
+        if (r.autoPublished) newlyPublished++;
+      } catch (e) { /* skip */ }
     }
-    return { rescored };
+    return { rescored, newlyPublished };
   }));
 
   // Gate on a local check before spending an API call: syncLiveScores previously
