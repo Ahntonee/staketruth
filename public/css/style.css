@@ -298,11 +298,22 @@ section { padding: 28px 0; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
 .card-pad { padding: 18px; }
 
+/* #predictions-grid is the compact multi-column list (home + predictions.html);
+   banker-cards and the VIP aside rail also render .prediction-card but keep
+   their own layout (single card / horizontal scroll), so the grid rules are
+   scoped to the id, not the card class itself. */
+#predictions-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 640px) { #predictions-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1280px) { #predictions-grid { grid-template-columns: repeat(3, 1fr); } }
+
 .prediction-card {
   background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg);
-  padding: 16px; margin-bottom: 14px; position: relative; overflow: hidden;
+  padding: 12px; margin-bottom: 14px; position: relative; overflow: hidden;
 }
-.prediction-card__league { font-size: 0.75rem; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; display: flex; justify-content: space-between; padding-right: 46px; }
+/* #predictions-grid supplies its own gap between cells, so the card's own
+   margin would double up the spacing there. */
+#predictions-grid .prediction-card { margin-bottom: 0; }
+.prediction-card__league { font-size: 0.75rem; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; justify-content: space-between; padding-right: 46px; }
 
 /* Autoscore — the Intelligence Engine's confidence score, shown at a glance
    on every card (never rendered when the pick itself is locked, since the

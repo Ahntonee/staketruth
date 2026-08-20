@@ -388,9 +388,7 @@
         (p.result === 'won' || p.result === 'lost' ? '<span>' + (p.home_score ?? '') + ' - ' + (p.away_score ?? '') + '</span>' : '') +
       '</div>' +
       (p.intelligence_score ? '<div class="confidence-bar-track"><div class="confidence-bar-fill ' + confidenceClass(p.intelligence_score) + '" style="width:' + p.intelligence_score + '%"></div></div>' : '') +
-      (p.analysis ? '<div class="prediction-card__analysis" style="margin-top:8px;">' + ST.escapeHtml(p.analysis) + '</div>' : '') +
       (bookieTags ? '<div class="flex gap-8" style="margin-top:8px;flex-wrap:wrap;">' + bookieTags + '</div>' : '') +
-      (!p.voting_disabled ? '<div style="margin-top:12px;" data-vote-poll data-prediction-id="' + p.id + '"></div>' : '') +
       '<div class="prediction-card__footer" style="margin-top:10px;">' +
         '<a href="/prediction/' + p.slug + '" class="btn btn-outline btn-sm">View Details</a>' +
       '</div>';
