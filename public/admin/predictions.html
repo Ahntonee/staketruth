@@ -181,12 +181,21 @@
   document.getElementById('result-modal-close').addEventListener('click', function () { closeModal('result-modal'); });
 
   document.getElementById('predictions-tbody').addEventListener('click', async function (e) {
-    var editId = e.target.getAttribute('data-edit');
-    var deleteId = e.target.getAttribute('data-delete');
-    var resultId = e.target.getAttribute('data-set-result');
-    var publishId = e.target.getAttribute('data-toggle-publish');
+    // Each button wraps a Material Icons <span>, which is almost always what
+    // actually receives the click (it visually fills the button), so reading
+    // data-* off e.target directly missed it whenever the icon glyph -- not
+    // the button's own padding -- was clicked. closest() walks up to whichever
+    // ancestor actually carries the attribute.
+    var editBtn = e.target.closest('[data-edit]');
+    var deleteBtn = e.target.closest('[data-delete]');
+    var resultBtn = e.target.closest('[data-set-result]');
+    var publishBtn = e.target.closest('[data-toggle-publish]');
+    var editId = editBtn && editBtn.getAttribute('data-edit');
+    var deleteId = deleteBtn && deleteBtn.getAttribute('data-delete');
+    var resultId = resultBtn && resultBtn.getAttribute('data-set-result');
+    var publishId = publishBtn && publishBtn.getAttribute('data-toggle-publish');
     if (publishId) {
-      var isPublished = e.target.getAttribute('data-published') === '1';
+      var isPublished = publishBtn.getAttribute('data-published') === '1';
       try {
         await AD.api('/predictions/' + publishId + '/publish', { method: 'PUT', body: { is_published: !isPublished } });
         AD.showToast(isPublished ? 'Prediction unpublished' : 'Prediction published', 'success');
