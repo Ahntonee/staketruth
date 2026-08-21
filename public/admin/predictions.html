@@ -38,9 +38,9 @@
         <table class="data-table" id="predictions-table">
           <thead><tr>
             <th><input type="checkbox" data-select-all></th>
-            <th>Date</th><th>Match</th><th>Category</th><th>Tip</th><th>Score</th><th>Status</th><th>Result</th><th>Source</th><th>Pushed</th><th>Actions</th>
+            <th>Date</th><th>Match</th><th>Category</th><th>Tip</th><th>Confidence</th><th>Score</th><th>Status</th><th>Result</th><th>Source</th><th>Pushed</th><th>Actions</th>
           </tr></thead>
-          <tbody id="predictions-tbody"><tr><td colspan="11">Loading…</td></tr></tbody>
+          <tbody id="predictions-tbody"><tr><td colspan="12">Loading…</td></tr></tbody>
         </table>
       </div>
 
@@ -127,6 +127,7 @@
       '<td data-label="Match">' + AD.escapeHtml(p.home_team) + ' vs ' + AD.escapeHtml(p.away_team) + '</td>' +
       '<td data-label="Category">' + p.category + '</td>' +
       '<td data-label="Tip">' + AD.escapeHtml(p.tip) + (p.is_vip ? ' <span class="badge badge-vip">VIP</span>' : '') + (p.is_banker ? ' <span class="badge badge-banker">B</span>' : '') + '</td>' +
+      '<td data-label="Confidence">' + (p.intelligence_score ?? '—') + '</td>' +
       '<td data-label="Score">' + (p.home_score ?? '') + (p.home_score !== null ? '-' + p.away_score : '') + '</td>' +
       '<td data-label="Status">' + (p.is_published ? '<span class="badge badge-won">Live</span>' : '<span class="badge badge-pending">Draft</span>') + '</td>' +
       '<td data-label="Result"><button class="result-badge-btn ' + p.result + '" data-set-result="' + p.id + '">' + p.result + '</button></td>' +
@@ -140,9 +141,16 @@
     '</tr>';
   }
 
+  // Cache of whatever's currently on screen, keyed by id -- Edit/Set Result
+  // look a row up from here instead of a second, unfiltered API call, since an
+  // unfiltered limit=200 fetch only ever returns the earliest 200 predictions
+  // by date and silently missed anything outside that (e.g. every date beyond
+  // "today" once the backlog passed a couple hundred rows).
+  var loadedRows = {};
+
   async function load() {
     var tbody = document.getElementById('predictions-tbody');
-    tbody.innerHTML = '<tr><td colspan="11">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12">Loading…</td></tr>';
     var params = new URLSearchParams({ limit: 50 });
     if (state.date) params.set('date', state.date);
     if (state.category) params.set('category', state.category);
@@ -150,9 +158,11 @@
     if (state.search) params.set('search', state.search);
     try {
       var res = await AD.api('/predictions/admin/list?' + params.toString());
-      tbody.innerHTML = res.data.map(rowHtml).join('') || '<tr><td colspan="11">No predictions found.</td></tr>';
+      loadedRows = {};
+      res.data.forEach(function (p) { loadedRows[p.id] = p; });
+      tbody.innerHTML = res.data.map(rowHtml).join('') || '<tr><td colspan="12">No predictions found.</td></tr>';
       bulkSelect.reset();
-    } catch (e) { tbody.innerHTML = '<tr><td colspan="11">Failed to load.</td></tr>'; }
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="12">Failed to load.</td></tr>'; }
   }
 
   document.getElementById('filter-date').addEventListener('change', function () { state.date = this.value; load(); });
@@ -204,8 +214,7 @@
       return;
     }
     if (editId) {
-      var res = await AD.api('/predictions/admin/list?limit=200');
-      var p = res.data.find(function (x) { return String(x.id) === editId; });
+      var p = loadedRows[editId];
       if (!p) return;
       var form = document.getElementById('prediction-form');
       form.id.value = p.id; form.home_team.value = p.home_team; form.away_team.value = p.away_team;
