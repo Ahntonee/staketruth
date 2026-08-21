@@ -331,7 +331,7 @@ const bulkPush = asyncHandler(async (req, res) => {
 
 // Admin list — sees every field, unredacted, with extra filters
 const adminListPredictions = asyncHandler(async (req, res) => {
-  const { date, league_id, category, result, source, vip, banker, pushed, search } = req.query;
+  const { date, league_id, category, result, source, vip, banker, pushed, search, market, visibility, min_confidence } = req.query;
   const { page, limit, offset } = parsePagination(req.query, 25, 200);
   const where = ['1=1'];
   const params = [];
@@ -340,6 +340,13 @@ const adminListPredictions = asyncHandler(async (req, res) => {
   if (category) { where.push('p.category = ?'); params.push(category); }
   if (result) { where.push('p.result = ?'); params.push(result); }
   if (source) { where.push('p.source = ?'); params.push(source); }
+  if (market) { where.push('p.market = ?'); params.push(market); }
+  if (min_confidence) { where.push('p.intelligence_score >= ?'); params.push(Number(min_confidence)); }
+  // visibility is a display-tier concept layered on top of is_vip/is_banker,
+  // not a stored column -- "free" means neither flag is set.
+  if (visibility === 'vip') where.push('p.is_vip = 1');
+  else if (visibility === 'banker') where.push('p.is_banker = 1');
+  else if (visibility === 'free') where.push('p.is_vip = 0 AND p.is_banker = 0');
   if (vip === 'true') where.push('p.is_vip = 1');
   if (banker === 'true') where.push('p.is_banker = 1');
   if (pushed === 'true') where.push('p.pushed_to_registered = 1');

@@ -551,6 +551,11 @@ async function migrate() {
   await ensureColumn('ad_slots', 'link_url', "VARCHAR(500)");
   await ensureColumn('ad_slots', 'link_text', "VARCHAR(255)");
   await ensureColumn('ad_slots', 'custom_code', "LONGTEXT");
+  // Free-text league filter for SEO landing pages -- replaces the old strict
+  // league_id FK filter so an admin can type any topic/league name, not just
+  // one already seeded in the leagues table. Matched by LIKE against the
+  // predictions' own league name at render time, not by id.
+  await ensureColumn('seo_landing_pages', 'league_text_filter', "VARCHAR(255)");
 
   // Seed admin
   const [existingAdmin] = await pool.query('SELECT id FROM users WHERE email = ?', ['admin@staketruth.com']);

@@ -52,14 +52,21 @@
       <div class="form-group"><label class="form-label">Meta Description</label><textarea name="meta_description" class="form-control" rows="2" maxlength="300"></textarea></div>
       <div class="form-group"><label class="form-label">Intro Content (Markdown)</label><textarea id="content-editor" name="intro_content" placeholder="Real, useful intro copy about this league/market..."></textarea></div>
       <div class="grid-2" style="grid-template-columns:1fr 1fr;">
-        <div class="form-group"><label class="form-label">League Filter</label><select name="league_id" class="form-control"><option value="">Any League</option></select></div>
-        <div class="form-group"><label class="form-label">Category Filter</label><select name="category" class="form-control">
-          <option value="">Any Category</option>
-          <option value="free">Free</option><option value="vip">VIP</option><option value="banker">Banker</option>
-          <option value="over_1_5">Over 1.5</option><option value="over_2_5">Over 2.5</option><option value="over_3_5">Over 3.5</option>
-          <option value="under_1_5">Under 1.5</option><option value="under_2_5">Under 2.5</option><option value="under_3_5">Under 3.5</option>
-          <option value="gg">BTTS</option><option value="home_win">Home Win</option><option value="away_win">Away Win</option><option value="draw">Draw</option>
-        </select></div>
+        <div class="form-group"><label class="form-label">League Filter</label>
+          <input name="league_text_filter" class="form-control" list="league-suggestions" placeholder="Any league (type anything, e.g. Premier League)">
+          <datalist id="league-suggestions"></datalist>
+          <div class="text-soft" style="font-size:0.75rem;margin-top:4px;">Matches any prediction whose league name contains this text. Leave blank for any league.</div>
+        </div>
+        <div class="form-group"><label class="form-label">Category Filter</label>
+          <input name="category" class="form-control" list="category-suggestions" placeholder="Any category (type anything, e.g. over_2_5)">
+          <datalist id="category-suggestions">
+            <option value="free"></option><option value="vip"></option><option value="banker"></option>
+            <option value="over_1_5"></option><option value="over_2_5"></option><option value="over_3_5"></option>
+            <option value="under_1_5"></option><option value="under_2_5"></option><option value="under_3_5"></option>
+            <option value="gg"></option><option value="home_win"></option><option value="away_win"></option><option value="draw"></option>
+          </datalist>
+          <div class="text-soft" style="font-size:0.75rem;margin-top:4px;">Pick a suggestion or type your own. Leave blank for any category.</div>
+        </div>
       </div>
       <label class="flex items-center gap-8" style="margin-bottom:16px;"><input type="checkbox" name="is_published" checked> Published</label>
       <button class="btn btn-primary btn-block">Save Page</button>
@@ -84,7 +91,7 @@
     return '<tr>' +
       '<td data-label="Title">' + AD.escapeHtml(p.title) + '</td>' +
       '<td data-label="Slug"><a href="/topic/' + p.slug + '" target="_blank">/topic/' + AD.escapeHtml(p.slug) + '</a></td>' +
-      '<td data-label="League">' + (p.league_name || 'Any') + '</td>' +
+      '<td data-label="League">' + AD.escapeHtml(p.league_text_filter || 'Any') + '</td>' +
       '<td data-label="Category">' + (p.category || 'Any') + '</td>' +
       '<td data-label="Status">' + (p.is_published ? '<span class="badge badge-won">Published</span>' : '<span class="badge badge-pending">Draft</span>') + '</td>' +
       '<td data-label="Actions">' +
@@ -107,11 +114,11 @@
 
   async function loadLeagueOptions() {
     var res = await AD.api('/leagues');
-    var select = document.querySelector('#page-form [name="league_id"]');
+    var datalist = document.getElementById('league-suggestions');
     res.data.forEach(function (l) {
       var opt = document.createElement('option');
-      opt.value = l.id; opt.textContent = l.name;
-      select.appendChild(opt);
+      opt.value = l.name;
+      datalist.appendChild(opt);
     });
   }
 
@@ -136,7 +143,7 @@
         form.id.value = p.id; form.title.value = p.title; form.slug.value = p.slug; form.h1.value = p.h1 || '';
         form.meta_description.value = p.meta_description || '';
         if (mde) mde.value(p.intro_content || '');
-        form.league_id.value = p.league_id || ''; form.category.value = p.category || '';
+        form.league_text_filter.value = p.league_text_filter || ''; form.category.value = p.category || '';
         form.is_published.checked = !!p.is_published;
         document.getElementById('modal-title').textContent = 'Edit SEO Page';
         openModal('edit-modal');
@@ -162,7 +169,7 @@
     var body = {
       title: fd.get('title'), slug: fd.get('slug'), h1: fd.get('h1'),
       meta_description: fd.get('meta_description'), intro_content: mde.value(),
-      league_id: fd.get('league_id') || null, category: fd.get('category') || null,
+      league_text_filter: fd.get('league_text_filter') || null, category: fd.get('category') || null,
       is_published: fd.get('is_published') === 'on',
     };
     try {
