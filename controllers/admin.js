@@ -144,24 +144,63 @@ const grantVip = asyncHandler(async (req, res) => {
 
 // ---- Leaderboard --------------------------------------------------------
 
+// Display labels for the raw category enum -- shown to admins in the
+// Accuracy by Category table instead of the raw db value (e.g. 'over_1_5').
+const CATEGORY_LABELS = {
+  free: 'Free Pick', vip: 'VIP', banker: 'Banker',
+  over_1_5: '1.5 Goals', over_2_5: '2.5 Goals', over_3_5: '3.5 Goals',
+  under_1_5: '1.5 Goals', under_2_5: '2.5 Goals', under_3_5: '3.5 Goals',
+  gg: 'BTTS', home_win: 'Home Win', away_win: 'Away Win', draw: 'Draw',
+};
+
 const getLeaderboard = asyncHandler(async (req, res) => {
   const { period = '30d', group_by = 'market', sort_by = 'win_rate' } = req.query;
   const days = period === '7d' ? 7 : period === 'all' ? 36500 : 30;
-  const groupCol = group_by === 'league' ? 'l.name' : group_by === 'team' ? 'p.home_team' : 'p.market';
+  const groupCol = group_by === 'league' ? 'l.name' : group_by === 'team' ? 'p.home_team' : group_by === 'category' ? 'p.category' : 'p.market';
+  const extraSelect = group_by === 'league' ? ', l.country AS group_country' : '';
 
   const [rows] = await pool.query(
-    `SELECT ${groupCol} AS group_label, COUNT(*) AS total,
+    `SELECT ${groupCol} AS group_label${extraSelect}, COUNT(*) AS total,
             SUM(p.result = 'won') AS wins, SUM(p.result = 'lost') AS losses,
             AVG(p.confidence_score) AS avg_confidence
      FROM predictions p LEFT JOIN leagues l ON l.id = p.league_id
      WHERE p.result IN ('won','lost') AND p.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-     GROUP BY ${groupCol} HAVING total >= 1
+     GROUP BY ${groupCol}${extraSelect} HAVING total >= 1
      ORDER BY ${sort_by === 'most_won' ? 'wins' : sort_by === 'confidence' ? 'avg_confidence' : '(wins/total)'} DESC
      LIMIT 30`,
     [days]
   );
-  const data = rows.map((r) => ({ ...r, win_rate: r.total ? ((r.wins / r.total) * 100).toFixed(1) : '0.0' }));
+  const data = rows.map((r) => ({
+    ...r,
+    win_rate: r.total ? ((r.wins / r.total) * 100).toFixed(1) : '0.0',
+    group_label: group_by === 'category' ? (CATEGORY_LABELS[r.group_label] || r.group_label) : r.group_label,
+  }));
   return successResponse(res, data);
+});
+
+const getLeaderboardSummary = asyncHandler(async (req, res) => {
+  const [[row]] = await pool.query(
+    `SELECT COUNT(*) AS settled, SUM(result = 'won') AS won, SUM(result = 'lost') AS lost
+     FROM predictions WHERE result IN ('won','lost')`
+  );
+  const settled = Number(row.settled) || 0;
+  const won = Number(row.won) || 0;
+  const lost = Number(row.lost) || 0;
+  return successResponse(res, {
+    settled, won, lost,
+    accuracy: settled ? Number(((won / settled) * 100).toFixed(1)) : 0,
+  });
+});
+
+const getRecentResults = asyncHandler(async (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 10, 50);
+  const [rows] = await pool.query(
+    `SELECT home_team, away_team, home_score, away_score, tip, result, match_date
+     FROM predictions WHERE result IN ('won','lost')
+     ORDER BY match_date DESC LIMIT ?`,
+    [limit]
+  );
+  return successResponse(res, rows);
 });
 
 // ---- Generic site settings (social links, misc key/value) ----------------
@@ -194,5 +233,5 @@ const putStatOverride = asyncHandler(async (req, res) => {
 
 module.exports = {
   getDashboardOverview, getDashboardTrend, listUsers, getUser, banUser, unbanUser, commentBanUser, commentUnbanUser, grantVip,
-  getLeaderboard, getSettings, putSetting, getStatOverrides, putStatOverride,
+  getLeaderboard, getLeaderboardSummary, getRecentResults, getSettings, putSetting, getStatOverrides, putStatOverride,
 };

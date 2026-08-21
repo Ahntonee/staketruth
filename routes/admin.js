@@ -17,6 +17,8 @@ router.put('/users/:id/comment-unban', ctrl.commentUnbanUser);
 router.post('/users/:id/grant-vip', ctrl.grantVip);
 
 router.get('/leaderboard', ctrl.getLeaderboard);
+router.get('/leaderboard/summary', ctrl.getLeaderboardSummary);
+router.get('/leaderboard/recent-results', ctrl.getRecentResults);
 
 router.get('/settings', ctrl.getSettings);
 router.put('/settings/:key', ctrl.putSetting);

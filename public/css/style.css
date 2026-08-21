@@ -508,6 +508,9 @@ textarea.form-control { min-height: 120px; resize: vertical; }
 .leaderboard-row { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: var(--radius); }
 .leaderboard-row:nth-child(odd) { background: var(--card-2); }
 .rank-badge { width: 26px; height: 26px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; flex-shrink: 0; }
+.rank-badge--gold { background: var(--light-green); color: #241a0d; }
+.rank-badge--silver { background: #c7cbd1; color: #24272b; }
+.rank-badge--bronze { background: #c98a4b; color: #2b1a0d; }
 
 .ad-slot { min-height: 1px; margin: 16px 0; text-align: center; overflow: hidden; }
 .ad-slot:empty { display: none; margin: 0; }

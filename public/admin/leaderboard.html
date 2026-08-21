@@ -8,7 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <link href="/css/style.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <div class="admin-shell">
@@ -21,21 +20,60 @@
       <div id="admin-user-slot"></div>
     </div>
     <div class="admin-content">
-      <div class="kpi-grid" id="top-performers" style="margin-bottom:18px;"></div>
-
-      <div class="flex gap-8" style="margin-bottom:14px;flex-wrap:wrap;">
-        <select id="period" class="form-control" style="width:auto;"><option value="7d">Last 7 days</option><option value="30d" selected>Last 30 days</option><option value="all">All time</option></select>
-        <select id="group-by" class="form-control" style="width:auto;"><option value="market">By Market</option><option value="league">By League</option><option value="team">By Team</option></select>
-        <select id="sort-by" class="form-control" style="width:auto;"><option value="win_rate">Sort: Win Rate</option><option value="most_won">Sort: Most Won</option><option value="confidence">Sort: Confidence</option></select>
+      <div class="flex justify-between items-center" style="margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <select id="period" class="form-control" style="width:auto;"><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="all" selected>All time</option></select>
       </div>
-      <div class="grid-2" style="grid-template-columns:2fr 1fr;">
+
+      <div class="kpi-grid" style="margin-bottom:18px;">
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-accuracy" style="font-size:1.8rem;font-weight:800;color:var(--success-dim);">—</div>
+          <div class="stat-card__label">All-Time Accuracy</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-won" style="font-size:1.8rem;font-weight:800;color:var(--success-dim);">—</div>
+          <div class="stat-card__label">Tips Won</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-lost" style="font-size:1.8rem;font-weight:800;color:var(--danger);">—</div>
+          <div class="stat-card__label">Tips Lost</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-settled" style="font-size:1.8rem;font-weight:800;">—</div>
+          <div class="stat-card__label">Settled Tips</div>
+        </div>
+      </div>
+
+      <div class="card card-pad" style="margin-bottom:18px;">
+        <h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">bar_chart</span>Accuracy by Category</h3>
         <div class="table-scroll">
-          <table class="data-table" id="leaderboard-table">
-            <thead><tr><th>#</th><th>Group</th><th>Won</th><th>Lost</th><th>Sample</th><th>Win Rate</th><th>Avg Confidence</th></tr></thead>
-            <tbody id="leaderboard-tbody"><tr><td colspan="7">Loading…</td></tr></tbody>
+          <table class="data-table" id="category-table">
+            <thead><tr><th>Category</th><th>Tips</th><th>Won</th><th>Lost</th><th>Accuracy</th></tr></thead>
+            <tbody id="category-tbody"><tr><td colspan="5">Loading…</td></tr></tbody>
           </table>
         </div>
-        <canvas id="leaderboard-chart" height="260"></canvas>
+      </div>
+
+      <div class="card card-pad" style="margin-bottom:18px;">
+        <h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">emoji_events</span>Accuracy by League</h3>
+        <div class="table-scroll">
+          <table class="data-table" id="league-table">
+            <thead><tr><th>#</th><th>League</th><th>Tips</th><th>Won</th><th>Accuracy</th></tr></thead>
+            <tbody id="league-tbody"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <div class="flex justify-between items-center" style="margin-bottom:4px;">
+          <h3 class="section-title" style="font-size:1rem;margin-bottom:0;"><span class="material-icons-round">history</span>Recent Results</h3>
+          <a href="/admin/predictions.html" style="font-size:0.85rem;">View All &rarr;</a>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table" id="recent-table">
+            <thead><tr><th>Match</th><th>Score</th><th>Tip</th><th>Result</th></tr></thead>
+            <tbody id="recent-tbody"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -43,53 +81,89 @@
 <script src="/js/admin.js"></script>
 <script>
 (function () {
-  var chart;
-  async function load() {
-    var params = new URLSearchParams({ period: document.getElementById('period').value, group_by: document.getElementById('group-by').value, sort_by: document.getElementById('sort-by').value });
-    var res = await AD.api('/admin/leaderboard?' + params.toString());
-    var tbody = document.getElementById('leaderboard-tbody');
-    tbody.innerHTML = res.data.map(function (r, i) {
-      return '<tr><td data-label="#"><span class="rank-badge">' + (i + 1) + '</span></td>' +
-        '<td data-label="Group">' + AD.escapeHtml(String(r.group_label || 'Unknown')) + '</td>' +
-        '<td data-label="Won"><span class="badge badge-won">' + r.wins + '</span></td>' +
-        '<td data-label="Lost"><span class="badge badge-lost">' + r.losses + '</span></td>' +
-        '<td data-label="Sample">' + r.total + '</td>' +
-        '<td data-label="Win Rate"><div class="confidence-bar-track" style="width:70px;display:inline-block;vertical-align:middle;margin-right:6px;"><div class="confidence-bar-fill ' + (r.win_rate >= 80 ? 'high' : r.win_rate >= 60 ? 'mid' : r.win_rate >= 40 ? 'low' : 'poor') + '" style="width:' + r.win_rate + '%"></div></div>' + r.win_rate + '%</td>' +
-        '<td data-label="Confidence">' + Math.round(r.avg_confidence || 0) + '</td></tr>';
-    }).join('') || '<tr><td colspan="7">No graded data yet.</td></tr>';
-
-    var ctx = document.getElementById('leaderboard-chart');
-    if (chart) chart.destroy();
-    chart = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: res.data.slice(0, 8).map(function (r) { return r.group_label; }), datasets: [{ label: 'Win Rate %', data: res.data.slice(0, 8).map(function (r) { return Number(r.win_rate); }), backgroundColor: '#ff6b35', borderRadius: 6 }] },
-      options: { responsive: true, plugins: { legend: { display: false } } },
-    });
+  function accuracyColor(pct) {
+    return pct >= 70 ? 'high' : pct >= 55 ? 'mid' : pct >= 40 ? 'low' : 'poor';
   }
-  ['period', 'group-by', 'sort-by'].forEach(function (id) { document.getElementById(id).addEventListener('change', load); });
+  function accuracyDot(pct) {
+    var cls = accuracyColor(pct);
+    var color = cls === 'high' ? 'var(--success)' : cls === 'mid' ? 'var(--light-green)' : cls === 'low' ? 'var(--warning)' : 'var(--danger)';
+    return '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + color + ';margin-right:6px;"></span>';
+  }
 
-  async function loadTopPerformers() {
+  async function loadSummary() {
     try {
-      var res = await AD.api('/admin/intelligence/patterns');
+      var res = await AD.api('/admin/leaderboard/summary');
       var d = res.data;
-      var bestMarket = d.byMarket[0], bestLeague = d.byLeague[0], bestTeam = d.byTeam[0];
-      function pct(r) { return r ? Math.round((r.correct / r.total) * 100) : null; }
-      document.getElementById('top-performers').innerHTML = [
-        { icon: 'military_tech', label: 'Best Market/Tip Type', value: bestMarket ? bestMarket.market + ' / ' + bestMarket.category : '—', sub: bestMarket ? pct(bestMarket) + '% (n=' + bestMarket.total + ')' : 'Not enough data' },
-        { icon: 'emoji_events', label: 'Best League', value: bestLeague ? (bestLeague.league_name || 'Unknown') : '—', sub: bestLeague ? pct(bestLeague) + '% (n=' + bestLeague.total + ')' : 'Not enough data' },
-        { icon: 'groups', label: 'Best Team Pattern', value: bestTeam ? bestTeam.team + ' (' + bestTeam.market + ')' : '—', sub: bestTeam ? pct(bestTeam) + '% (n=' + bestTeam.total + ')' : 'Not enough data' },
-      ].map(function (t) {
-        return '<div class="stat-card"><span class="material-icons-round">' + t.icon + '</span><div class="stat-card__value" style="font-size:1.05rem;">' + AD.escapeHtml(t.value) + '</div><div class="stat-card__label">' + t.label + ' &middot; ' + t.sub + '</div></div>';
-      }).join('');
-    } catch (e) { document.getElementById('top-performers').innerHTML = ''; }
+      document.getElementById('stat-accuracy').textContent = d.accuracy + '%';
+      document.getElementById('stat-won').textContent = d.won;
+      document.getElementById('stat-lost').textContent = d.lost;
+      document.getElementById('stat-settled').textContent = d.settled;
+    } catch (e) { /* leave dashes */ }
   }
+
+  async function loadCategoryTable(period) {
+    var tbody = document.getElementById('category-tbody');
+    tbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
+    try {
+      var res = await AD.api('/admin/leaderboard?' + new URLSearchParams({ period: period, group_by: 'category', sort_by: 'most_won' }));
+      tbody.innerHTML = res.data.map(function (r) {
+        return '<tr><td data-label="Category"><strong>' + AD.escapeHtml(String(r.group_label || 'Unknown')) + '</strong></td>' +
+          '<td data-label="Tips">' + r.total + '</td>' +
+          '<td data-label="Won" style="color:var(--success-dim);font-weight:700;">' + r.wins + '</td>' +
+          '<td data-label="Lost" style="color:var(--danger);">' + r.losses + '</td>' +
+          '<td data-label="Accuracy">' + accuracyDot(r.win_rate) + '<strong>' + r.win_rate + '%</strong></td></tr>';
+      }).join('') || '<tr><td colspan="5">No graded data yet.</td></tr>';
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="5">Failed to load.</td></tr>'; }
+  }
+
+  async function loadLeagueTable(period) {
+    var tbody = document.getElementById('league-tbody');
+    tbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
+    try {
+      var res = await AD.api('/admin/leaderboard?' + new URLSearchParams({ period: period, group_by: 'league', sort_by: 'most_won' }));
+      tbody.innerHTML = res.data.map(function (r, i) {
+        var rank = i + 1;
+        var rankHtml = rank <= 3
+          ? '<span class="rank-badge rank-badge--' + (rank === 1 ? 'gold' : rank === 2 ? 'silver' : 'bronze') + '">' + rank + '</span>'
+          : '<strong>' + rank + '</strong>';
+        return '<tr><td data-label="#">' + rankHtml + '</td>' +
+          '<td data-label="League"><strong>' + AD.escapeHtml(String(r.group_label || 'Unknown')) + '</strong>' + (r.group_country ? ' <span class="text-soft" style="font-size:0.8rem;">&middot; ' + AD.escapeHtml(r.group_country) + '</span>' : '') + '</td>' +
+          '<td data-label="Tips">' + r.total + '</td>' +
+          '<td data-label="Won" style="color:var(--success-dim);font-weight:700;">' + r.wins + '</td>' +
+          '<td data-label="Accuracy">' + accuracyDot(r.win_rate) + r.win_rate + '%</td></tr>';
+      }).join('') || '<tr><td colspan="5">No graded data yet.</td></tr>';
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="5">Failed to load.</td></tr>'; }
+  }
+
+  async function loadRecentResults() {
+    var tbody = document.getElementById('recent-tbody');
+    tbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+    try {
+      var res = await AD.api('/admin/leaderboard/recent-results?limit=10');
+      tbody.innerHTML = res.data.map(function (p) {
+        return '<tr><td data-label="Match">' + AD.escapeHtml(p.home_team) + ' vs ' + AD.escapeHtml(p.away_team) + '</td>' +
+          '<td data-label="Score">' + p.home_score + ' - ' + p.away_score + '</td>' +
+          '<td data-label="Tip">' + AD.escapeHtml(p.tip) + '</td>' +
+          '<td data-label="Result"><span class="badge ' + (p.result === 'won' ? 'badge-won' : 'badge-lost') + '">' + p.result.toUpperCase() + '</span></td></tr>';
+      }).join('') || '<tr><td colspan="4">No graded results yet.</td></tr>';
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="4">Failed to load.</td></tr>'; }
+  }
+
+  function loadAll() {
+    var period = document.getElementById('period').value;
+    loadCategoryTable(period);
+    loadLeagueTable(period);
+  }
+
+  document.getElementById('period').addEventListener('change', loadAll);
 
   async function init() {
     var user = await AD.requireAdmin();
     if (!user) return;
     AD.renderShell('leaderboard', user, 'Leaderboard');
-    loadTopPerformers();
-    load();
+    loadSummary();
+    loadAll();
+    loadRecentResults();
   }
   init();
 })();
