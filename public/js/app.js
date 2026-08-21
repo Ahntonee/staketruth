@@ -286,6 +286,23 @@
     fetchOtherSites();
   };
 
+  // Site-wide floating "back to top" button -- added once here rather than
+  // per-page so every page (including SEO landing pages, which tend to run
+  // long with intro copy + a full predictions feed) gets it automatically.
+  ST.injectBackToTop = function () {
+    if (document.getElementById('back-to-top-btn')) return;
+    var btn = document.createElement('button');
+    btn.id = 'back-to-top-btn';
+    btn.className = 'back-to-top';
+    btn.setAttribute('aria-label', 'Back to top');
+    btn.innerHTML = '<span class="material-icons-round">arrow_upward</span>';
+    btn.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    document.body.appendChild(btn);
+    window.addEventListener('scroll', function () {
+      btn.classList.toggle('back-to-top--visible', window.scrollY > 500);
+    }, { passive: true });
+  };
+
   var SOCIAL_ICONS = { twitter: 'X', telegram: 'TG', facebook: 'FB', reddit: 'RD', whatsapp: 'WA' };
   async function fetchSocialLinks() {
     try {
@@ -700,6 +717,7 @@
     ST.injectFooter();
     ST.refreshAuth();
     ST.injectAdSlots();
+    ST.injectBackToTop();
 
     var pending = sessionStorage.getItem('st_pending_toast');
     if (pending) {

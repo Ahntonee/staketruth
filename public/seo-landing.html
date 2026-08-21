@@ -32,7 +32,7 @@
   <section>
     <div class="container" style="max-width:900px;">
       <h2 class="section-title" style="font-size:1.1rem;">Live Predictions</h2>
-      <div id="predictions-list"><div class="skeleton" style="height:300px;border-radius:14px;"></div></div>
+      <div id="predictions-grid"><div class="skeleton" style="height:200px;border-radius:14px;"></div></div>
     </div>
   </section>
 </main>
@@ -50,7 +50,7 @@
 
   async function load() {
     var pageContainer = document.getElementById('page-container');
-    var listContainer = document.getElementById('predictions-list');
+    var listContainer = document.getElementById('predictions-grid');
     if (!slug) { pageContainer.innerHTML = '<div class="empty-state">Page not found.</div>'; listContainer.innerHTML = ''; return; }
     try {
       var res = await ST.api('/seo-pages/' + slug);

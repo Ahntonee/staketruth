@@ -50,7 +50,7 @@
       <div class="form-group"><label class="form-label">URL Slug</label><input required name="slug" class="form-control" placeholder="premier-league-predictions"><div class="text-soft" style="font-size:0.75rem;margin-top:4px;">Lives at /topic/&lt;slug&gt;</div></div>
       <div class="form-group"><label class="form-label">H1 Heading</label><input name="h1" class="form-control" placeholder="Premier League Predictions Today"></div>
       <div class="form-group"><label class="form-label">Meta Description</label><textarea name="meta_description" class="form-control" rows="2" maxlength="300"></textarea></div>
-      <div class="form-group"><label class="form-label">Intro Content (Markdown)</label><textarea name="intro_content" class="form-control" rows="6" placeholder="Real, useful intro copy about this league/market..."></textarea></div>
+      <div class="form-group"><label class="form-label">Intro Content (Markdown)</label><textarea id="content-editor" name="intro_content" placeholder="Real, useful intro copy about this league/market..."></textarea></div>
       <div class="grid-2" style="grid-template-columns:1fr 1fr;">
         <div class="form-group"><label class="form-label">League Filter</label><select name="league_id" class="form-control"><option value="">Any League</option></select></div>
         <div class="form-group"><label class="form-label">Category Filter</label><select name="category" class="form-control">
@@ -67,10 +67,18 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
 <script src="/js/admin.js"></script>
 <script>
 (function () {
   var cache = [];
+  var mde;
+
+  function openModal(id) {
+    document.getElementById(id).classList.add('open');
+    setTimeout(function () { if (mde) mde.codemirror.refresh(); }, 10);
+  }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
   function rowHtml(p) {
     return '<tr>' +
@@ -107,13 +115,11 @@
     });
   }
 
-  function openModal(id) { document.getElementById(id).classList.add('open'); }
-  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
   document.getElementById('add-btn').addEventListener('click', function () {
     document.getElementById('page-form').reset();
     document.getElementById('page-form').id.value = '';
     document.getElementById('modal-title').textContent = 'Add SEO Page';
+    if (mde) mde.value('');
     openModal('edit-modal');
   });
   document.getElementById('modal-close').addEventListener('click', function () { closeModal('edit-modal'); });
@@ -128,7 +134,8 @@
         var p = res.data;
         var form = document.getElementById('page-form');
         form.id.value = p.id; form.title.value = p.title; form.slug.value = p.slug; form.h1.value = p.h1 || '';
-        form.meta_description.value = p.meta_description || ''; form.intro_content.value = p.intro_content || '';
+        form.meta_description.value = p.meta_description || '';
+        if (mde) mde.value(p.intro_content || '');
         form.league_id.value = p.league_id || ''; form.category.value = p.category || '';
         form.is_published.checked = !!p.is_published;
         document.getElementById('modal-title').textContent = 'Edit SEO Page';
@@ -149,11 +156,12 @@
 
   document.getElementById('page-form').addEventListener('submit', async function (e) {
     e.preventDefault();
+    if (!mde) { AD.showToast('The editor failed to load — refresh the page and try again.', 'error'); return; }
     var fd = new FormData(e.target);
     var id = fd.get('id');
     var body = {
       title: fd.get('title'), slug: fd.get('slug'), h1: fd.get('h1'),
-      meta_description: fd.get('meta_description'), intro_content: fd.get('intro_content'),
+      meta_description: fd.get('meta_description'), intro_content: mde.value(),
       league_id: fd.get('league_id') || null, category: fd.get('category') || null,
       is_published: fd.get('is_published') === 'on',
     };
@@ -170,6 +178,11 @@
     var user = await AD.requireAdmin();
     if (!user) return;
     AD.renderShell('seo-pages', user, 'SEO Pages');
+    try {
+      mde = new EasyMDE({ element: document.getElementById('content-editor'), spellChecker: false, minHeight: '160px', autoDownloadFontAwesome: false });
+    } catch (err) {
+      AD.showToast('Editor failed to load — you can still manage existing pages, but new/edited content needs a page refresh first.', 'error');
+    }
     loadLeagueOptions();
     load();
   }
