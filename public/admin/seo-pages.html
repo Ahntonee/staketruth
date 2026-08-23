@@ -186,7 +186,20 @@
     if (!user) return;
     AD.renderShell('seo-pages', user, 'SEO Pages');
     try {
-      mde = new EasyMDE({ element: document.getElementById('content-editor'), spellChecker: false, minHeight: '160px', autoDownloadFontAwesome: false });
+      mde = new EasyMDE({
+        element: document.getElementById('content-editor'), spellChecker: false, minHeight: '160px', autoDownloadFontAwesome: false,
+        uploadImage: true,
+        imageUploadFunction: function (file, onSuccess, onError) {
+          var reader = new FileReader();
+          reader.onload = async function () {
+            try {
+              var res = await AD.api('/blog/upload-image', { method: 'POST', body: { dataUrl: reader.result } });
+              onSuccess(res.data.url);
+            } catch (err) { onError(err.message); }
+          };
+          reader.readAsDataURL(file);
+        },
+      });
     } catch (err) {
       AD.showToast('Editor failed to load — you can still manage existing pages, but new/edited content needs a page refresh first.', 'error');
     }

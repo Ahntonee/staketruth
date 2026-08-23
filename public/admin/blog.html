@@ -135,12 +135,19 @@
   document.getElementById('image-input').addEventListener('change', function (e) {
     var file = e.target.files[0];
     if (!file) return;
+    var preview = document.getElementById('image-preview');
+    AD.showToast('Uploading image…', 'success');
     var reader = new FileReader();
-    reader.onload = function () {
-      document.querySelector('[name="featured_image"]').value = reader.result;
-      var preview = document.getElementById('image-preview');
-      preview.src = reader.result; preview.style.display = 'block';
-      AD.showToast('Image attached', 'success');
+    reader.onload = async function () {
+      try {
+        // Uploads to Cloudinary and stores the hosted URL, not the raw
+        // base64 blob -- embedding the image directly bloated the database
+        // row and repeatedly exceeded nginx's request body limit.
+        var res = await AD.api('/blog/upload-image', { method: 'POST', body: { dataUrl: reader.result } });
+        document.querySelector('[name="featured_image"]').value = res.data.url;
+        preview.src = res.data.url; preview.style.display = 'block';
+        AD.showToast('Image uploaded', 'success');
+      } catch (err) { AD.showToast('Image upload failed: ' + err.message, 'error'); }
     };
     reader.readAsDataURL(file);
   });
@@ -210,7 +217,23 @@
     if (!user) return;
     AD.renderShell('blog', user, 'Blog CMS');
     try {
-      mde = new EasyMDE({ element: document.getElementById('content-editor'), spellChecker: false, minHeight: '200px', autoDownloadFontAwesome: false });
+      mde = new EasyMDE({
+        element: document.getElementById('content-editor'), spellChecker: false, minHeight: '200px', autoDownloadFontAwesome: false,
+        // Pasted/dragged images upload to Cloudinary and get inserted as a
+        // hosted URL, not embedded inline as base64 markdown -- same reason
+        // as the featured image field.
+        uploadImage: true,
+        imageUploadFunction: function (file, onSuccess, onError) {
+          var reader = new FileReader();
+          reader.onload = async function () {
+            try {
+              var res = await AD.api('/blog/upload-image', { method: 'POST', body: { dataUrl: reader.result } });
+              onSuccess(res.data.url);
+            } catch (err) { onError(err.message); }
+          };
+          reader.readAsDataURL(file);
+        },
+      });
     } catch (err) {
       AD.showToast('Editor failed to load — you can still manage existing posts, but new/edited content needs a page refresh first.', 'error');
     }

@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { successResponse, errorResponse, asyncHandler, parsePagination, paginate, generateBlogSlug } = require('../utils/helpers');
+const cloudinaryService = require('../services/cloudinary');
 
 const listPosts = asyncHandler(async (req, res) => {
   const { category, published } = req.query;
@@ -80,11 +81,16 @@ const togglePublish = asyncHandler(async (req, res) => {
 });
 
 const uploadImage = asyncHandler(async (req, res) => {
-  // Images are pasted as base64 data URLs from EasyMDE's uploader and stored
-  // inline in blog_posts.content / featured_image (LONGTEXT) — no filesystem writes.
+  // The browser reads the file as a base64 data URL and sends it here; we
+  // upload it to Cloudinary and hand back the hosted URL. Nothing ever gets
+  // embedded as base64 in the database or in a later request body -- that
+  // was blowing well past nginx's request size limit for anything but a
+  // tiny image, and bloated blog_posts rows for no reason.
   const { dataUrl } = req.body;
   if (!dataUrl || !dataUrl.startsWith('data:image/')) return errorResponse(res, 'A valid image data URL is required', 400);
-  return successResponse(res, { url: dataUrl });
+  if (!cloudinaryService.isConfigured()) return errorResponse(res, 'Image hosting is not configured on the server', 500);
+  const url = await cloudinaryService.uploadImage(dataUrl, 'staketruth/blog');
+  return successResponse(res, { url });
 });
 
 const adminList = asyncHandler(async (req, res) => {
