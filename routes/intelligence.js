@@ -16,4 +16,10 @@ router.get('/performance', ctrl.getPerformance);
 router.get('/profitability', ctrl.getProfitability);
 router.post('/run', ctrl.runNow);
 
+router.get('/league/:leagueId/overview', ctrl.getLeagueOverview);
+router.get('/league/:leagueId/standings', ctrl.getLeagueStandings);
+router.post('/league/:leagueId/standings/sync', ctrl.syncLeagueStandings);
+router.get('/league/:leagueId/match-intel', ctrl.getMatchIntel);
+router.get('/league/:leagueId/accuracy', ctrl.getLeagueAccuracy);
+
 module.exports = router;

@@ -79,7 +79,71 @@ const runNow = asyncHandler(async (req, res) => {
   return successResponse(res, result);
 });
 
+// ---- Per-league browser: League Overview / Standings / Match Intel / Accuracy ----
+
+const getLeagueOverview = asyncHandler(async (req, res) => {
+  const leagueId = req.params.leagueId;
+  const [[league]] = await pool.query('SELECT id, name, country FROM leagues WHERE id = ?', [leagueId]);
+  if (!league) return errorResponse(res, 'League not found', 404);
+  const [[stats]] = await pool.query(
+    `SELECT matches_played, goals_per_game, btts_percentage, over_1_5_percentage, over_2_5_percentage,
+            over_3_5_percentage, home_win_percentage, away_win_percentage, draw_percentage, season
+     FROM league_statistics WHERE league_id = ? ORDER BY season DESC LIMIT 1`,
+    [leagueId]
+  );
+  const [[predCounts]] = await pool.query(
+    `SELECT COUNT(*) AS total_predictions, SUM(result = 'pending') AS upcoming, SUM(result IN ('won','lost')) AS settled
+     FROM predictions WHERE league_id = ?`,
+    [leagueId]
+  );
+  return successResponse(res, { league, stats: stats || null, predictions: predCounts });
+});
+
+const getLeagueStandings = asyncHandler(async (req, res) => {
+  const leagueId = req.params.leagueId;
+  const [rows] = await pool.query(
+    `SELECT * FROM league_standings WHERE league_id = ? AND season = (
+       SELECT MAX(season) FROM league_standings WHERE league_id = ?
+     ) ORDER BY \`rank\` ASC`,
+    [leagueId, leagueId]
+  );
+  return successResponse(res, rows);
+});
+
+const syncLeagueStandings = asyncHandler(async (req, res) => {
+  const apiFootball = require('../services/apiFootball');
+  const result = await apiFootball.syncStandingsForLeague(req.params.leagueId);
+  return successResponse(res, result);
+});
+
+const getMatchIntel = asyncHandler(async (req, res) => {
+  const leagueId = req.params.leagueId;
+  const [rows] = await pool.query(
+    `SELECT id, home_team, away_team, match_date, tip, category, intelligence_score, analysis, is_published, result
+     FROM predictions WHERE league_id = ? AND match_date >= DATE_SUB(NOW(), INTERVAL 3 DAY)
+     ORDER BY match_date ASC LIMIT 50`,
+    [leagueId]
+  );
+  return successResponse(res, rows);
+});
+
+const getLeagueAccuracy = asyncHandler(async (req, res) => {
+  const leagueId = req.params.leagueId;
+  const [rows] = await pool.query(
+    `SELECT p.category AS group_label, COUNT(*) AS total,
+            SUM(p.result = 'won') AS wins, SUM(p.result = 'lost') AS losses
+     FROM predictions p
+     WHERE p.league_id = ? AND p.result IN ('won','lost')
+     GROUP BY p.category HAVING total >= 1
+     ORDER BY wins DESC`,
+    [leagueId]
+  );
+  const data = rows.map((r) => ({ ...r, win_rate: r.total ? ((r.wins / r.total) * 100).toFixed(1) : '0.0' }));
+  return successResponse(res, data);
+});
+
 module.exports = {
   getStatus, getWeights, putWeights, getQueue, approveQueueItem, rejectQueueItem,
   getPatterns, getPerformance, getProfitability, runNow,
+  getLeagueOverview, getLeagueStandings, syncLeagueStandings, getMatchIntel, getLeagueAccuracy,
 };

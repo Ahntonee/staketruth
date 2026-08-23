@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weight Tuner | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+<style>
+  .weight-groups-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+  .weight-group {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 18px 20px 20px; box-shadow: var(--shadow-sm);
+  }
+  .weight-group__title {
+    font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-soft); font-weight: 800;
+    margin-bottom: 16px; display: flex; align-items: center; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
+  .weight-group__title .material-icons-round {
+    font-size: 1.05rem; color: var(--primary); background: rgba(255,107,53,0.12);
+    width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .weight-item { margin-bottom: 22px; }
+  .weight-item:last-child { margin-bottom: 0; }
+  .weight-item__head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .weight-item__label-wrap { display: flex; align-items: center; gap: 6px; }
+  .weight-item__label { font-weight: 700; font-size: 0.9rem; }
+  .weight-item__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--warning); flex-shrink: 0; }
+  .weight-group--advanced { grid-column: 1 / -1; }
+  .weight-group--advanced summary.weight-group__title { cursor: pointer; margin-bottom: 0; list-style: none; }
+  .weight-group--advanced summary.weight-group__title::-webkit-details-marker { display: none; }
+  .weight-group--advanced summary.weight-group__title::after { content: 'expand_more'; font-family: 'Material Icons Round'; margin-left: auto; color: var(--text-soft); }
+  .weight-group--advanced[open] summary.weight-group__title::after { content: 'expand_less'; }
+  .weight-group--advanced[open] summary.weight-group__title { border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 16px; }
+  .weight-group--advanced:not([open]) summary.weight-group__title { border-bottom: none; }
+  .weight-item__row { display: flex; align-items: center; gap: 10px; }
+  .weight-item__num {
+    font-family: var(--font-head); font-weight: 800; font-size: 0.85rem; color: var(--primary);
+    background: rgba(255,107,53,0.08); border: 1px solid rgba(255,107,53,0.25); border-radius: 8px;
+    padding: 4px 6px; width: 64px; text-align: center; flex-shrink: 0;
+  }
+  .weight-item__num:focus { outline: none; border-color: var(--primary); background: var(--card); }
+  .weight-item__desc { font-size: 0.78rem; color: var(--muted); margin-top: 8px; line-height: 1.4; }
+  .weight-item__default { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+  .weight-slider {
+    -webkit-appearance: none; appearance: none; flex: 1; height: 8px; border-radius: 4px;
+    outline: none; cursor: pointer;
+    background: linear-gradient(to right, var(--primary) 0%, var(--primary) var(--pct, 0%), var(--card-2) var(--pct, 0%), var(--card-2) 100%);
+  }
+  .weight-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--card); border: 4px solid var(--primary); box-shadow: var(--shadow-sm); cursor: pointer;
+  }
+  .weight-slider::-moz-range-thumb {
+    width: 20px; height: 20px; border-radius: 50%; background: var(--card); border: 4px solid var(--primary);
+    box-shadow: var(--shadow-sm); cursor: pointer;
+  }
+  .weight-slider::-moz-range-track { background: transparent; }
+</style>
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Weight Tuner</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:10px;">
+          <div id="engine-status" class="text-soft" style="font-size:0.85rem;">Loading status…</div>
+          <button class="btn btn-primary btn-sm" id="run-now-btn">Run Intelligence Now</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div class="flex justify-between items-center" style="margin-bottom:4px;flex-wrap:wrap;gap:10px;">
+          <div>
+            <h3 class="section-title" style="font-size:1.05rem;margin-bottom:2px;"><span class="material-icons-round">tune</span>Weight Tuner</h3>
+            <p class="text-soft" style="font-size:0.82rem;margin:0;">Changes apply on the Weight Tuner's next run — no restart needed. <span class="weight-item__dot" style="display:inline-block;vertical-align:middle;margin:0 4px;"></span> marks a value that's been tuned away from its default.</p>
+          </div>
+          <div class="flex gap-8">
+            <button class="btn btn-outline btn-sm" id="reset-weights-btn"><span class="material-icons-round" style="font-size:1rem;">restart_alt</span> Reset to Defaults</button>
+            <button class="btn btn-primary btn-sm" id="save-weights-btn">Save Weights</button>
+          </div>
+        </div>
+        <div id="weights-form" class="weight-groups-grid" style="margin-top:18px;"></div>
+      </div>
+
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <h3 class="section-title" style="font-size:1rem;">Review Queue</h3>
+        <div class="table-scroll"><table class="data-table" id="queue-table">
+          <thead><tr><th>Match</th><th>Tip</th><th>Score</th><th style="min-width:280px;">Analysis</th><th>Actions</th></tr></thead>
+          <tbody id="queue-tbody"><tr><td colspan="5">Loading…</td></tr></tbody>
+        </table></div>
+      </div>
+
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:16px;">
+        <div class="card card-pad">
+          <h3 class="section-title" style="font-size:1rem;">Pattern Insights</h3>
+          <div id="patterns-content" class="text-soft" style="font-size:0.85rem;"></div>
+        </div>
+        <div class="card card-pad">
+          <h3 class="section-title" style="font-size:1rem;">Profitability (Admin-Only)</h3>
+          <div class="flex gap-8" style="margin-bottom:10px;">
+            <button class="btn btn-outline btn-sm active" data-profit-type="team">Teams</button>
+            <button class="btn btn-outline btn-sm" data-profit-type="league">Leagues</button>
+          </div>
+          <div id="profitability-content" style="font-size:0.85rem;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  var WEIGHT_LABELS = {
+    form_weight: 'Recent Form', h2h_weight: 'Head-to-Head History', odds_weight: 'Bookmaker Odds',
+    market_weight: 'Bet Type Track Record', league_weight: 'League Track Record', home_advantage: 'Home Advantage Boost',
+    poisson_k: 'Scoring Model Precision', learning_rate: 'Self-Correction Speed',
+    auto_publish_threshold: 'Auto-Publish Score', team_pattern_weight: 'Team-Specific Pattern Learning',
+    vip_pick_threshold: 'VIP Pick of the Day Score', auto_push_threshold: 'Auto-Push to Free Users',
+  };
+  // Plain-language, direction-aware explanations -- replaces the old ML-jargon
+  // descriptions. Every entry says what the setting does AND what "higher"
+  // means in practice, since "what does this number mean" was the exact
+  // confusion reported.
+  var WEIGHT_HINTS = {
+    form_weight: 'How much recent results shape a pick. Higher = today’s confidence leans more on how each team has played in its last few games.',
+    h2h_weight: 'How much past results between these exact two teams matter. Higher = head-to-head history between them counts for more.',
+    odds_weight: 'How closely picks follow what bookmakers already expect. Higher = picks lean closer to the betting market’s own view.',
+    market_weight: 'How much a bet type’s own past accuracy factors in (e.g. how reliable "Over 2.5" tips have been historically). Higher = boosts bet types that have historically held up better.',
+    league_weight: 'How much a league’s own predictability factors in. Higher = boosts leagues that have historically been easier to call.',
+    auto_publish_threshold: 'Predictions scoring at or above this go live automatically — no approval needed. Anything below waits in your Review Queue for you to approve.',
+    vip_pick_threshold: 'Predictions scoring at or above this qualify for the VIP Picks of the Day spotlight on the site.',
+    auto_push_threshold: 'Predictions scoring at or above this get automatically sent to your free registered users at midnight.',
+    home_advantage: 'How much extra credit the home team gets just for playing at home. Higher = home teams are favored more strongly.',
+    poisson_k: 'A technical setting for the scoring model’s math — not something you need to change. The default works for virtually every match.',
+    learning_rate: 'How fast the engine adjusts based on its own recent wins and losses. Higher = it reacts faster to a hot or cold streak, but can overreact to a short run of results.',
+    team_pattern_weight: 'How much a team’s own history with this exact bet type counts (e.g. "this team + Over 2.5" specifically), on top of everything else.',
+  };
+  var WEIGHT_GROUPS = [
+    { title: 'Publishing Rules', icon: 'rule', keys: ['auto_publish_threshold', 'vip_pick_threshold', 'auto_push_threshold'] },
+    { title: 'What The Engine Considers', icon: 'insights', keys: ['form_weight', 'h2h_weight', 'odds_weight', 'market_weight', 'league_weight'] },
+  ];
+  var ADVANCED_GROUP = { title: 'Advanced (rarely needs changing)', icon: 'settings_suggest', keys: ['home_advantage', 'poisson_k', 'learning_rate', 'team_pattern_weight'] };
+  // Fixed per-key ranges — NOT derived from the current value. A slider's max
+  // used to be picked based on whatever value was already saved, which meant
+  // a full drag to the right on h2h_weight/learning_rate silently saved 2.0
+  // (10-20x their intended 0-0.3ish range) with nothing to stop it.
+  var WEIGHT_RANGES = {
+    form_weight: { min: 0, max: 1, step: 0.01 },
+    h2h_weight: { min: 0, max: 1, step: 0.01 },
+    odds_weight: { min: 0, max: 1, step: 0.01 },
+    market_weight: { min: 0, max: 1, step: 0.01 },
+    league_weight: { min: 0, max: 1, step: 0.01 },
+    learning_rate: { min: 0, max: 0.5, step: 0.01 },
+    team_pattern_weight: { min: 0, max: 0.5, step: 0.01 },
+    home_advantage: { min: 1, max: 2, step: 0.01 },
+    poisson_k: { min: 3, max: 10, step: 1 },
+    min_confidence_publish: { min: 0, max: 99, step: 1 },
+    auto_publish_threshold: { min: 0, max: 99, step: 1 },
+    auto_push_threshold: { min: 0, max: 99, step: 1 },
+    vip_pick_threshold: { min: 0, max: 99, step: 1 },
+  };
+  // Shown as a "default: X" hint and used by Reset to Defaults — mirrors
+  // config/migrate.js's WEIGHTS seed values.
+  var WEIGHT_DEFAULTS = {
+    form_weight: 0.30, h2h_weight: 0.20, odds_weight: 0.20, market_weight: 0.15, league_weight: 0.15,
+    home_advantage: 1.15, poisson_k: 6, learning_rate: 0.10, min_confidence_publish: 72,
+    auto_publish_threshold: 78, team_pattern_weight: 0.10, vip_pick_threshold: 85, auto_push_threshold: 80,
+  };
+
+  async function loadStatus() {
+    var res = await AD.api('/admin/intelligence/status');
+    var d = res.data;
+    document.getElementById('engine-status').innerHTML =
+      'Last run: <strong>' + (d.lastRun ? AD.formatDate(d.lastRun) : 'never') + '</strong> &middot; ' +
+      'Generated today: <strong>' + d.generatedToday + '</strong> &middot; Auto-published: <strong>' + d.autoPublishedToday + '</strong> &middot; ' +
+      'Review queue: <strong>' + d.reviewQueueCount + '</strong> &middot; VIP Picks today: <strong>' + d.vipPicksToday + '</strong>';
+  }
+
+  function setSliderFill(input) {
+    var min = Number(input.min), max = Number(input.max), val = Number(input.value);
+    var pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
+    input.style.setProperty('--pct', pct + '%');
+  }
+
+  async function loadWeights() {
+    var res = await AD.api('/admin/intelligence/weights');
+    var byKey = {};
+    res.data.forEach(function (w) { byKey[w.weight_key] = w; });
+    var container = document.getElementById('weights-form');
+
+    function itemHtml(key) {
+      var w = byKey[key];
+      if (!w) return '';
+      var range = WEIGHT_RANGES[key] || { min: 0, max: 10, step: 0.01 };
+      var def = WEIGHT_DEFAULTS[key];
+      var isChanged = def !== undefined && Number(w.weight_value) !== def;
+      var hint = WEIGHT_HINTS[key] || w.description;
+      return '<div class="weight-item" data-weight-item="' + key + '">' +
+        '<div class="weight-item__head">' +
+          '<span class="weight-item__label-wrap"><span class="weight-item__label">' + (WEIGHT_LABELS[key] || key) + '</span>' +
+          '<span class="weight-item__dot" data-dot-for="' + key + '" style="visibility:' + (isChanged ? 'visible' : 'hidden') + '" title="Differs from default"></span></span>' +
+        '</div>' +
+        '<div class="weight-item__row">' +
+          '<input type="range" class="weight-slider" min="' + range.min + '" max="' + range.max + '" step="' + range.step + '" value="' + w.weight_value + '" data-weight-key="' + key + '">' +
+          '<input type="number" class="weight-item__num" min="' + range.min + '" max="' + range.max + '" step="' + range.step + '" value="' + w.weight_value + '" data-weight-num-for="' + key + '">' +
+        '</div>' +
+        (def !== undefined ? '<div class="weight-item__default">Default: ' + def + '</div>' : '') +
+        (hint ? '<div class="weight-item__desc">' + AD.escapeHtml(hint) + '</div>' : '') +
+      '</div>';
+    }
+
+    var mainGroupsHtml = WEIGHT_GROUPS.map(function (group) {
+      var items = group.keys.filter(function (k) { return byKey[k]; }).map(itemHtml).join('');
+      return '<div class="weight-group"><div class="weight-group__title"><span class="material-icons-round">' + group.icon + '</span>' + group.title + '</div>' + items + '</div>';
+    }).join('');
+
+    var advancedItems = ADVANCED_GROUP.keys.filter(function (k) { return byKey[k]; }).map(itemHtml).join('');
+    var advancedHtml = '<details class="weight-group weight-group--advanced">' +
+      '<summary class="weight-group__title"><span class="material-icons-round">' + ADVANCED_GROUP.icon + '</span>' + ADVANCED_GROUP.title + '</summary>' +
+      '<p class="text-soft" style="font-size:0.78rem;margin:10px 0 16px;">These control the scoring model\'s internal math. The defaults work well for almost every case — only change these if you know what you\'re doing.</p>' +
+      advancedItems +
+    '</details>';
+
+    container.innerHTML = mainGroupsHtml + advancedHtml;
+
+    function syncFromValue(key, value) {
+      var def = WEIGHT_DEFAULTS[key];
+      var dot = container.querySelector('[data-dot-for="' + key + '"]');
+      if (dot) dot.style.visibility = (def !== undefined && Number(value) !== def) ? 'visible' : 'hidden';
+    }
+
+    container.querySelectorAll('.weight-slider').forEach(function (input) {
+      setSliderFill(input);
+      input.addEventListener('input', function () {
+        setSliderFill(input);
+        var key = input.getAttribute('data-weight-key');
+        var num = container.querySelector('[data-weight-num-for="' + key + '"]');
+        if (num) num.value = input.value;
+        syncFromValue(key, input.value);
+      });
+    });
+    container.querySelectorAll('.weight-item__num').forEach(function (input) {
+      input.addEventListener('input', function () {
+        var key = input.getAttribute('data-weight-num-for');
+        var slider = container.querySelector('[data-weight-key="' + key + '"]');
+        if (slider && input.value !== '') {
+          var clamped = Math.min(Number(slider.max), Math.max(Number(slider.min), Number(input.value)));
+          slider.value = clamped;
+          setSliderFill(slider);
+        }
+        syncFromValue(key, input.value);
+      });
+    });
+  }
+
+  document.getElementById('save-weights-btn').addEventListener('click', async function () {
+    var updates = {};
+    document.querySelectorAll('[data-weight-key]').forEach(function (input) { updates[input.getAttribute('data-weight-key')] = Number(input.value); });
+    try { await AD.api('/admin/intelligence/weights', { method: 'PUT', body: updates }); AD.showToast('Weights saved', 'success'); }
+    catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  document.getElementById('reset-weights-btn').addEventListener('click', async function () {
+    if (!AD.confirmAction('Reset every weight back to its default value? This overwrites any manual tuning.')) return;
+    try {
+      await AD.api('/admin/intelligence/weights', { method: 'PUT', body: WEIGHT_DEFAULTS });
+      AD.showToast('Weights reset to defaults', 'success');
+      loadWeights();
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  async function loadQueue() {
+    var res = await AD.api('/admin/intelligence/queue');
+    var tbody = document.getElementById('queue-tbody');
+    tbody.innerHTML = res.data.map(function (p) {
+      return '<tr><td data-label="Match">' + AD.escapeHtml(p.home_team) + ' vs ' + AD.escapeHtml(p.away_team) +
+          (p.league_name ? '<br><span class="text-soft" style="font-size:0.76rem;">' + AD.escapeHtml(p.league_name) + '</span>' : '') + '</td>' +
+        '<td data-label="Tip">' + AD.escapeHtml(p.tip) + '</td>' +
+        '<td data-label="Score"><div class="confidence-bar-track" style="width:80px;"><div class="confidence-bar-fill ' + (p.intelligence_score >= 80 ? 'high' : p.intelligence_score >= 60 ? 'mid' : 'low') + '" style="width:' + p.intelligence_score + '%"></div></div>' + p.intelligence_score + '</td>' +
+        '<td data-label="Analysis" style="font-size:0.8rem;color:var(--text-soft);white-space:normal;max-width:360px;">' + (p.analysis ? AD.escapeHtml(p.analysis) : '<em>No analysis text.</em>') + '</td>' +
+        '<td data-label="Actions"><button class="btn btn-primary btn-sm" data-approve="' + p.id + '">Approve</button> <button class="btn btn-danger btn-sm" data-reject="' + p.id + '">Reject</button></td></tr>';
+    }).join('') || '<tr><td colspan="5">Review queue is empty.</td></tr>';
+  }
+  document.getElementById('queue-tbody').addEventListener('click', async function (e) {
+    var approveId = e.target.getAttribute('data-approve');
+    var rejectId = e.target.getAttribute('data-reject');
+    if (approveId) { await AD.api('/admin/intelligence/queue/' + approveId + '/approve', { method: 'PUT' }); loadQueue(); loadStatus(); }
+    if (rejectId) { await AD.api('/admin/intelligence/queue/' + rejectId + '/reject', { method: 'PUT' }); loadQueue(); loadStatus(); }
+  });
+
+  async function loadPatterns() {
+    var res = await AD.api('/admin/intelligence/patterns');
+    var d = res.data;
+    function list(rows, labelFn) {
+      if (!rows.length) return '<p>Not enough graded data yet.</p>';
+      return '<ul>' + rows.map(function (r) { return '<li>' + labelFn(r) + ' — ' + Math.round((r.correct / r.total) * 100) + '% (n=' + r.total + ')</li>'; }).join('') + '</ul>';
+    }
+    document.getElementById('patterns-content').innerHTML =
+      '<strong>Best tip types</strong>' + list(d.byMarket, function (r) { return r.market + ' / ' + r.category; }) +
+      '<strong>Best leagues</strong>' + list(d.byLeague, function (r) { return r.league_name || 'Unknown'; }) +
+      '<strong>Best team patterns</strong>' + list(d.byTeam, function (r) { return r.team + ' (' + r.market + ')'; });
+  }
+
+  async function loadProfitability(type) {
+    var res = await AD.api('/admin/intelligence/profitability?type=' + type);
+    document.getElementById('profitability-content').innerHTML = res.data.length ? res.data.map(function (r) {
+      return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);"><span>' + AD.escapeHtml(r.entity_name) + ' <span class="text-soft">(' + r.market + ')</span></span><strong style="color:' + (r.profit_units >= 0 ? 'var(--primary)' : 'var(--danger)') + '">' + Number(r.profit_units).toFixed(1) + 'u</strong></div>';
+    }).join('') : '<p class="text-soft">Not enough graded data yet.</p>';
+  }
+  document.querySelectorAll('[data-profit-type]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('[data-profit-type]').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      loadProfitability(btn.getAttribute('data-profit-type'));
+    });
+  });
+
+  document.getElementById('run-now-btn').addEventListener('click', async function (e) {
+    e.target.disabled = true; e.target.textContent = 'Running…';
+    try {
+      var res = await AD.api('/admin/intelligence/run', { method: 'POST' });
+      AD.showToast('Generated ' + res.data.generated + ' predictions', 'success');
+      loadStatus(); loadQueue();
+    } catch (err) { AD.showToast(err.message, 'error'); }
+    e.target.disabled = false; e.target.textContent = 'Run Intelligence Now';
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell("weights", user, 'Weight Tuner');
+    loadStatus(); loadWeights(); loadQueue(); loadPatterns(); loadProfitability('team');
+  }
+  init();
+})();
+</script>
+</body>
+</html>

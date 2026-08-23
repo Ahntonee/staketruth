@@ -310,6 +310,43 @@ async function syncHistoricalFixtures(apiLeagueId, seasonsBack = 3) {
   return { skipped: false, inserted, seasons: seasonsBack };
 }
 
+/**
+ * Pulls the current standings table for one league from API-Football and
+ * upserts it into league_standings. On-demand (called when an admin picks a
+ * league on the Intelligence page and clicks Load Data), not scheduled --
+ * standings only change a few times a week, so there's no need to poll it.
+ */
+async function syncStandingsForLeague(leagueId) {
+  if (!isConfigured()) return { skipped: true, reason: 'API_FOOTBALL_KEY not configured' };
+  const [leagueRows] = await pool.query('SELECT id, api_league_id FROM leagues WHERE id = ?', [leagueId]);
+  const league = leagueRows[0];
+  if (!league || !league.api_league_id) return { skipped: true, reason: 'League not found or missing api_league_id' };
+
+  const season = Number(process.env.API_FOOTBALL_SEASON) || new Date().getFullYear();
+  try {
+    const { data } = await client().get('/standings', { params: { league: league.api_league_id, season } });
+    const table = data.response?.[0]?.league?.standings?.[0] || [];
+    for (const row of table) {
+      await pool.query(
+        `INSERT INTO league_standings
+           (league_id, season, api_team_id, team_name, team_logo, \`rank\`, played, won, drawn, lost, goals_for, goals_against, goal_diff, points)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           api_team_id = VALUES(api_team_id), team_logo = VALUES(team_logo), \`rank\` = VALUES(\`rank\`),
+           played = VALUES(played), won = VALUES(won), drawn = VALUES(drawn), lost = VALUES(lost),
+           goals_for = VALUES(goals_for), goals_against = VALUES(goals_against),
+           goal_diff = VALUES(goal_diff), points = VALUES(points)`,
+        [league.id, season, row.team.id, row.team.name, row.team.logo, row.rank,
+          row.all.played, row.all.win, row.all.draw, row.all.lose,
+          row.all.goals.for, row.all.goals.against, row.goalsDiff, row.points]
+      );
+    }
+    return { skipped: false, teams: table.length, season };
+  } catch (err) {
+    return { skipped: true, reason: err.response?.data?.message || err.message };
+  }
+}
+
 module.exports = {
   isConfigured,
   getRemainingCount,
@@ -322,4 +359,5 @@ module.exports = {
   getTeamFormStrings,
   getTeamGoalAverages,
   syncHistoricalFixtures,
+  syncStandingsForLeague,
 };

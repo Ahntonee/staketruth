@@ -170,9 +170,9 @@
         '<div class="insight-row"><span class="material-icons-round">workspace_premium</span><span>VIP Picks today: <strong>' + d.intelligence.vipPicksToday + '</strong>, pushed to registered users: <strong>' + d.intelligence.pushedToday + '</strong></span></div>' +
         (bestMarket ? '<div class="insight-row"><span class="material-icons-round">military_tech</span><span>Best tip type: <strong>' + bestMarket.market + ' / ' + bestMarket.category + '</strong> (' + Math.round((bestMarket.correct / bestMarket.total) * 100) + '%)</span></div>' : '') +
         (bestLeague ? '<div class="insight-row"><span class="material-icons-round">emoji_events</span><span>Best league: <strong>' + (bestLeague.league_name || 'Unknown') + '</strong> (' + Math.round((bestLeague.correct / bestLeague.total) * 100) + '%)</span></div>' : '') +
-        '<a href="intelligence.html" class="btn btn-outline btn-sm btn-block" style="margin-top:10px;">Open Intelligence Engine</a>';
+        '<a href="intelligence.html" class="btn btn-outline btn-sm btn-block" style="margin-top:10px;">Open Intelligence</a>';
     } catch (e) {
-      document.getElementById('intel-snapshot').innerHTML = '<p class="text-soft">Not enough graded data yet.</p><a href="intelligence.html" class="btn btn-outline btn-sm btn-block">Open Intelligence Engine</a>';
+      document.getElementById('intel-snapshot').innerHTML = '<p class="text-soft">Not enough graded data yet.</p><a href="intelligence.html" class="btn btn-outline btn-sm btn-block">Open Intelligence</a>';
     }
   }
 

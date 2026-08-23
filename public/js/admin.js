@@ -72,7 +72,7 @@
 
   var NAV_ITEMS = [
     { key: 'dashboard', href: 'dashboard.html', icon: 'dashboard', label: 'Dashboard' },
-    { key: 'intelligence', href: 'intelligence.html', icon: 'psychology', label: 'Intelligence Engine' },
+    { key: 'intelligence', href: 'intelligence.html', icon: 'psychology', label: 'Intelligence' },
     { key: 'predictions', href: 'predictions.html', icon: 'sports_soccer', label: 'Predictions' },
     { key: 'categories', href: 'categories.html', icon: 'category', label: 'Categories' },
     { key: 'leaderboard', href: 'leaderboard.html', icon: 'leaderboard', label: 'Leaderboard' },

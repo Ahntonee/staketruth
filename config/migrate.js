@@ -436,6 +436,27 @@ const TABLES = [
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE SET NULL
   ) ENGINE=InnoDB`,
+
+  `CREATE TABLE IF NOT EXISTS league_standings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    league_id INT NOT NULL,
+    season INT NOT NULL,
+    api_team_id INT,
+    team_name VARCHAR(255) NOT NULL,
+    team_logo VARCHAR(500),
+    \`rank\` INT,
+    played INT DEFAULT 0,
+    won INT DEFAULT 0,
+    drawn INT DEFAULT 0,
+    lost INT DEFAULT 0,
+    goals_for INT DEFAULT 0,
+    goals_against INT DEFAULT 0,
+    goal_diff INT DEFAULT 0,
+    points INT DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_league_season_team (league_id, season, team_name),
+    FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB`,
 ];
 
 // NOTE: api_league_id values follow API-Football's well-documented ID scheme.
