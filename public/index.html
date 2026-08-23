@@ -93,8 +93,9 @@
               <div class="skeleton" style="height:200px;border-radius:14px;margin-bottom:14px;"></div>
             </div>
             <div class="ad-slot" data-placement="homepage_infeed"></div>
-            <div class="text-center" style="margin-top:12px;">
-              <button class="btn btn-outline" id="load-more-btn">Load More</button>
+            <div id="scroll-sentinel" style="height:1px;"></div>
+            <div class="text-center" id="load-more-spinner" style="margin-top:12px;display:none;">
+              <span class="material-icons-round" style="animation:spin 1s linear infinite;">progress_activity</span>
             </div>
           </div>
         </div>
@@ -118,7 +119,9 @@
 <script src="/js/content-protection.js"></script>
 <script>
 (function () {
-  var state = { category: 'all', date: 'today', league_id: '', page: 1 };
+  var state = { category: 'all', date: 'today', league_id: '', page: 1, hasNextPage: false };
+  var requestSeq = 0;
+  var loadingMore = false;
 
   async function loadLeagues() {
     try {
@@ -140,19 +143,33 @@
   async function loadPredictions(append) {
     var grid = document.getElementById('predictions-grid');
     if (!append) grid.innerHTML = '<div class="skeleton" style="height:200px;border-radius:14px;"></div>';
+    var mySeq = ++requestSeq;
     var params = new URLSearchParams({ date: state.date, category: state.category, page: state.page, limit: 10 });
     if (state.league_id) params.set('league_id', state.league_id);
     try {
       var res = await ST.api('/predictions?' + params.toString());
+      if (mySeq !== requestSeq) return;
       var html = res.data.map(ST.buildPredictionCard).join('') || '<div class="empty-state">No predictions found for this filter.</div>';
       if (append) grid.insertAdjacentHTML('beforeend', html);
       else grid.innerHTML = html;
       grid.querySelectorAll('[data-vote-poll]').forEach(function (el) {
         if (!el.dataset.wired) { el.dataset.wired = '1'; ST.initVotePoll(el, el.getAttribute('data-prediction-id')); }
       });
-      document.getElementById('load-more-btn').style.display = res.meta.hasNextPage ? '' : 'none';
-    } catch (e) { grid.innerHTML = '<div class="empty-state">Could not load predictions right now.</div>'; }
+      state.hasNextPage = res.meta.hasNextPage;
+    } catch (e) { if (mySeq === requestSeq) grid.innerHTML = '<div class="empty-state">Could not load predictions right now.</div>'; }
+    document.getElementById('load-more-spinner').style.display = 'none';
+    loadingMore = false;
   }
+
+  var scrollObserver = new IntersectionObserver(function (entries) {
+    if (entries[0].isIntersecting && state.hasNextPage && !loadingMore) {
+      loadingMore = true;
+      document.getElementById('load-more-spinner').style.display = '';
+      state.page++;
+      loadPredictions(true);
+    }
+  }, { rootMargin: '300px' });
+  scrollObserver.observe(document.getElementById('scroll-sentinel'));
 
   document.getElementById('category-tabs').addEventListener('click', function (e) {
     var btn = e.target.closest('.category-tab');
@@ -175,8 +192,6 @@
   document.getElementById('league-filter').addEventListener('change', function () {
     state.league_id = this.value; state.page = 1; loadPredictions(false);
   });
-  document.getElementById('load-more-btn').addEventListener('click', function () { state.page++; loadPredictions(true); });
-
   loadLeagues();
   loadPredictions(false);
   ST.renderBankerCards(document.getElementById('banker-cards'));

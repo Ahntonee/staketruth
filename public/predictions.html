@@ -88,8 +88,9 @@
               <div class="skeleton" style="height:200px;border-radius:14px;margin-bottom:14px;"></div>
               <div class="skeleton" style="height:200px;border-radius:14px;margin-bottom:14px;"></div>
             </div>
-            <div class="text-center" style="margin-top:12px;">
-              <button class="btn btn-outline" id="load-more-btn">Load More</button>
+            <div id="scroll-sentinel" style="height:1px;"></div>
+            <div class="text-center" id="load-more-spinner" style="margin-top:12px;display:none;">
+              <span class="material-icons-round" style="animation:spin 1s linear infinite;">progress_activity</span>
             </div>
           </div>
         </div>
@@ -112,8 +113,10 @@
 <script src="/js/content-protection.js"></script>
 <script>
 (function () {
-  var state = { category: 'all', date: 'today', league_id: '', market: '', search: '', page: 1 };
+  var state = { category: 'all', date: 'today', league_id: '', market: '', search: '', page: 1, hasNextPage: false };
   var searchTimer = null;
+  var requestSeq = 0;
+  var loadingMore = false;
 
   async function loadLeagues() {
     try {
@@ -135,21 +138,38 @@
   async function loadPredictions(append) {
     var grid = document.getElementById('predictions-grid');
     if (!append) grid.innerHTML = '<div class="skeleton" style="height:200px;border-radius:14px;"></div>';
+    // Guards against rapid tab-switching: if a slower, older request resolves
+    // after a newer one, it used to overwrite the grid with stale results even
+    // though the tab UI already showed the new filter as active.
+    var mySeq = ++requestSeq;
     var params = new URLSearchParams({ date: state.date, category: state.category, page: state.page, limit: 10 });
     if (state.league_id) params.set('league_id', state.league_id);
     if (state.market) params.set('market', state.market);
     if (state.search) params.set('search', state.search);
     try {
       var res = await ST.api('/predictions?' + params.toString());
+      if (mySeq !== requestSeq) return;
       var html = res.data.map(ST.buildPredictionCard).join('') || '<div class="empty-state">No predictions found for this filter.</div>';
       if (append) grid.insertAdjacentHTML('beforeend', html);
       else grid.innerHTML = html;
       grid.querySelectorAll('[data-vote-poll]').forEach(function (el) {
         if (!el.dataset.wired) { el.dataset.wired = '1'; ST.initVotePoll(el, el.getAttribute('data-prediction-id')); }
       });
-      document.getElementById('load-more-btn').style.display = res.meta.hasNextPage ? '' : 'none';
-    } catch (e) { grid.innerHTML = '<div class="empty-state">Could not load predictions right now.</div>'; }
+      state.hasNextPage = res.meta.hasNextPage;
+    } catch (e) { if (mySeq === requestSeq) grid.innerHTML = '<div class="empty-state">Could not load predictions right now.</div>'; }
+    document.getElementById('load-more-spinner').style.display = 'none';
+    loadingMore = false;
   }
+
+  var scrollObserver = new IntersectionObserver(function (entries) {
+    if (entries[0].isIntersecting && state.hasNextPage && !loadingMore) {
+      loadingMore = true;
+      document.getElementById('load-more-spinner').style.display = '';
+      state.page++;
+      loadPredictions(true);
+    }
+  }, { rootMargin: '300px' });
+  scrollObserver.observe(document.getElementById('scroll-sentinel'));
 
   document.getElementById('category-tabs').addEventListener('click', function (e) {
     var btn = e.target.closest('.category-tab');
@@ -172,8 +192,6 @@
     var val = this.value;
     searchTimer = setTimeout(function () { state.search = val; state.page = 1; loadPredictions(false); }, 400);
   });
-  document.getElementById('load-more-btn').addEventListener('click', function () { state.page++; loadPredictions(true); });
-
   function renderVipTeaser() {
     var user = ST.getUser();
     var isVip = user && (user.role === 'vip' || user.role === 'admin');

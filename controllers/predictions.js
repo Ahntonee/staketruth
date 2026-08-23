@@ -83,9 +83,17 @@ const listPredictions = asyncHandler(async (req, res) => {
 
   const whereSql = where.join(' AND ');
   const [countRows] = await pool.query(`SELECT COUNT(*) AS cnt FROM predictions p WHERE ${whereSql}`, params);
+  // Pending picks first (soonest kickoff first, since those are what a visitor
+  // actually wants to act on), already-settled won/lost results after (most
+  // recently played first) -- a plain match_date sort let an early finished
+  // match outrank later still-pending ones just because it kicked off first.
   const [rows] = await pool.query(
     `SELECT p.*, l.name AS league_name FROM predictions p LEFT JOIN leagues l ON l.id = p.league_id
-     WHERE ${whereSql} ORDER BY p.match_date ASC LIMIT ? OFFSET ?`,
+     WHERE ${whereSql}
+     ORDER BY (p.result = 'pending') DESC,
+              CASE WHEN p.result = 'pending' THEN p.match_date END ASC,
+              CASE WHEN p.result != 'pending' THEN p.match_date END DESC
+     LIMIT ? OFFSET ?`,
     [...params, limit, offset]
   );
   return successResponse(res, rows.map((r) => serializePrediction(r, role)), paginate(countRows[0].cnt, page, limit));
