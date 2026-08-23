@@ -135,6 +135,14 @@ function startScheduler() {
 
   cron.schedule('*/30 * * * *', safeRun('sync bookie odds', () => oddsApi.syncOddsForTodayFixtures()));
 
+  cron.schedule('*/5 * * * *', safeRun('publish scheduled blog posts', async () => {
+    const [result] = await pool.query(
+      `UPDATE blog_posts SET is_published = 1, published_at = NOW()
+       WHERE is_published = 0 AND scheduled_publish_at IS NOT NULL AND scheduled_publish_at <= NOW()`
+    );
+    return { published: result.affectedRows };
+  }));
+
   console.log('[scheduler] all cron jobs registered on instance 0');
 }
 

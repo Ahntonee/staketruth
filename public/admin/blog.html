@@ -50,10 +50,20 @@
         <input type="file" id="image-input" accept="image/*"><input type="hidden" name="featured_image">
       </div>
       <h4 style="margin-top:16px;">SEO</h4>
-      <div class="form-group"><label class="form-label">Meta Title</label><input name="meta_title" class="form-control"></div>
+      <div class="form-group"><label class="form-label">Meta Title</label><input name="meta_title" class="form-control" maxlength="255"><div class="text-soft" style="font-size:0.75rem;margin-top:4px;">Short SEO title, max 255 characters -- not a description.</div></div>
       <div class="form-group"><label class="form-label">Meta Description</label><textarea name="meta_description" class="form-control"></textarea></div>
       <div class="form-group"><label class="form-label">Keywords</label><input name="keywords" class="form-control"></div>
-      <label class="flex items-center gap-8" style="margin-bottom:16px;"><input type="checkbox" name="is_published"> Published</label>
+
+      <div class="form-group">
+        <label class="form-label">Publishing</label>
+        <div class="flex gap-8" style="flex-wrap:wrap;">
+          <label class="flex items-center gap-8"><input type="radio" name="publish_mode" value="draft" checked> Save as Draft</label>
+          <label class="flex items-center gap-8"><input type="radio" name="publish_mode" value="now"> Publish Now</label>
+          <label class="flex items-center gap-8"><input type="radio" name="publish_mode" value="schedule"> Schedule for Later</label>
+        </div>
+        <input type="datetime-local" name="scheduled_publish_at" class="form-control" style="margin-top:8px;display:none;" id="schedule-input">
+      </div>
+
       <button class="btn btn-primary btn-block">Save Post</button>
     </form>
   </div>
@@ -65,11 +75,17 @@
 (function () {
   var mde;
 
+  function statusBadge(p) {
+    if (p.is_published) return '<span class="badge badge-won">Published</span>';
+    if (p.scheduled_publish_at) return '<span class="badge badge-pending">Scheduled &middot; ' + AD.formatDate(p.scheduled_publish_at) + '</span>';
+    return '<span class="badge badge-pending">Draft</span>';
+  }
+
   async function load() {
     var res = await AD.api('/blog/admin/list');
     document.getElementById('posts-tbody').innerHTML = res.data.map(function (p) {
       return '<tr><td data-label="Title">' + AD.escapeHtml(p.title) + '</td><td data-label="Category">' + AD.escapeHtml(p.category || '') + '</td>' +
-        '<td data-label="Status">' + (p.is_published ? '<span class="badge badge-won">Published</span>' : '<span class="badge badge-pending">Draft</span>') + '</td>' +
+        '<td data-label="Status">' + statusBadge(p) + '</td>' +
         '<td data-label="Date">' + AD.formatDate(p.published_at || p.created_at) + '</td>' +
         '<td data-label="Actions">' +
           (p.is_published ? '<a href="/blog/' + p.slug + '" target="_blank" class="btn btn-outline btn-sm">View</a> ' : '') +
@@ -91,11 +107,26 @@
   }
   function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
 
+  function setPublishMode(mode, scheduledAt) {
+    var form = document.getElementById('post-form');
+    var radio = form.querySelector('[name="publish_mode"][value="' + mode + '"]');
+    if (radio) radio.checked = true;
+    document.getElementById('schedule-input').style.display = mode === 'schedule' ? '' : 'none';
+    form.scheduled_publish_at.value = scheduledAt || '';
+  }
+
+  document.querySelectorAll('[name="publish_mode"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      document.getElementById('schedule-input').style.display = this.value === 'schedule' ? '' : 'none';
+    });
+  });
+
   document.getElementById('add-btn').addEventListener('click', function () {
     document.getElementById('post-form').reset();
     document.getElementById('post-form').id.value = '';
     document.getElementById('modal-title').textContent = 'New Post';
     resetImagePreview();
+    setPublishMode('draft', '');
     if (mde) mde.value('');
     openModal();
   });
@@ -126,7 +157,10 @@
         form.id.value = p.id; form.title.value = p.title; form.category.value = p.category || '';
         form.author_name.value = p.author_name || ''; form.excerpt.value = p.excerpt || '';
         form.meta_title.value = p.meta_title || ''; form.meta_description.value = p.meta_description || ''; form.keywords.value = p.keywords || '';
-        form.is_published.checked = !!p.is_published;
+        setPublishMode(
+          p.is_published ? 'now' : (p.scheduled_publish_at ? 'schedule' : 'draft'),
+          p.scheduled_publish_at ? p.scheduled_publish_at.replace(' ', 'T').slice(0, 16) : ''
+        );
         form.featured_image.value = p.featured_image || '';
         var preview = document.getElementById('image-preview');
         if (p.featured_image) { preview.src = p.featured_image; preview.style.display = 'block'; } else resetImagePreview();
@@ -154,11 +188,14 @@
     try {
       var fd = new FormData(e.target);
       var id = fd.get('id');
+      var mode = fd.get('publish_mode');
+      if (mode === 'schedule' && !fd.get('scheduled_publish_at')) { AD.showToast('Pick a date and time to schedule this post', 'error'); return; }
       var body = {
         title: fd.get('title'), category: fd.get('category'), author_name: fd.get('author_name'),
         excerpt: fd.get('excerpt'), content: mde.value(), featured_image: fd.get('featured_image') || null,
         meta_title: fd.get('meta_title'), meta_description: fd.get('meta_description'), keywords: fd.get('keywords'),
-        is_published: fd.get('is_published') === 'on',
+        is_published: mode === 'now',
+        scheduled_publish_at: mode === 'schedule' ? fd.get('scheduled_publish_at').replace('T', ' ') + ':00' : null,
       };
       if (id) await AD.api('/blog/' + id, { method: 'PUT', body: body });
       else await AD.api('/blog', { method: 'POST', body: body });

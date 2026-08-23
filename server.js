@@ -274,7 +274,16 @@ app.use('/api', (req, res) => res.status(404).json({ success: false, message: 'N
 // ---- Global error handler ----------------------------------------------------
 app.use((err, req, res, next) => {
   console.error('[error]', err);
-  const message = process.env.NODE_ENV === 'production' ? 'An error occurred.' : err.message;
+  // Full error detail is still logged above for debugging -- this just avoids
+  // leaking raw SQL/schema in the response. A couple of common MySQL error
+  // codes get an actionable-but-safe message instead of the fully generic
+  // one, since "one of your fields is too long" is genuinely useful to an
+  // admin filling out a form and reveals nothing about the schema.
+  let message = process.env.NODE_ENV === 'production' ? 'An error occurred.' : err.message;
+  if (process.env.NODE_ENV === 'production') {
+    if (err.code === 'ER_DATA_TOO_LONG') message = 'One of the fields you entered is too long for its limit -- please shorten it and try again.';
+    else if (err.code === 'ER_DUP_ENTRY') message = 'That value is already in use -- please choose a different one.';
+  }
   res.status(err.status || 500).json({ success: false, message });
 });
 

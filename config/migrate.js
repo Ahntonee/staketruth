@@ -578,6 +578,10 @@ async function migrate() {
   // predictions' own league name at render time, not by id.
   await ensureColumn('seo_landing_pages', 'league_text_filter', "VARCHAR(255)");
 
+  // Blog post scheduling: when set, the post stays a draft until this
+  // moment, at which point the scheduler cron flips is_published to 1.
+  await ensureColumn('blog_posts', 'scheduled_publish_at', "DATETIME NULL");
+
   // Seed admin
   const [existingAdmin] = await pool.query('SELECT id FROM users WHERE email = ?', ['admin@staketruth.com']);
   if (existingAdmin.length === 0) {
