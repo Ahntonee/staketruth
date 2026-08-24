@@ -76,7 +76,13 @@ const listPredictions = asyncHandler(async (req, res) => {
   else if (date === 'tomorrow') where.push('DATE(p.match_date) = DATE_ADD(CURDATE(), INTERVAL 1 DAY)');
   if (league_id) { where.push('p.league_id = ?'); params.push(league_id); }
   if (market) { where.push('p.market = ?'); params.push(market); }
-  if (category && category !== 'all') { where.push('p.category = ?'); params.push(category); }
+  // 'free' isn't a real category the scoring pipeline ever assigns (predictions
+  // get tagged by their actual market -- over_1_5, home_win, etc. -- or 'vip'
+  // once they clear the VIP threshold), so filtering on the literal string
+  // always returned nothing. "Free" means what a visitor actually expects:
+  // everything that isn't VIP-gated.
+  if (category === 'free') where.push("p.is_vip = 0 AND p.category != 'banker'");
+  else if (category && category !== 'all') { where.push('p.category = ?'); params.push(category); }
   if (vip === 'true') where.push('p.is_vip = 1');
   if (result) { where.push('p.result = ?'); params.push(result); }
   if (search) { where.push('(p.home_team LIKE ? OR p.away_team LIKE ?)'); params.push(`%${search}%`, `%${search}%`); }
