@@ -126,7 +126,7 @@
     market_weight: 'Bet Type Track Record', league_weight: 'League Track Record', home_advantage: 'Home Advantage Boost',
     poisson_k: 'Scoring Model Precision', learning_rate: 'Self-Correction Speed',
     auto_publish_threshold: 'Auto-Publish Score', team_pattern_weight: 'Team-Specific Pattern Learning',
-    vip_pick_threshold: 'VIP Pick of the Day Score', auto_push_threshold: 'Auto-Push to Free Users',
+    vip_pick_threshold: 'Truthpick of the Day Score', auto_push_threshold: 'Auto-Push to Free Users',
   };
   // Plain-language, direction-aware explanations -- replaces the old ML-jargon
   // descriptions. Every entry says what the setting does AND what "higher"
@@ -139,7 +139,7 @@
     market_weight: 'How much a bet type’s own past accuracy factors in (e.g. how reliable "Over 2.5" tips have been historically). Higher = boosts bet types that have historically held up better.',
     league_weight: 'How much a league’s own predictability factors in. Higher = boosts leagues that have historically been easier to call.',
     auto_publish_threshold: 'Predictions scoring at or above this go live automatically — no approval needed. Anything below waits in your Review Queue for you to approve.',
-    vip_pick_threshold: 'Predictions scoring at or above this qualify for the VIP Picks of the Day spotlight on the site.',
+    vip_pick_threshold: 'Predictions scoring at or above this qualify for the Truthpicks of the Day spotlight on the site.',
     auto_push_threshold: 'Predictions scoring at or above this get automatically sent to your free registered users at midnight.',
     home_advantage: 'How much extra credit the home team gets just for playing at home. Higher = home teams are favored more strongly.',
     poisson_k: 'A technical setting for the scoring model’s math — not something you need to change. The default works for virtually every match.',
@@ -184,7 +184,7 @@
     document.getElementById('engine-status').innerHTML =
       'Last run: <strong>' + (d.lastRun ? AD.formatDate(d.lastRun) : 'never') + '</strong> &middot; ' +
       'Generated today: <strong>' + d.generatedToday + '</strong> &middot; Auto-published: <strong>' + d.autoPublishedToday + '</strong> &middot; ' +
-      'Review queue: <strong>' + d.reviewQueueCount + '</strong> &middot; VIP Picks today: <strong>' + d.vipPicksToday + '</strong>';
+      'Review queue: <strong>' + d.reviewQueueCount + '</strong> &middot; Truthpicks today: <strong>' + d.vipPicksToday + '</strong>';
   }
 
   function setSliderFill(input) {
