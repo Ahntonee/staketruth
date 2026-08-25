@@ -203,17 +203,19 @@ section { padding: 28px 0; }
 .mobile-drawer.open .mobile-drawer__overlay { opacity: 1; }
 .mobile-drawer__panel {
   position: absolute; top: 0; left: 0; bottom: 0; width: 82%; max-width: 340px;
-  background: rgba(250, 246, 242, 0.72);
-  backdrop-filter: blur(18px) saturate(180%);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  border-right: 1px solid rgba(255, 255, 255, 0.3);
+  /* Solid, not the old translucent + backdrop-filter "frosted glass" look --
+     that relied on blur rendering well on top of busy page content, and on
+     some mobile browsers it doesn't, leaving page text readable straight
+     through the menu. */
+  background: var(--off-white);
+  border-right: 1px solid var(--border);
   padding: 20px; display: flex; flex-direction: column; gap: 4px;
   box-shadow: 8px 0 24px rgba(0,0,0,0.2);
   transform: translateX(-100%);
   transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
-[data-theme="dark"] .mobile-drawer__panel { background: rgba(36, 27, 47, 0.68); border-right-color: rgba(255, 255, 255, 0.08); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mobile-drawer__panel { background: rgba(36, 27, 47, 0.68); border-right-color: rgba(255, 255, 255, 0.08); } }
+[data-theme="dark"] .mobile-drawer__panel { background: var(--charcoal); border-right-color: rgba(255, 255, 255, 0.08); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mobile-drawer__panel { background: var(--charcoal); border-right-color: rgba(255, 255, 255, 0.08); } }
 .mobile-drawer.open .mobile-drawer__panel { transform: translateX(0); }
 .mobile-drawer__panel a, .mobile-drawer__panel button {
   display: block; width: 100%; text-align: left; padding: 14px 8px; font-size: 1.05rem; font-weight: 600;

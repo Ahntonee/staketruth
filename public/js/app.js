@@ -258,15 +258,17 @@
     var drawer = document.getElementById('st-drawer');
     var drawerClose = document.getElementById('st-drawer-close');
     var drawerOverlay = document.getElementById('st-drawer-overlay');
-    if (mobileToggle) mobileToggle.addEventListener('click', function () { drawer.classList.add('open'); });
-    if (drawerClose) drawerClose.addEventListener('click', function () { drawer.classList.remove('open'); });
+    function openDrawer() { drawer.classList.add('open'); document.body.style.overflow = 'hidden'; }
+    function closeDrawer() { drawer.classList.remove('open'); document.body.style.overflow = ''; }
+    if (mobileToggle) mobileToggle.addEventListener('click', openDrawer);
+    if (drawerClose) drawerClose.addEventListener('click', closeDrawer);
     // Slide the panel back out when any nav link inside it is tapped, so it
     // doesn't sit open behind the page that just navigated.
     var drawerPanel = document.querySelector('.mobile-drawer__panel');
     if (drawerPanel) drawerPanel.addEventListener('click', function (e) {
-      if (e.target.closest('a')) drawer.classList.remove('open');
+      if (e.target.closest('a')) closeDrawer();
     });
-    if (drawerOverlay) drawerOverlay.addEventListener('click', function () { drawer.classList.remove('open'); });
+    if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
   }
 
   ST.injectHeader = function () {
