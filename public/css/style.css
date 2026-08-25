@@ -186,7 +186,10 @@ section { padding: 28px 0; }
   width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
 }
 .mobile-menu-toggle {
-  background: none; border: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+  /* No explicit color meant it fell back to the browser's default button
+     text color (near-black) instead of following the theme -- fine in light
+     mode, nearly invisible against a dark header. */
+  background: none; border: none; color: var(--text); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
 }
 @media (min-width: 900px) { .mobile-menu-toggle { display: none; } }
 
