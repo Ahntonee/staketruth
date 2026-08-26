@@ -196,26 +196,54 @@ app.get('/api/status', async (req, res) => {
 });
 
 // ---- Pretty URLs -----------------------------------------------------------
-app.get('/prediction/:slug', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'prediction-detail.html')));
-app.get('/blog/:slug', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'blog-post.html')));
-// SEO landing pages get real server-side <title>/meta injection per slug (not
-// just client-side document.title) so search engines see the same content in
-// the initial response as everyone else — no cloaking, no JS-dependent SEO.
+// All three of these are real server-side rendering, not just client-side
+// document.title tricks -- title, meta description, canonical URL, structured
+// data, AND the visible content itself are injected before the response goes
+// out, so a crawler (or anything else that doesn't run JS) sees the actual
+// page on the very first request. See services/ssr.js for why this mattered:
+// every one of these pages previously defaulted its canonical tag to the
+// homepage until client JS corrected it, which told search engines to treat
+// the whole prediction/blog/topic library as homepage duplicates.
+const ssr = require('./services/ssr');
+
+app.get('/prediction/:slug', (req, res) => {
+  fs.readFile(path.join(PUBLIC_DIR, 'prediction-detail.html'), 'utf8', async (err, html) => {
+    if (err) return res.status(500).send('Server error');
+    try {
+      const [rows] = await pool.query(
+        'SELECT p.*, l.name AS league_name FROM predictions p LEFT JOIN leagues l ON l.id = p.league_id WHERE p.slug = ?',
+        [req.params.slug]
+      );
+      if (rows.length) html = ssr.renderPredictionPage(html, rows[0], req.user ? req.user.role : 'guest');
+    } catch (e) { /* fall back to the static template defaults */ }
+    const inject = extraHeadTags();
+    if (inject) html = html.replace('</head>', `${inject}</head>`);
+    res.type('html').send(html);
+  });
+});
+
+app.get('/blog/:slug', (req, res) => {
+  fs.readFile(path.join(PUBLIC_DIR, 'blog-post.html'), 'utf8', async (err, html) => {
+    if (err) return res.status(500).send('Server error');
+    try {
+      const [rows] = await pool.query('SELECT * FROM blog_posts WHERE slug = ? AND is_published = 1', [req.params.slug]);
+      if (rows.length) html = ssr.renderBlogPage(html, rows[0]);
+    } catch (e) { /* fall back to the static template defaults */ }
+    const inject = extraHeadTags();
+    if (inject) html = html.replace('</head>', `${inject}</head>`);
+    res.type('html').send(html);
+  });
+});
+
 app.get('/topic/:slug', (req, res) => {
   fs.readFile(path.join(PUBLIC_DIR, 'seo-landing.html'), 'utf8', async (err, html) => {
     if (err) return res.status(500).send('Server error');
     try {
       const [rows] = await pool.query(
-        'SELECT title, meta_description FROM seo_landing_pages WHERE slug = ? AND is_published = 1',
+        'SELECT * FROM seo_landing_pages WHERE slug = ? AND is_published = 1',
         [req.params.slug]
       );
-      const page = rows[0];
-      if (page) {
-        html = html.replace(/<title>.*?<\/title>/s, `<title>${page.title}</title>`);
-        if (page.meta_description) {
-          html = html.replace(/(<meta name="description" content=")[^"]*(")/, `$1${page.meta_description.replace(/"/g, '&quot;')}$2`);
-        }
-      }
+      if (rows.length) html = ssr.renderTopicPage(html, rows[0]);
     } catch (e) { /* fall back to the static template defaults */ }
     const inject = extraHeadTags();
     if (inject) html = html.replace('</head>', `${inject}</head>`);
