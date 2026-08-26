@@ -131,6 +131,7 @@
   var NAV_LINKS = [
     { href: '/', label: 'Home' },
     { href: '/predictions.html', label: 'Predictions' },
+    { href: '/bet-builder.html', label: 'Bet Builder' },
     { href: '/pricing.html', label: 'Subscription' },
     { href: '/blog.html', label: 'Blog' },
     { href: '/about.html', label: 'About Us' },
@@ -463,6 +464,31 @@
       container.innerHTML = res.data.map(function (p) {
         return '<div class="aside-widget">' + ST.buildPredictionCard(p) + '</div>';
       }).join('');
+    } catch (e) { container.innerHTML = ''; }
+  };
+
+  ST.renderTruthSafePicks = async function (container) {
+    if (!container) return;
+    try {
+      var res = await api('/accumulators');
+      if (!res.data.length) { container.innerHTML = ''; return; }
+      container.innerHTML = '<div class="aside-widget"><h3 style="display:flex;align-items:center;gap:6px;"><span class="material-icons-round" style="color:var(--accent);">stacked_line_chart</span>Truth Safe Picks</h3>' +
+        res.data.map(function (a) {
+          if (a.lockReason) {
+            var cta = a.lockReason === 'guest'
+              ? '<button type="button" class="btn btn-vip btn-sm" data-auth-open="register">Sign Up Free</button>'
+              : '<a href="/pricing.html" class="btn btn-vip btn-sm">Join VIP</a>';
+            return '<div style="padding:10px 0;border-bottom:1px dashed var(--border);">' +
+              '<div class="flex items-center gap-8"><span class="material-icons-round" style="color:var(--warning);">lock</span><strong>' + ST.escapeHtml(a.title) + '</strong></div>' +
+              '<p class="text-soft" style="font-size:0.8rem;margin:4px 0 8px;">Unlock this multi-leg combo with VIP.</p>' + cta +
+            '</div>';
+          }
+          return '<div style="padding:10px 0;border-bottom:1px dashed var(--border);font-size:0.85rem;">' +
+            '<strong>' + ST.escapeHtml(a.title) + '</strong>' +
+            '<div style="margin:4px 0;">' + a.legs.map(function (l) { return ST.escapeHtml(l.home_team) + ' vs ' + ST.escapeHtml(l.away_team) + ' — ' + ST.escapeHtml(l.tip); }).join('<br>') + '</div>' +
+            '<div>Combined Odds: <strong>' + (a.combined_odds ?? '—') + '</strong> &middot; <span class="badge ' + (a.result === 'won' ? 'badge-won' : a.result === 'lost' ? 'badge-lost' : 'badge-pending') + '">' + a.result.toUpperCase() + '</span></div>' +
+          '</div>';
+        }).join('') + '</div>';
     } catch (e) { container.innerHTML = ''; }
   };
 

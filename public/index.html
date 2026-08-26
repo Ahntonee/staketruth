@@ -105,6 +105,7 @@
             <h3 style="font-size:1rem;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><span class="material-icons-round" style="color:var(--accent);">workspace_premium</span>Truthpicks of the Day</h3>
             <div class="aside-scroll-row" id="vip-picks-of-day"><div class="skeleton" style="height:140px;width:260px;border-radius:14px;"></div></div>
           </div>
+          <div id="truth-safe-picks-widget" style="margin-top:16px;"></div>
           <div id="recent-wins-widget"></div>
         </aside>
       </div>
@@ -196,6 +197,7 @@
   loadPredictions(false);
   ST.renderBankerCards(document.getElementById('banker-cards'));
   ST.renderVipPicksOfDay(document.getElementById('vip-picks-of-day'));
+  ST.renderTruthSafePicks(document.getElementById('truth-safe-picks-widget'));
   ST.renderRecentWins(document.getElementById('recent-wins-widget'));
 })();
 </script>

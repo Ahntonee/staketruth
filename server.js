@@ -181,6 +181,8 @@ app.use('/api/pages', require('./routes/pages'));
 app.use('/api/sync', require('./routes/sync'));
 app.use('/api/backlinks', require('./routes/backlinks'));
 app.use('/api/seo-pages', require('./routes/seoPages'));
+app.use('/api/accumulators', require('./routes/accumulators'));
+app.use('/api/bet-builder', require('./routes/betBuilder'));
 
 app.get('/api/health', (req, res) => res.json({ success: true, status: 'ok', time: new Date().toISOString() }));
 app.get('/api/status', async (req, res) => {

@@ -457,6 +457,50 @@ const TABLES = [
     UNIQUE KEY uq_league_season_team (league_id, season, team_name),
     FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE CASCADE
   ) ENGINE=InnoDB`,
+
+  // Admin-curated multi-leg accumulators ("Truth Safe Picks") -- distinct from
+  // the auto-scored single predictions table. Legs reference existing
+  // predictions so odds/results/grading flow from the underlying pick rather
+  // than being duplicated here.
+  `CREATE TABLE IF NOT EXISTS accumulators (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(255) NOT NULL,
+    is_published TINYINT(1) DEFAULT 0,
+    published_at DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB`,
+
+  `CREATE TABLE IF NOT EXISTS accumulator_legs (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    accumulator_id INT NOT NULL,
+    prediction_id INT NOT NULL,
+    sort_order INT DEFAULT 0,
+    FOREIGN KEY (accumulator_id) REFERENCES accumulators(id) ON DELETE CASCADE,
+    FOREIGN KEY (prediction_id) REFERENCES predictions(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_accumulator_prediction (accumulator_id, prediction_id)
+  ) ENGINE=InnoDB`,
+
+  // User-facing bet builder -- a personal planning tool (no real transactions).
+  // Registered users pick from published predictions to build and save their
+  // own combo, same leg-references-a-prediction shape as accumulators above.
+  `CREATE TABLE IF NOT EXISTS user_bet_slips (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    title VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB`,
+
+  `CREATE TABLE IF NOT EXISTS user_bet_slip_legs (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    slip_id INT NOT NULL,
+    prediction_id INT NOT NULL,
+    sort_order INT DEFAULT 0,
+    FOREIGN KEY (slip_id) REFERENCES user_bet_slips(id) ON DELETE CASCADE,
+    FOREIGN KEY (prediction_id) REFERENCES predictions(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_slip_prediction (slip_id, prediction_id)
+  ) ENGINE=InnoDB`,
 ];
 
 // NOTE: api_league_id values follow API-Football's well-documented ID scheme.

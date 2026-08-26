@@ -74,6 +74,7 @@
     { key: 'dashboard', href: 'dashboard.html', icon: 'dashboard', label: 'Dashboard' },
     { key: 'intelligence', href: 'intelligence.html', icon: 'psychology', label: 'Intelligence' },
     { key: 'predictions', href: 'predictions.html', icon: 'sports_soccer', label: 'Predictions' },
+    { key: 'bet-builder', href: 'bet-builder.html', icon: 'stacked_line_chart', label: 'Bet Builder' },
     { key: 'categories', href: 'categories.html', icon: 'category', label: 'Categories' },
     { key: 'leaderboard', href: 'leaderboard.html', icon: 'leaderboard', label: 'Leaderboard' },
     { key: 'blog', href: 'blog.html', icon: 'article', label: 'Blog' },

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bet Builder — Build Your Own Combo | StakeTruth</title>
+<meta name="description" content="Pick from today's published football predictions and build your own multi-leg combo — a free personal planning tool, no real wagers placed.">
+<link rel="canonical" href="https://www.staketruth.com/bet-builder.html">
+<link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap-reboot.min.css" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+
+<main>
+  <section style="padding-bottom:0;">
+    <div class="container">
+      <h1 style="font-size:1.5rem;">Bet Builder</h1>
+      <p class="text-soft">Pick from today's published predictions to build your own combo. This is a personal planning tool — it doesn't place any real bet, just tracks a combo you're considering.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="main-with-aside">
+        <div class="main-with-aside__content">
+          <div class="tab-row" id="date-tabs">
+            <button class="category-tab" data-date="yesterday">Yesterday</button>
+            <button class="category-tab active" data-date="today">Today</button>
+            <button class="category-tab" data-date="tomorrow">Tomorrow</button>
+          </div>
+          <div class="form-group" style="margin-top:12px;">
+            <input type="search" id="search-input" class="form-control" placeholder="Search by team name…">
+          </div>
+          <h2 class="section-title" style="margin-top:20px;"><span class="material-icons-round">sports_soccer</span>Available Predictions</h2>
+          <div id="picker-list"><div class="skeleton" style="height:60px;border-radius:10px;margin-bottom:8px;"></div></div>
+          <div id="picker-sentinel" style="height:1px;"></div>
+        </div>
+
+        <aside class="main-with-aside__aside">
+          <div class="aside-widget">
+            <h3 style="display:flex;align-items:center;gap:6px;"><span class="material-icons-round" style="color:var(--accent);">stacked_line_chart</span>Your Combo</h3>
+            <div id="my-slip"></div>
+            <div style="margin-top:8px;font-size:0.9rem;">Legs: <strong id="slip-count">0</strong> &middot; Combined Odds: <strong id="slip-odds">—</strong></div>
+            <button class="btn btn-primary btn-block" id="save-slip-btn" style="margin-top:10px;">Save Combo</button>
+          </div>
+          <div id="saved-slips" class="aside-widget" style="margin-top:16px;"></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="/js/app.js"></script>
+<script>
+(function () {
+  var state = { date: 'today', search: '', page: 1, hasNextPage: false };
+  var mySlip = []; // [{id, home_team, away_team, tip, odds}]
+  var searchTimer, requestSeq = 0, loadingMore = false;
+
+  function pickerRowHtml(p) {
+    var isSelected = mySlip.some(function (l) { return l.id === p.id; });
+    var locked = !!p.lockReason;
+    return '<div class="flex justify-between items-center" style="padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">' +
+      '<span style="font-size:0.9rem;">' + ST.escapeHtml(p.home_team) + ' vs ' + ST.escapeHtml(p.away_team) +
+        (locked ? ' — <span class="text-soft">🔒 VIP pick</span>' : ' — <strong>' + ST.escapeHtml(p.tip) + '</strong>' + (p.odds ? ' (' + ST.formatOdds(p.odds) + ')' : '')) +
+      '</span>' +
+      (locked ? '' : '<button type="button" class="btn btn-sm ' + (isSelected ? 'btn-outline' : 'btn-primary') + '" data-toggle-leg=\'' + JSON.stringify({ id: p.id, home_team: p.home_team, away_team: p.away_team, tip: p.tip, odds: p.odds }).replace(/'/g, '&apos;') + '\'>' + (isSelected ? 'Remove' : 'Add') + '</button>') +
+    '</div>';
+  }
+
+  async function loadPicker(append) {
+    var list = document.getElementById('picker-list');
+    if (!append) list.innerHTML = '<div class="skeleton" style="height:60px;border-radius:10px;"></div>';
+    var mySeq = ++requestSeq;
+    var params = new URLSearchParams({ date: state.date, category: 'all', page: state.page, limit: 15 });
+    if (state.search) params.set('search', state.search);
+    try {
+      var res = await ST.api('/predictions?' + params.toString());
+      if (mySeq !== requestSeq) return;
+      var html = res.data.map(pickerRowHtml).join('') || '<div class="empty-state">No predictions found.</div>';
+      if (append) list.insertAdjacentHTML('beforeend', html); else list.innerHTML = html;
+      state.hasNextPage = res.meta.hasNextPage;
+    } catch (e) { if (mySeq === requestSeq) list.innerHTML = '<div class="empty-state">Could not load predictions.</div>'; }
+    loadingMore = false;
+  }
+
+  var observer = new IntersectionObserver(function (entries) {
+    if (entries[0].isIntersecting && state.hasNextPage && !loadingMore) { loadingMore = true; state.page++; loadPicker(true); }
+  }, { rootMargin: '300px' });
+  observer.observe(document.getElementById('picker-sentinel'));
+
+  document.getElementById('date-tabs').addEventListener('click', function (e) {
+    var btn = e.target.closest('.category-tab');
+    if (!btn) return;
+    document.querySelectorAll('#date-tabs .category-tab').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    state.date = btn.getAttribute('data-date'); state.page = 1; loadPicker(false);
+  });
+  document.getElementById('search-input').addEventListener('input', function () {
+    var val = this.value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () { state.search = val; state.page = 1; loadPicker(false); }, 400);
+  });
+
+  function renderSlip() {
+    document.getElementById('slip-count').textContent = mySlip.length;
+    var withOdds = mySlip.filter(function (l) { return l.odds; });
+    document.getElementById('slip-odds').textContent = withOdds.length ? withOdds.reduce(function (acc, l) { return acc * Number(l.odds); }, 1).toFixed(2) : '—';
+    document.getElementById('my-slip').innerHTML = mySlip.map(function (l, i) {
+      return '<div class="flex justify-between items-center" style="padding:6px 0;border-bottom:1px dashed var(--border);font-size:0.85rem;">' +
+        '<span>' + ST.escapeHtml(l.home_team) + ' vs ' + ST.escapeHtml(l.away_team) + '<br><span class="text-soft">' + ST.escapeHtml(l.tip) + '</span></span>' +
+        '<button type="button" class="icon-btn" data-remove-slip-leg="' + i + '"><span class="material-icons-round" style="font-size:1rem;">close</span></button>' +
+      '</div>';
+    }).join('') || '<p class="text-soft" style="font-size:0.85rem;">Add at least 2 picks to build a combo.</p>';
+  }
+
+  document.getElementById('picker-list').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-toggle-leg]');
+    if (!btn) return;
+    var leg = JSON.parse(btn.getAttribute('data-toggle-leg'));
+    var idx = mySlip.findIndex(function (l) { return l.id === leg.id; });
+    if (idx === -1) mySlip.push(leg); else mySlip.splice(idx, 1);
+    renderSlip();
+    loadPicker(false);
+  });
+  document.getElementById('my-slip').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-remove-slip-leg]');
+    if (!btn) return;
+    mySlip.splice(Number(btn.getAttribute('data-remove-slip-leg')), 1);
+    renderSlip();
+    loadPicker(false);
+  });
+
+  async function loadSavedSlips() {
+    var user = ST.getUser();
+    var el = document.getElementById('saved-slips');
+    if (!user) { el.innerHTML = ''; return; }
+    try {
+      var res = await ST.api('/bet-builder');
+      el.innerHTML = '<h3 style="display:flex;align-items:center;gap:6px;"><span class="material-icons-round">history</span>Your Saved Combos</h3>' +
+        (res.data.map(function (s) {
+          return '<div style="padding:8px 0;border-bottom:1px dashed var(--border);font-size:0.85rem;">' +
+            '<div class="flex justify-between items-center"><strong>' + ST.escapeHtml(s.title || (s.legs.length + '-leg combo')) + '</strong>' +
+            '<button type="button" class="icon-btn icon-btn-danger" data-delete-slip="' + s.id + '"><span class="material-icons-round" style="font-size:1rem;">delete</span></button></div>' +
+            '<div>Odds: ' + (s.combined_odds ?? '—') + ' &middot; <span class="badge ' + (s.result === 'won' ? 'badge-won' : s.result === 'lost' ? 'badge-lost' : 'badge-pending') + '">' + s.result.toUpperCase() + '</span></div>' +
+          '</div>';
+        }).join('') || '<p class="text-soft" style="font-size:0.85rem;">No saved combos yet.</p>');
+    } catch (e) { el.innerHTML = ''; }
+  }
+  document.getElementById('saved-slips').addEventListener('click', async function (e) {
+    var btn = e.target.closest('[data-delete-slip]');
+    if (!btn) return;
+    await ST.api('/bet-builder/' + btn.getAttribute('data-delete-slip'), { method: 'DELETE' });
+    loadSavedSlips();
+  });
+
+  document.getElementById('save-slip-btn').addEventListener('click', async function () {
+    var user = ST.getUser();
+    if (!user) { ST.showToast('Log in to save your combo', 'error'); ST.openAuthModal('login'); return; }
+    if (mySlip.length < 2) { ST.showToast('Add at least 2 picks first', 'error'); return; }
+    try {
+      await ST.api('/bet-builder', { method: 'POST', body: { prediction_ids: mySlip.map(function (l) { return l.id; }) } });
+      ST.showToast('Combo saved', 'success');
+      mySlip = []; renderSlip(); loadPicker(false); loadSavedSlips();
+    } catch (err) { ST.showToast(err.message, 'error'); }
+  });
+
+  renderSlip();
+  loadPicker(false);
+  loadSavedSlips();
+})();
+</script>
+</body>
+</html>

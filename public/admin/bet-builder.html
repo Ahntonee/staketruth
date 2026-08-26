@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bet Builder | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Bet Builder</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <p class="text-soft" style="font-size:0.85rem;margin:0;">
+          Build multi-leg accumulators ("Truth Safe Picks") from currently published predictions. These are gated
+          exactly like an individual VIP pick -- free visitors see a locked teaser, VIP members see every leg.
+        </p>
+      </div>
+      <div class="flex justify-between items-center" style="margin-bottom:14px;">
+        <div></div>
+        <button class="btn btn-primary btn-sm" id="add-btn"><span class="material-icons-round" style="font-size:1rem;">add</span> New Accumulator</button>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table" id="acca-table">
+          <thead><tr><th>Title</th><th>Legs</th><th>Combined Odds</th><th>Result</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="acca-tbody"><tr><td colspan="6">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header"><h3 id="modal-title">New Accumulator</h3><button class="modal-close" id="modal-close">&times;</button></div>
+    <form id="acca-form">
+      <input type="hidden" name="id">
+      <div class="form-group"><label class="form-label">Title</label><input required name="title" class="form-control" placeholder="e.g. Truth Safe Pick — Aug 26"></div>
+
+      <div class="form-group">
+        <label class="form-label">Add Legs (search published predictions by team)</label>
+        <input type="text" id="leg-search" class="form-control" placeholder="Search team name…">
+        <div id="leg-search-results" style="margin-top:6px;max-height:180px;overflow-y:auto;"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Selected Legs (<span id="leg-count">0</span>) — Combined Odds: <span id="combined-odds-preview">—</span></label>
+        <div id="selected-legs"></div>
+      </div>
+
+      <button class="btn btn-primary btn-block">Save Accumulator</button>
+    </form>
+  </div>
+</div>
+
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  var selectedLegs = []; // [{id, home_team, away_team, tip, odds}]
+  var searchTimer;
+
+  function rowHtml(a) {
+    return '<tr>' +
+      '<td data-label="Title"><strong>' + AD.escapeHtml(a.title) + '</strong></td>' +
+      '<td data-label="Legs">' + a.legs.length + '</td>' +
+      '<td data-label="Combined Odds">' + (a.combined_odds ?? '—') + '</td>' +
+      '<td data-label="Result"><span class="badge ' + (a.result === 'won' ? 'badge-won' : a.result === 'lost' ? 'badge-lost' : 'badge-pending') + '">' + a.result.toUpperCase() + '</span></td>' +
+      '<td data-label="Status">' + (a.is_published ? '<span class="badge badge-won">Live</span>' : '<span class="badge badge-pending">Draft</span>') + '</td>' +
+      '<td data-label="Actions"><div class="icon-btn-row">' +
+        '<button class="icon-btn" data-toggle="' + a.id + '" data-published="' + (a.is_published ? '1' : '0') + '" title="' + (a.is_published ? 'Unpublish' : 'Publish') + '"><span class="material-icons-round">' + (a.is_published ? 'visibility_off' : 'visibility') + '</span></button>' +
+        '<button class="icon-btn icon-btn-danger" data-delete="' + a.id + '" title="Delete"><span class="material-icons-round">delete</span></button>' +
+      '</div></td>' +
+    '</tr>';
+  }
+
+  async function load() {
+    var tbody = document.getElementById('acca-tbody');
+    tbody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
+    try {
+      var res = await AD.api('/accumulators/admin/list');
+      tbody.innerHTML = res.data.map(rowHtml).join('') || '<tr><td colspan="6">No accumulators yet.</td></tr>';
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="6">Failed to load.</td></tr>'; }
+  }
+
+  function renderSelectedLegs() {
+    document.getElementById('leg-count').textContent = selectedLegs.length;
+    var withOdds = selectedLegs.filter(function (l) { return l.odds; });
+    var combined = withOdds.length ? withOdds.reduce(function (acc, l) { return acc * Number(l.odds); }, 1).toFixed(2) : '—';
+    document.getElementById('combined-odds-preview').textContent = combined;
+    document.getElementById('selected-legs').innerHTML = selectedLegs.map(function (l, i) {
+      return '<div class="flex justify-between items-center" style="padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;">' +
+        '<span>' + AD.escapeHtml(l.home_team) + ' vs ' + AD.escapeHtml(l.away_team) + ' — <strong>' + AD.escapeHtml(l.tip) + '</strong>' + (l.odds ? ' (' + l.odds + ')' : '') + '</span>' +
+        '<button type="button" class="icon-btn icon-btn-danger" data-remove-leg="' + i + '"><span class="material-icons-round" style="font-size:1.1rem;">close</span></button>' +
+      '</div>';
+    }).join('') || '<p class="text-soft" style="font-size:0.85rem;">No legs added yet — search above and add at least 2.</p>';
+  }
+
+  document.getElementById('leg-search').addEventListener('input', function () {
+    var value = this.value;
+    clearTimeout(searchTimer);
+    if (!value || value.length < 2) { document.getElementById('leg-search-results').innerHTML = ''; return; }
+    searchTimer = setTimeout(async function () {
+      try {
+        var res = await AD.api('/predictions/admin/list?search=' + encodeURIComponent(value) + '&limit=10');
+        var already = selectedLegs.map(function (l) { return l.id; });
+        document.getElementById('leg-search-results').innerHTML = res.data.filter(function (p) { return already.indexOf(p.id) === -1; }).map(function (p) {
+          return '<div class="flex justify-between items-center" style="padding:6px 8px;border-bottom:1px dashed var(--border);">' +
+            '<span style="font-size:0.85rem;">' + AD.escapeHtml(p.home_team) + ' vs ' + AD.escapeHtml(p.away_team) + ' — ' + AD.escapeHtml(p.tip) + (p.odds ? ' (' + p.odds + ')' : '') + '</span>' +
+            '<button type="button" class="btn btn-outline btn-sm" data-add-leg=\'' + JSON.stringify({ id: p.id, home_team: p.home_team, away_team: p.away_team, tip: p.tip, odds: p.odds }).replace(/'/g, '&apos;') + '\'>Add</button>' +
+          '</div>';
+        }).join('') || '<p class="text-soft" style="font-size:0.8rem;">No matches.</p>';
+      } catch (e) { /* ignore */ }
+    }, 300);
+  });
+
+  document.getElementById('leg-search-results').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-add-leg]');
+    if (!btn) return;
+    selectedLegs.push(JSON.parse(btn.getAttribute('data-add-leg')));
+    renderSelectedLegs();
+    document.getElementById('leg-search-results').innerHTML = '';
+    document.getElementById('leg-search').value = '';
+  });
+
+  document.getElementById('selected-legs').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-remove-leg]');
+    if (!btn) return;
+    selectedLegs.splice(Number(btn.getAttribute('data-remove-leg')), 1);
+    renderSelectedLegs();
+  });
+
+  function openModal() { document.getElementById('edit-modal').classList.add('open'); }
+  function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
+
+  document.getElementById('add-btn').addEventListener('click', function () {
+    document.getElementById('acca-form').reset();
+    document.getElementById('acca-form').id.value = '';
+    selectedLegs = [];
+    renderSelectedLegs();
+    document.getElementById('modal-title').textContent = 'New Accumulator';
+    openModal();
+  });
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+
+  document.getElementById('acca-tbody').addEventListener('click', async function (e) {
+    var toggleBtn = e.target.closest('[data-toggle]');
+    var deleteBtn = e.target.closest('[data-delete]');
+    if (toggleBtn) {
+      var isPublished = toggleBtn.getAttribute('data-published') === '1';
+      try {
+        await AD.api('/accumulators/' + toggleBtn.getAttribute('data-toggle'), { method: 'PUT', body: { is_published: !isPublished } });
+        AD.showToast(isPublished ? 'Unpublished' : 'Published', 'success');
+        load();
+      } catch (err) { AD.showToast(err.message, 'error'); }
+    }
+    if (deleteBtn) {
+      if (!AD.confirmAction('Delete this accumulator?')) return;
+      await AD.api('/accumulators/' + deleteBtn.getAttribute('data-delete'), { method: 'DELETE' });
+      load();
+    }
+  });
+
+  document.getElementById('acca-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (selectedLegs.length < 2) { AD.showToast('Add at least 2 legs', 'error'); return; }
+    var fd = new FormData(e.target);
+    try {
+      await AD.api('/accumulators', { method: 'POST', body: { title: fd.get('title'), prediction_ids: selectedLegs.map(function (l) { return l.id; }) } });
+      closeModal();
+      AD.showToast('Accumulator created', 'success');
+      load();
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('bet-builder', user, 'Bet Builder');
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
