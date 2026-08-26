@@ -224,7 +224,7 @@ app.get('/topic/:slug', (req, res) => {
 // ---- SEO: robots.txt, sitemap.xml, ads.txt ---------------------------------
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send(
-    `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\n\nSitemap: ${process.env.SITE_URL}/sitemap.xml\n`
+    `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\nDisallow: /dashboard.html\nDisallow: /reset-password.html\n\nSitemap: ${process.env.SITE_URL}/sitemap.xml\n`
   );
 });
 
@@ -242,6 +242,7 @@ app.get('/sitemap.xml', async (req, res) => {
   }
   const site = process.env.SITE_URL;
   const staticUrls = ['/', '/predictions.html', '/pricing.html', '/blog.html', '/about.html', '/statistics.html'];
+  const lowPriorityUrls = ['/contact.html', '/terms.html', '/privacy.html'];
   const [preds] = await pool.query(
     "SELECT slug, updated_at FROM predictions WHERE is_published = 1 AND slug IS NOT NULL ORDER BY updated_at DESC LIMIT 5000"
   );
@@ -253,6 +254,7 @@ app.get('/sitemap.xml', async (req, res) => {
 
   const body = [
     ...staticUrls.map((u) => urlXml(u, null, u === '/' ? '1.0' : '0.7')),
+    ...lowPriorityUrls.map((u) => urlXml(u, null, '0.3')),
     ...preds.map((p) => urlXml(`/prediction/${p.slug}`, p.updated_at, '0.6')),
     ...posts.map((p) => urlXml(`/blog/${p.slug}`, p.updated_at, '0.5')),
     ...topics.map((t) => urlXml(`/topic/${t.slug}`, t.updated_at, '0.7')),
