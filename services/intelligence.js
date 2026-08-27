@@ -92,14 +92,33 @@ function selectBestMarket(probModel, odds) {
   return scored[0];
 }
 
-function buildAnalysisText({ homeTeam, awayTeam, homeForm, awayForm, homeGoalsAvg, tip, probability,
+// Turns the compact "RH3-RA1-RD1|OH2-OA1-OD2" tally getH2hSummary produces
+// (recent-5 home/away/draw wins, then the previous 5) into a readable
+// sentence. Returns null if there's nothing to say yet.
+function describeH2h(h2hSummary, homeTeam, awayTeam) {
+  if (!h2hSummary) return null;
+  const match = /^RH(\d+)-RA(\d+)-RD(\d+)/.exec(h2hSummary);
+  if (!match) return null;
+  const [, rh, ra, rd] = match.map(Number);
+  const total = rh + ra + rd;
+  if (!total) return null;
+  if (rh === ra) return `${homeTeam} and ${awayTeam} have split their last ${total} meetings evenly (${rh}-${rd}-${ra}).`;
+  const leader = rh > ra ? homeTeam : awayTeam;
+  const leaderWins = Math.max(rh, ra);
+  return `${leader} has the edge head-to-head, winning ${leaderWins} of the last ${total} meetings between these two.`;
+}
+
+function buildAnalysisText({ homeTeam, awayTeam, homeForm, awayForm, homeGoalsAvg, awayGoalsAvg,
+  homeGoalsConcededAvg, awayGoalsConcededAvg, tip, probability,
   h2hSummary, intelligenceScore, bookmakers, teamPatternNote }) {
   const parts = [];
-  parts.push(`${homeTeam} are in ${homeForm ? `recent form ${homeForm}` : 'a developing run of form'}, averaging ${homeGoalsAvg?.toFixed ? homeGoalsAvg.toFixed(2) : homeGoalsAvg} goals per game.`);
-  parts.push(`Our Poisson model projects a ${Math.round(probability * 100)}% probability for "${tip}".`);
-  if (h2hSummary) parts.push(`Head-to-head history (from our own match database) supports this read.`);
+  parts.push(`${homeTeam} come in ${homeForm ? `on a run of ${homeForm}` : 'with a developing run of form'}, scoring ${homeGoalsAvg?.toFixed ? homeGoalsAvg.toFixed(2) : homeGoalsAvg} and conceding ${homeGoalsConcededAvg?.toFixed ? homeGoalsConcededAvg.toFixed(2) : homeGoalsConcededAvg} goals per game on average.`);
+  parts.push(`${awayTeam} are ${awayForm ? `on ${awayForm}` : 'still building a form line'}, averaging ${awayGoalsAvg?.toFixed ? awayGoalsAvg.toFixed(2) : awayGoalsAvg} scored and ${awayGoalsConcededAvg?.toFixed ? awayGoalsConcededAvg.toFixed(2) : awayGoalsConcededAvg} conceded per game.`);
+  const h2hText = describeH2h(h2hSummary, homeTeam, awayTeam);
+  if (h2hText) parts.push(h2hText);
+  parts.push(`Feeding both sides' scoring rates into our Poisson model projects a ${Math.round(probability * 100)}% probability for "${tip}".`);
   if (teamPatternNote) parts.push(teamPatternNote);
-  parts.push(`Confidence: ${intelligenceScore}/100.`);
+  parts.push(`Overall confidence: ${intelligenceScore}/100.`);
   if (bookmakers?.length) parts.push(`Live odds available on ${bookmakers.slice(0, 3).join(', ')}.`);
   return parts.join(' ');
 }
@@ -168,7 +187,11 @@ async function runForPrediction(prediction) {
     homeTeam: prediction.home_team,
     awayTeam: prediction.away_team,
     homeForm: homeForm.overall,
+    awayForm: awayForm.overall,
     homeGoalsAvg: homeStats.scoredAvg,
+    awayGoalsAvg: awayStats.scoredAvg,
+    homeGoalsConcededAvg: homeStats.concededAvg,
+    awayGoalsConcededAvg: awayStats.concededAvg,
     tip: best.tip,
     probability: best.prob,
     h2hSummary,
