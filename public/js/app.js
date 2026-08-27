@@ -158,6 +158,7 @@
         '<div class="header-actions">' +
           '<button class="theme-toggle" id="st-theme-toggle" aria-label="Toggle theme"><span class="material-icons-round" id="st-theme-icon">dark_mode</span></button>' +
           '<div id="st-auth-slot"></div>' +
+          '<a href="/pricing.html" class="btn btn-vip btn-sm mobile-vip-btn" id="st-mobile-vip-btn">Join VIP</a>' +
           '<button class="mobile-menu-toggle" id="st-mobile-toggle" aria-label="Menu"><span class="material-icons-round">menu</span></button>' +
         '</div>' +
       '</div>' +
@@ -206,13 +207,16 @@
     var user = ST.currentUser;
     var slot = document.getElementById('st-auth-slot');
     var drawerAuth = document.getElementById('st-drawer-auth');
+    var mobileVipBtn = document.getElementById('st-mobile-vip-btn');
     if (!slot) return;
 
     if (!user) {
       slot.innerHTML = '<button class="btn btn-outline btn-sm" data-auth-open="login">Log In</button> <button class="btn btn-primary btn-sm" data-auth-open="register">Sign Up</button>';
       if (drawerAuth) drawerAuth.innerHTML = '<button data-auth-open="login">Log In</button><button data-auth-open="register">Sign Up</button>';
+      if (mobileVipBtn) mobileVipBtn.classList.add('mobile-vip-btn--show');
       return;
     }
+    if (mobileVipBtn) mobileVipBtn.classList.remove('mobile-vip-btn--show');
 
     var initial = (user.name || '?').charAt(0).toUpperCase();
     var adminLink = user.role === 'admin' ? '<a href="/admin/dashboard.html">Admin Panel</a>' : '';

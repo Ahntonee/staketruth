@@ -193,6 +193,15 @@ section { padding: 28px 0; }
 }
 @media (min-width: 900px) { .mobile-menu-toggle { display: none; } }
 
+/* On mobile, Log In/Sign Up are redundant with the hamburger drawer (which
+   has its own copy of them) and just crowd the header -- hide them there and
+   show a single Join VIP CTA instead. Scoped to [data-auth-open] specifically
+   (not #st-auth-slot as a whole) so the logged-in avatar dropdown, which has
+   no equivalent in the top bar otherwise, is untouched. */
+@media (max-width: 899px) { #st-auth-slot > [data-auth-open] { display: none; } }
+.mobile-vip-btn { display: none; }
+@media (max-width: 899px) { .mobile-vip-btn.mobile-vip-btn--show { display: inline-flex; } }
+
 .mobile-drawer {
   position: fixed; inset: 0; z-index: 200;
   visibility: hidden;
@@ -205,25 +214,40 @@ section { padding: 28px 0; }
 }
 .mobile-drawer.open .mobile-drawer__overlay { opacity: 1; }
 .mobile-drawer__panel {
-  position: absolute; top: 0; left: 0; bottom: 0; width: 82%; max-width: 340px;
+  /* Flies in from the right, and sized to its content (no bottom:0 stretch)
+     rather than always filling the full screen height -- capped with
+     max-height + scroll as a safety net if the nav list ever grows long. */
+  position: absolute; top: 0; right: 0; width: 82%; max-width: 340px;
+  max-height: 100vh; overflow-y: auto;
+  border-bottom-left-radius: 18px;
   /* Solid, not the old translucent + backdrop-filter "frosted glass" look --
      that relied on blur rendering well on top of busy page content, and on
      some mobile browsers it doesn't, leaving page text readable straight
      through the menu. */
   background: var(--off-white);
-  border-right: 1px solid var(--border);
+  border-left: 1px solid var(--border);
   padding: 20px; display: flex; flex-direction: column; gap: 4px;
-  box-shadow: 8px 0 24px rgba(0,0,0,0.2);
-  transform: translateX(-100%);
+  box-shadow: -8px 0 24px rgba(0,0,0,0.2);
+  transform: translateX(100%);
   transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
-[data-theme="dark"] .mobile-drawer__panel { background: var(--charcoal); border-right-color: rgba(255, 255, 255, 0.08); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mobile-drawer__panel { background: var(--charcoal); border-right-color: rgba(255, 255, 255, 0.08); } }
+[data-theme="dark"] .mobile-drawer__panel { background: var(--charcoal); border-left-color: rgba(255, 255, 255, 0.08); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mobile-drawer__panel { background: var(--charcoal); border-left-color: rgba(255, 255, 255, 0.08); } }
 .mobile-drawer.open .mobile-drawer__panel { transform: translateX(0); }
 .mobile-drawer__panel a, .mobile-drawer__panel button {
   display: block; width: 100%; text-align: left; padding: 14px 8px; font-size: 1.05rem; font-weight: 600;
   border-radius: var(--radius); min-height: 44px; cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease, transform 0.15s ease;
+}
+/* Flex-wrap so this holds up whether it's 2 buttons (Log In/Sign Up, guest)
+   or 3 (Dashboard/Admin Panel/Logout, logged in) without any getting
+   squeezed too narrow to read. */
+#st-drawer-auth {
+  display: flex; flex-wrap: wrap; gap: 10px;
+}
+#st-drawer-auth a, #st-drawer-auth button {
+  width: auto; flex: 1 1 auto; min-width: 100px; text-align: center; padding: 9px 8px; font-size: 0.88rem; min-height: 38px;
+  border: 1px solid var(--border);
 }
 .mobile-drawer__panel a:hover, .mobile-drawer__panel button:hover { background: var(--card-2); color: var(--primary); transform: translateX(4px); }
 .mobile-drawer__panel a:active, .mobile-drawer__panel button:active { transform: translateX(2px) scale(0.98); }
