@@ -480,13 +480,21 @@
 
   ST.renderVipPicksOfDay = async function (container) {
     if (!container) return;
+    // Scoped to a dedicated wrapper, same fix as renderBankerCards -- the
+    // heading ("Truthpicks of the Day") is a separate static element from
+    // this container, so on days with zero Truthpicks (a real, regular
+    // occurrence given how high that threshold is set) the heading was
+    // floating alone over an invisible, zero-height empty container instead
+    // of the whole block disappearing together.
+    var wrapper = container.closest('[data-truthpicks-wrapper]');
     try {
       var res = await api('/predictions/vip-picks-of-day');
+      if (wrapper) wrapper.style.display = res.data.length ? '' : 'none';
       if (!res.data.length) { container.innerHTML = ''; return; }
       container.innerHTML = res.data.map(function (p) {
         return '<div class="aside-widget">' + ST.buildPredictionCard(p) + '</div>';
       }).join('');
-    } catch (e) { container.innerHTML = ''; }
+    } catch (e) { container.innerHTML = ''; if (wrapper) wrapper.style.display = 'none'; }
   };
 
   ST.renderTruthSafePicks = async function (container) {
