@@ -280,6 +280,16 @@
     var el = document.getElementById('site-header');
     if (!el) return;
     el.innerHTML = headerHtml();
+    // .site-header has backdrop-filter for the frosted sticky-header look --
+    // per spec, backdrop-filter (like transform) on an ancestor creates a new
+    // containing block for position:fixed descendants. #st-drawer is fixed
+    // and meant to cover the full viewport, but left nested inside the header
+    // it was being contained within the header's own small box instead,
+    // squeezing the whole drawer into a tiny area at the top of the screen.
+    // Moving it out to a direct child of <body> restores real viewport-fixed
+    // behavior.
+    var drawer = document.getElementById('st-drawer');
+    if (drawer) document.body.appendChild(drawer);
     wireHeaderInteractions();
     renderAuthUI();
     renderTicker();
