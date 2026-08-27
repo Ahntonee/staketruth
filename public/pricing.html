@@ -40,7 +40,19 @@
 
   <section>
     <div class="container">
-      <div class="grid-3" id="pricing-cards">
+      <div class="text-center" id="accuracy-badge" style="margin-bottom:20px;"></div>
+      <div class="grid-4" id="pricing-cards">
+        <div class="pricing-card">
+          <h3>Day Pass</h3>
+          <div class="pricing-card__price">&#8358;1,500<span style="font-size:0.9rem;font-weight:400;">/24hrs</span></div>
+          <ul>
+            <li><span class="material-icons-round">check_circle</span>Full VIP access for 24 hours</li>
+            <li><span class="material-icons-round">check_circle</span>Truthpicks of the Day</li>
+            <li><span class="material-icons-round">check_circle</span>Banker of the Day</li>
+            <li><span class="material-icons-round">check_circle</span>No commitment</li>
+          </ul>
+          <button class="btn btn-outline btn-block" data-plan="daypass" data-amount="1500">Get Day Pass</button>
+        </div>
         <div class="pricing-card">
           <h3>Monthly</h3>
           <div class="pricing-card__price">&#8358;7,500<span style="font-size:0.9rem;font-weight:400;">/mo</span></div>
@@ -110,6 +122,18 @@
   document.querySelectorAll('[data-faq]').forEach(function (btn) {
     btn.addEventListener('click', function () { btn.nextElementSibling.classList.toggle('open'); });
   });
+
+  async function loadAccuracyBadge() {
+    try {
+      var res = await ST.api('/statistics/summary');
+      var winRate = Math.round(Number(res.data.winRate));
+      var total = Math.round(Number(res.data.totalPredictions));
+      if (!winRate || !total) return;
+      document.getElementById('accuracy-badge').innerHTML =
+        '<span class="badge badge-won" style="font-size:0.9rem;padding:6px 14px;">' + winRate + '% all-time accuracy across ' + total.toLocaleString() + '+ graded predictions</span>';
+    } catch (e) { /* skip the badge if stats aren't ready yet */ }
+  }
+  loadAccuracyBadge();
 
   async function checkStatus() {
     var user = ST.getUser();

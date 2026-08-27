@@ -3,7 +3,7 @@ const { pool } = require('../config/db');
 const { successResponse, errorResponse, asyncHandler, parsePagination, paginate } = require('../utils/helpers');
 const email = require('../utils/email');
 
-const DURATIONS = { monthly: 30, quarterly: 90, annual: 365 };
+const DURATIONS = { daypass: 1, monthly: 30, quarterly: 90, annual: 365 };
 
 const getStatus = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(
