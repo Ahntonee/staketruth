@@ -29,6 +29,22 @@ const getSocialLinks = asyncHandler(async (req, res) => {
   return successResponse(res, links);
 });
 
+// Affiliate CTA on prediction cards -- returns null values (not an error)
+// until an admin actually configures a bookmaker via site_settings, so the
+// frontend can just hide the CTA rather than show a dead link. No affiliate
+// program was live at the time this was built; this makes turning one on
+// a settings change, not a code change.
+const getAffiliateConfig = asyncHandler(async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('affiliate_bookmaker_name', 'affiliate_bookmaker_url')`
+  );
+  const map = Object.fromEntries(rows.map((r) => [r.setting_key, r.setting_value || null]));
+  return successResponse(res, {
+    name: map.affiliate_bookmaker_name || null,
+    url: map.affiliate_bookmaker_url || null,
+  });
+});
+
 // ---- SEO settings ---------------------------------------------------------
 
 const getAllSeo = asyncHandler(async (req, res) => {
@@ -52,4 +68,4 @@ const updateSeo = asyncHandler(async (req, res) => {
   return successResponse(res, { message: 'SEO settings updated' });
 });
 
-module.exports = { getPage, updatePage, getSocialLinks, getAllSeo, getSeoForPage, updateSeo };
+module.exports = { getPage, updatePage, getSocialLinks, getAffiliateConfig, getAllSeo, getSeoForPage, updateSeo };

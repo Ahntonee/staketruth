@@ -8,6 +8,10 @@
 
   var ST = window.ST = window.ST || {};
   ST.currentUser = null;
+  // Populated once at boot (see fetchAffiliateConfig below); stays {name:null,
+  // url:null} until an admin actually sets a bookmaker via site_settings, so
+  // buildPredictionCard can just skip the CTA rather than render a dead link.
+  ST.affiliateConfig = { name: null, url: null };
 
   // Helmet's CSP blocks inline onerror="..." attributes (script-src-attr 'none'),
   // which is correct security behaviour — so broken-image fallbacks are handled
@@ -307,6 +311,13 @@
   };
 
   var SOCIAL_ICONS = { twitter: 'X', telegram: 'TG', facebook: 'FB', reddit: 'RD', whatsapp: 'WA' };
+  async function fetchAffiliateConfig() {
+    try {
+      var res = await api('/pages/affiliate-config');
+      ST.affiliateConfig = res.data;
+    } catch (e) { /* keep the null default -- CTA just stays hidden */ }
+  }
+
   async function fetchSocialLinks() {
     try {
       var res = await api('/pages/social-links');
@@ -411,6 +422,7 @@
       (bookieTags ? '<div class="flex gap-8" style="margin-top:8px;flex-wrap:wrap;">' + bookieTags + '</div>' : '') +
       '<div class="prediction-card__footer" style="margin-top:10px;">' +
         '<a href="/prediction/' + p.slug + '" class="btn btn-outline btn-sm">View Details</a>' +
+        (ST.affiliateConfig.url ? '<a href="' + ST.affiliateConfig.url + '" target="_blank" rel="noopener sponsored" class="btn btn-vip btn-sm">Bet on ' + ST.escapeHtml(ST.affiliateConfig.name || 'Bookmaker') + '</a>' : '') +
       '</div>';
 
     if (!isLocked) {
@@ -746,6 +758,7 @@
     ST.refreshAuth();
     ST.injectAdSlots();
     ST.injectBackToTop();
+    fetchAffiliateConfig();
 
     var pending = sessionStorage.getItem('st_pending_toast');
     if (pending) {
