@@ -193,20 +193,33 @@
   });
 
   document.getElementById('auto-generate-btn').addEventListener('click', async function (e) {
-    e.target.disabled = true;
-    try {
-      var count = document.getElementById('auto-count').value;
-      var confidence = document.getElementById('auto-confidence').value;
-      var params = new URLSearchParams({ date: state.date, category: state.category || 'all', min_confidence: confidence, sort: 'confidence', limit: 30 });
-      var res = await ST.api('/predictions?' + params.toString());
-      var picks = res.data.filter(function (p) { return !p.lockReason; }).slice(0, Number(count));
-      if (!picks.length) { ST.showToast('No predictions match that confidence level right now', 'error'); e.target.disabled = false; return; }
-      mySlip = picks.map(function (p) { return { id: p.id, home_team: p.home_team, away_team: p.away_team, tip: p.tip, odds: p.odds }; });
-      renderSlip();
-      loadPicker(false);
-      ST.showToast('Added ' + mySlip.length + ' picks to your slip', 'success');
-    } catch (err) { ST.showToast(err.message, 'error'); }
-    e.target.disabled = false;
+    var btn = e.currentTarget; // not e.target -- a click on the icon inside the button would target the <span>, not the button
+    btn.disabled = true;
+    var count = document.getElementById('auto-count').value;
+    var confidence = document.getElementById('auto-confidence').value;
+    var params = new URLSearchParams({ date: state.date, category: state.category || 'all', min_confidence: confidence, sort: 'confidence', limit: 30 });
+    var attempt = 0;
+    while (attempt < 2) {
+      attempt++;
+      try {
+        var res = await ST.api('/predictions?' + params.toString());
+        var picks = res.data.filter(function (p) { return !p.lockReason; }).slice(0, Number(count));
+        if (!picks.length) { ST.showToast('No predictions match that confidence level right now', 'error'); break; }
+        mySlip = picks.map(function (p) { return { id: p.id, home_team: p.home_team, away_team: p.away_team, tip: p.tip, odds: p.odds }; });
+        renderSlip();
+        loadPicker(false);
+        ST.showToast('Added ' + mySlip.length + ' picks to your slip', 'success');
+        break;
+      } catch (err) {
+        // "Failed to fetch" is the browser's own network-layer error (dropped
+        // connection, DNS blip, an extension interfering) -- worth one silent
+        // retry before bothering the user, since it's not something a second
+        // click from them would meaningfully do differently.
+        if (err.message === 'Failed to fetch' && attempt < 2) continue;
+        ST.showToast(err.message === 'Failed to fetch' ? 'Network issue reaching the server -- check your connection and try again' : err.message, 'error');
+      }
+    }
+    btn.disabled = false;
   });
 
   document.getElementById('clear-slip-btn').addEventListener('click', function () {
@@ -278,7 +291,7 @@
         return '<div class="bb-share-card__leg"><strong>' + l.home_team + ' vs ' + l.away_team + '</strong><br>' + l.tip + (l.odds ? ' &middot; Odds ' + ST.formatOdds(l.odds) : '') + '</div>';
       }).join('') +
       (combined ? '<div class="bb-share-card__footer"><span>Combined Odds: ' + combined.toFixed(2) + '</span>' + (stake ? '<span>Payout: ₦' + Math.round(stake * combined).toLocaleString() + '</span>' : '') + '</div>' : '') +
-      '<p style="text-align:center;color:var(--text-soft);font-size:0.75rem;margin-top:14px;margin-bottom:0;">staketruth.com &middot; Personal planning tool, not a real bet slip. Gamble responsibly.</p>';
+      '<p style="text-align:center;color:var(--text-soft);font-size:0.75rem;margin-top:14px;margin-bottom:0;">BetBuilder Tool @ staketruth.com</p>';
     return card;
   }
 
@@ -286,26 +299,30 @@
     var card = buildShareCard();
     card.style.position = 'fixed'; card.style.left = '-9999px'; card.style.top = '0';
     document.body.appendChild(card);
+    // Reuse the logo <img> already in the card (header) rather than loading a
+    // fresh Image() -- guarantees it's the exact element html2canvas already
+    // proved can load in this context, no separate fetch/race to get wrong.
+    var logoEl = card.querySelector('img');
+    if (logoEl && !logoEl.complete) {
+      await new Promise(function (resolve) { logoEl.onload = resolve; logoEl.onerror = resolve; });
+    }
     var canvas;
     try {
       canvas = await html2canvas(card, { backgroundColor: '#faf6f2', scale: 2 });
     } finally {
       document.body.removeChild(card);
     }
-    // Brand logo as a multiply watermark, centered, low-opacity so it sits
-    // behind the text rather than competing with it.
+    // Brand logo as a large, centered multiply watermark. Multiply blend
+    // means it darkens rather than washes out what's underneath, so it stays
+    // legible-but-present at this size/opacity instead of fighting the text.
     try {
-      var logo = new Image();
-      await new Promise(function (resolve) {
-        logo.onload = resolve; logo.onerror = resolve; logo.src = '/images/logo.png';
-      });
-      if (logo.width) {
+      if (logoEl && logoEl.naturalWidth) {
         var ctx = canvas.getContext('2d');
-        var wm = canvas.width * 0.5;
+        var wm = canvas.width * 0.75;
         ctx.save();
         ctx.globalCompositeOperation = 'multiply';
-        ctx.globalAlpha = 0.12;
-        ctx.drawImage(logo, (canvas.width - wm) / 2, (canvas.height - wm) / 2, wm, wm);
+        ctx.globalAlpha = 0.22;
+        ctx.drawImage(logoEl, (canvas.width - wm) / 2, (canvas.height - wm) / 2, wm, wm);
         ctx.restore();
       }
     } catch (e) { /* watermark is a nice-to-have -- ship the image without it if this fails */ }
