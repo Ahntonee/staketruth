@@ -41,8 +41,21 @@
 </script>
 <style>
   .home-layout { display: block; }
-  @media (min-width: 1100px) {
-    .home-layout { display: grid; grid-template-columns: 260px 1fr 300px; gap: 24px; align-items: start; }
+  /* Same breakpoint as .main-with-aside elsewhere -- the right aside reuses
+     .main-with-aside__aside, whose own media query switches to
+     position:sticky at 1024px, so this needs to match or there's a window
+     where it goes sticky while still sitting in plain block flow (not yet
+     a grid), which looks buggy mid-scroll. */
+  @media (min-width: 1024px) {
+    .home-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+    /* Grid items default to min-width:auto, meaning they refuse to shrink
+       below their content's natural width -- a flex row of pill buttons
+       (category tabs) or anything else with real intrinsic width in the
+       center column was pushing that track wider than its 1fr share,
+       overflowing the grid and shoving the right aside off the edge of the
+       screen. minmax(0, 1fr) above fixes the column track itself; this
+       covers the direct children too, since the same default applies to them. */
+    .home-layout > * { min-width: 0; }
   }
   /* Center column is sandwiched between two asides now, so predictions run
      one per row here regardless of viewport width -- the multi-column grid
