@@ -178,6 +178,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin', require('./routes/analytics'));
 app.use('/api/pages', require('./routes/pages'));
+app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/sync', require('./routes/sync'));
 app.use('/api/backlinks', require('./routes/backlinks'));
 app.use('/api/seo-pages', require('./routes/seoPages'));

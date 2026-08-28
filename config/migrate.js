@@ -263,6 +263,18 @@ const TABLES = [
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ) ENGINE=InnoDB`,
 
+  `CREATE TABLE IF NOT EXISTS announcements (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    link_url VARCHAR(500),
+    link_label VARCHAR(100),
+    is_active TINYINT(1) DEFAULT 1,
+    expires_at DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB`,
+
   `CREATE TABLE IF NOT EXISTS prediction_accuracy_log (
     id INT PRIMARY KEY AUTO_INCREMENT,
     prediction_id INT UNIQUE NOT NULL,
@@ -577,7 +589,7 @@ const SEO_PAGES = [
 ];
 
 const STATIC_PAGES = [
-  ['home', 'Home', '# Welcome to StakeTruth\n\nData-driven football predictions, proven results.', null],
+  ['home', 'Home', '# Data-Driven Football Predictions You Can Actually Follow\n\nStakeTruth turns raw football data into daily predictions you can act on. Every tip on this site — free or VIP — comes from the same statistical Intelligence Engine, not a tipster\'s gut feeling, so the reasoning behind a pick is always visible in its confidence score and analysis.\n\n## How the Intelligence Engine works\n\nEach prediction starts from a Poisson goal-expectancy model built on both teams\' recent scoring and conceding form, then blends in head-to-head history, market-specific track record, and league-level patterns learned from our own growing database of graded outcomes. The result is a single confidence score from 0-100 that determines whether a pick publishes automatically, gets held for manual review, or gets promoted to a Truthpick of the Day.\n\n## What you get\n\n**Free Predictions** cover a wide spread of markets — over/under goals, BTTS, home/away wins, draws — across leagues worldwide, refreshed daily. **Banker of the Day** is our single highest-conviction pick, chosen for members. **Truthpicks of the Day** are reserved for VIP members: the small handful of predictions each day that clear our highest confidence bar. Every graded prediction, win or loss, is tracked openly on our Leaderboard so our real accuracy is never a mystery.\n\n## Built for how you actually bet\n\nBeyond single tips, our Bet Builder lets you auto-generate a multi-leg accumulator from today\'s highest-confidence picks, or build your own combo pick by pick, complete with a stake calculator and one-tap sharing.\n\n## Responsible gambling\n\nStakeTruth provides statistical analysis for entertainment and informational purposes. Confidence scores reflect the strength of our model, not a guarantee of any outcome. Please gamble responsibly and only wager what you can afford to lose.', null],
   ['about', 'About Us', '# About StakeTruth\n\nStakeTruth combines a real-time football data pipeline with a statistical Intelligence Engine to produce football predictions with a target 80-88% win rate. We publish free daily tips, a Banker of the Day, and a VIP tier with our highest-confidence picks.\n\n## How it works\n\nOur Intelligence Engine blends a Poisson goal-expectancy model with historical outcome learning drawn from our own prediction database, so it gets sharper the longer it runs.\n\n## Responsible gambling\n\nStakeTruth provides statistical analysis for entertainment and informational purposes. Please gamble responsibly.', null],
   ['terms', 'Terms of Service', '# Terms of Service\n\nBy using StakeTruth you agree that all predictions are provided for informational and entertainment purposes only. We do not guarantee outcomes. You are solely responsible for any wagering decisions you make. You must be of legal gambling age in your jurisdiction to use betting-related content on this site.', null],
   ['privacy', 'Privacy Policy', '# Privacy Policy\n\nStakeTruth collects the minimum data necessary to operate your account: name, email, and usage analytics. We never sell your personal data. Payment is processed by Paystack; we do not store card details.', null],

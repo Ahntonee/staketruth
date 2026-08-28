@@ -78,6 +78,7 @@
     { key: 'categories', href: 'categories.html', icon: 'category', label: 'Categories' },
     { key: 'leaderboard', href: 'leaderboard.html', icon: 'leaderboard', label: 'Leaderboard' },
     { key: 'blog', href: 'blog.html', icon: 'article', label: 'Blog' },
+    { key: 'announcements', href: 'announcements.html', icon: 'campaign', label: 'Announcements' },
     { key: 'subscriptions', href: 'subscriptions.html', icon: 'workspace_premium', label: 'Subscriptions' },
     { key: 'users', href: 'users.html', icon: 'group', label: 'Users' },
     { key: 'leagues', href: 'leagues.html', icon: 'emoji_events', label: 'Leagues' },

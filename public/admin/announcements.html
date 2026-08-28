@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Announcements | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Announcements</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <p class="text-soft" style="font-size:0.85rem;margin:0;">Short cards shown in the homepage's left sidebar. Active, non-expired announcements show newest first, up to 5 at a time.</p>
+      </div>
+      <div class="flex justify-between items-center" style="margin-bottom:14px;">
+        <div></div>
+        <button class="btn btn-primary btn-sm" id="add-btn"><span class="material-icons-round" style="font-size:1rem;">add</span> New Announcement</button>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table" id="announcements-table">
+          <thead><tr><th>Title</th><th>Status</th><th>Expires</th><th>Actions</th></tr></thead>
+          <tbody id="announcements-tbody"><tr><td colspan="4">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-title">New Announcement</h3><button class="modal-close" id="modal-close">&times;</button></div>
+    <form id="announcement-form">
+      <input type="hidden" name="id">
+      <div class="form-group"><label class="form-label">Title</label><input required name="title" class="form-control"></div>
+      <div class="form-group"><label class="form-label">Content</label><textarea name="content" class="form-control" rows="4"></textarea></div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+        <div class="form-group"><label class="form-label">Link URL (optional)</label><input name="link_url" class="form-control" placeholder="https://…"></div>
+        <div class="form-group"><label class="form-label">Link Label</label><input name="link_label" class="form-control" placeholder="Learn more"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Expires (optional)</label><input type="datetime-local" name="expires_at" class="form-control"></div>
+      <label class="flex items-center gap-8" style="margin-bottom:16px;"><input type="checkbox" name="is_active" checked> Active</label>
+      <button class="btn btn-primary btn-block">Save Announcement</button>
+    </form>
+  </div>
+</div>
+
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  var cache = [];
+
+  function rowHtml(a) {
+    var expired = a.expires_at && new Date(a.expires_at) < new Date();
+    return '<tr>' +
+      '<td data-label="Title">' + AD.escapeHtml(a.title) + '</td>' +
+      '<td data-label="Status">' + (expired ? '<span class="badge badge-lost">Expired</span>' : a.is_active ? '<span class="badge badge-won">Active</span>' : '<span class="badge badge-pending">Inactive</span>') + '</td>' +
+      '<td data-label="Expires">' + (a.expires_at ? AD.formatDate(a.expires_at) : '—') + '</td>' +
+      '<td data-label="Actions">' +
+        '<button class="btn btn-outline btn-sm" data-edit="' + a.id + '">Edit</button> ' +
+        '<button class="btn btn-danger btn-sm" data-delete="' + a.id + '">Delete</button>' +
+      '</td>' +
+    '</tr>';
+  }
+
+  async function load() {
+    var tbody = document.getElementById('announcements-tbody');
+    tbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+    try {
+      var res = await AD.api('/announcements/admin');
+      cache = res.data;
+      tbody.innerHTML = cache.map(rowHtml).join('') || '<tr><td colspan="4">No announcements yet.</td></tr>';
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="4">Failed to load.</td></tr>'; }
+  }
+
+  function openModal() { document.getElementById('edit-modal').classList.add('open'); }
+  function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
+
+  document.getElementById('add-btn').addEventListener('click', function () {
+    document.getElementById('announcement-form').reset();
+    document.getElementById('announcement-form').id.value = '';
+    document.getElementById('modal-title').textContent = 'New Announcement';
+    openModal();
+  });
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+
+  document.getElementById('announcements-tbody').addEventListener('click', async function (e) {
+    var editId = e.target.getAttribute('data-edit');
+    var deleteId = e.target.getAttribute('data-delete');
+    if (editId) {
+      var a = cache.find(function (x) { return String(x.id) === editId; });
+      if (!a) return;
+      var form = document.getElementById('announcement-form');
+      form.id.value = a.id; form.title.value = a.title; form.content.value = a.content || '';
+      form.link_url.value = a.link_url || ''; form.link_label.value = a.link_label || '';
+      form.expires_at.value = a.expires_at ? a.expires_at.slice(0, 16) : '';
+      form.is_active.checked = !!a.is_active;
+      document.getElementById('modal-title').textContent = 'Edit Announcement';
+      openModal();
+    }
+    if (deleteId) {
+      if (!AD.confirmAction('Delete this announcement?')) return;
+      await AD.api('/announcements/' + deleteId, { method: 'DELETE' });
+      load();
+    }
+  });
+
+  document.getElementById('announcement-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    var id = fd.get('id');
+    var body = {
+      title: fd.get('title'), content: fd.get('content'),
+      link_url: fd.get('link_url') || null, link_label: fd.get('link_label') || null,
+      expires_at: fd.get('expires_at') || null, is_active: fd.get('is_active') === 'on',
+    };
+    try {
+      if (id) await AD.api('/announcements/' + id, { method: 'PUT', body: body });
+      else await AD.api('/announcements', { method: 'POST', body: body });
+      closeModal();
+      AD.showToast('Saved', 'success');
+      load();
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('announcements', user, 'Announcements');
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
