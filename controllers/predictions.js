@@ -65,7 +65,7 @@ function serializePrediction(row, role) {
 }
 
 const listPredictions = asyncHandler(async (req, res) => {
-  const { date, league_id, market, category, vip, result, search } = req.query;
+  const { date, league_id, market, category, vip, result, search, min_confidence, sort } = req.query;
   const { page, limit, offset } = parsePagination(req.query);
   const role = getRole(req);
 
@@ -86,6 +86,7 @@ const listPredictions = asyncHandler(async (req, res) => {
   if (vip === 'true') where.push('p.is_vip = 1');
   if (result) { where.push('p.result = ?'); params.push(result); }
   if (search) { where.push('(p.home_team LIKE ? OR p.away_team LIKE ?)'); params.push(`%${search}%`, `%${search}%`); }
+  if (min_confidence) { where.push('p.intelligence_score >= ?'); params.push(Number(min_confidence)); }
 
   const whereSql = where.join(' AND ');
   const [countRows] = await pool.query(`SELECT COUNT(*) AS cnt FROM predictions p WHERE ${whereSql}`, params);
@@ -93,12 +94,18 @@ const listPredictions = asyncHandler(async (req, res) => {
   // actually wants to act on), already-settled won/lost results after (most
   // recently played first) -- a plain match_date sort let an early finished
   // match outrank later still-pending ones just because it kicked off first.
+  // sort=confidence overrides this for callers that specifically want the
+  // strongest picks first regardless of kickoff time (e.g. Bet Builder's
+  // Auto-Generate, which is asking for "the best N picks", not "what's next").
+  const orderSql = sort === 'confidence'
+    ? 'p.intelligence_score DESC'
+    : `(p.result = 'pending') DESC,
+       CASE WHEN p.result = 'pending' THEN p.match_date END ASC,
+       CASE WHEN p.result != 'pending' THEN p.match_date END DESC`;
   const [rows] = await pool.query(
     `SELECT p.*, l.name AS league_name FROM predictions p LEFT JOIN leagues l ON l.id = p.league_id
      WHERE ${whereSql}
-     ORDER BY (p.result = 'pending') DESC,
-              CASE WHEN p.result = 'pending' THEN p.match_date END ASC,
-              CASE WHEN p.result != 'pending' THEN p.match_date END DESC
+     ORDER BY ${orderSql}
      LIMIT ? OFFSET ?`,
     [...params, limit, offset]
   );

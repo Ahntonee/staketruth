@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bet Builder — Build Your Own Combo | StakeTruth</title>
-<meta name="description" content="Pick from today's published football predictions and build your own multi-leg combo — a free personal planning tool, no real wagers placed.">
+<meta name="description" content="Auto-generate your accumulator from StakeTruth's highest-confidence predictions, or build your own combo. A free personal planning tool — no real wagers placed.">
 <link rel="canonical" href="https://www.staketruth.com/bet-builder.html">
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,6 +12,23 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap-reboot.min.css" rel="stylesheet">
 <link href="/css/style.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  .bb-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .bb-controls select { padding: 8px 10px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 0.9rem; }
+  .bb-pick-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; background: var(--card); }
+  .bb-pick-row.in-slip { border-color: var(--primary); background: var(--card-2); }
+  .bb-empty { text-align: center; padding: 40px 16px; color: var(--text-soft); }
+  .bb-empty .material-icons-round { font-size: 2.5rem; opacity: 0.4; }
+  .bb-slip-leg { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem; }
+  .bb-badge-count { background: var(--primary); color: #fff; border-radius: 100px; padding: 1px 9px; font-size: 0.78rem; font-weight: 800; }
+  .bb-share-card { width: 480px; padding: 28px; background: var(--off-white); font-family: 'Inter', sans-serif; }
+  .bb-share-card__header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .bb-share-card__header img { height: 40px; }
+  .bb-share-card__header strong { font-size: 1.2rem; }
+  .bb-share-card__leg { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+  .bb-share-card__footer { margin-top: 16px; padding-top: 14px; border-top: 2px solid var(--primary); display: flex; justify-content: space-between; font-weight: 800; }
+</style>
 </head>
 <body>
 <header class="site-header" id="site-header"></header>
@@ -19,34 +36,66 @@
 <main>
   <section style="padding-bottom:0;">
     <div class="container">
-      <h1 style="font-size:1.5rem;">Bet Builder</h1>
-      <p class="text-soft">Pick from today's published predictions to build your own combo. This is a personal planning tool — it doesn't place any real bet, just tracks a combo you're considering.</p>
+      <div class="card card-pad">
+        <h1 style="font-size:1.4rem;display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span class="material-icons-round" style="color:var(--primary);">construction</span>Bet Builder</h1>
+        <p class="text-soft" style="margin:0;">Auto-generate your accumulator from today's highest-confidence predictions, or add picks yourself. Set your stake and share your combo — this is a personal planning tool, it doesn't place any real bet.</p>
+      </div>
     </div>
   </section>
 
   <section>
     <div class="container">
+      <div class="card card-pad" style="margin-bottom:16px;">
+        <div class="bb-controls">
+          <span class="material-icons-round" style="color:var(--primary);">auto_awesome</span>
+          <strong>Auto-pick top</strong>
+          <select id="auto-count"><option value="3">3 picks</option><option value="5" selected>5 picks</option><option value="7">7 picks</option><option value="10">10 picks</option></select>
+          <strong>confidence &ge;</strong>
+          <select id="auto-confidence"><option value="50">50%</option><option value="60" selected>60%</option><option value="65">65%</option><option value="70">70%</option><option value="75">75%</option><option value="80">80%</option></select>
+          <button class="btn btn-primary btn-sm" id="auto-generate-btn"><span class="material-icons-round" style="font-size:1rem;">auto_awesome</span> Auto-Generate</button>
+          <button class="btn btn-outline btn-sm" id="clear-slip-btn"><span class="material-icons-round" style="font-size:1rem;">clear_all</span> Clear Slip</button>
+        </div>
+      </div>
+
       <div class="main-with-aside">
         <div class="main-with-aside__content">
           <div class="tab-row" id="date-tabs">
-            <button class="category-tab" data-date="yesterday">Yesterday</button>
-            <button class="category-tab active" data-date="today">Today</button>
+            <button class="category-tab active" data-date="today">Today's Games</button>
             <button class="category-tab" data-date="tomorrow">Tomorrow</button>
           </div>
-          <div class="form-group" style="margin-top:12px;">
-            <input type="search" id="search-input" class="form-control" placeholder="Search by team name…">
+          <div class="tab-row" id="market-tabs" style="margin-top:10px;">
+            <button class="category-tab active" data-category="">All Markets</button>
+            <button class="category-tab" data-category="over_1_5">Over 1.5</button>
+            <button class="category-tab" data-category="over_2_5">Over 2.5</button>
+            <button class="category-tab" data-category="gg">BTTS</button>
+            <button class="category-tab" data-category="home_win">Home Win</button>
+            <button class="category-tab" data-category="away_win">Away Win</button>
+            <button class="category-tab" data-category="draw">Draw</button>
           </div>
-          <h2 class="section-title" style="margin-top:20px;"><span class="material-icons-round">sports_soccer</span>Available Predictions</h2>
+          <h2 class="section-title" style="margin-top:18px;font-size:1.05rem;">Today's Predictions</h2>
           <div id="picker-list"><div class="skeleton" style="height:60px;border-radius:10px;margin-bottom:8px;"></div></div>
           <div id="picker-sentinel" style="height:1px;"></div>
         </div>
 
         <aside class="main-with-aside__aside">
           <div class="aside-widget">
-            <h3 style="display:flex;align-items:center;gap:6px;"><span class="material-icons-round" style="color:var(--accent);">stacked_line_chart</span>Your Combo</h3>
+            <h3 style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+              <span style="display:flex;align-items:center;gap:6px;"><span class="material-icons-round" style="color:var(--accent);">receipt_long</span>Bet Slip</span>
+              <span class="bb-badge-count" id="slip-count-badge">0</span>
+            </h3>
             <div id="my-slip"></div>
-            <div style="margin-top:8px;font-size:0.9rem;">Legs: <strong id="slip-count">0</strong> &middot; Combined Odds: <strong id="slip-odds">—</strong></div>
+            <div class="form-group" style="margin-top:10px;">
+              <label class="form-label" style="font-size:0.8rem;">Stake (&#8358;)</label>
+              <input type="number" id="stake-input" class="form-control" value="1000" min="0" step="100">
+            </div>
+            <div style="margin-top:8px;font-size:0.9rem;">Combined Odds: <strong id="slip-odds">—</strong></div>
+            <div style="font-size:0.9rem;">Potential Payout: <strong id="slip-payout">—</strong></div>
             <button class="btn btn-primary btn-block" id="save-slip-btn" style="margin-top:10px;">Save Combo</button>
+            <div class="flex gap-8" style="margin-top:8px;">
+              <button class="btn btn-outline btn-sm" id="copy-text-btn" style="flex:1;"><span class="material-icons-round" style="font-size:1rem;">content_copy</span> Copy Text</button>
+              <button class="btn btn-outline btn-sm" id="share-image-btn" style="flex:1;"><span class="material-icons-round" style="font-size:1rem;">image</span> Share Image</button>
+            </div>
+            <p class="text-soft" style="font-size:0.75rem;margin-top:10px;margin-bottom:0;">Odds shown are estimated from our confidence scores. Always verify actual odds with your bookmaker. Bet responsibly.</p>
           </div>
           <div id="saved-slips" class="aside-widget" style="margin-top:16px;"></div>
         </aside>
@@ -60,16 +109,16 @@
 <script src="/js/app.js"></script>
 <script>
 (function () {
-  var state = { date: 'today', search: '', page: 1, hasNextPage: false };
+  var state = { date: 'today', category: '', page: 1, hasNextPage: false };
   var mySlip = []; // [{id, home_team, away_team, tip, odds}]
   var searchTimer, requestSeq = 0, loadingMore = false;
 
   function pickerRowHtml(p) {
     var isSelected = mySlip.some(function (l) { return l.id === p.id; });
     var locked = !!p.lockReason;
-    return '<div class="flex justify-between items-center" style="padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">' +
+    return '<div class="bb-pick-row' + (isSelected ? ' in-slip' : '') + '">' +
       '<span style="font-size:0.9rem;">' + ST.escapeHtml(p.home_team) + ' vs ' + ST.escapeHtml(p.away_team) +
-        (locked ? ' — <span class="text-soft">🔒 VIP pick</span>' : ' — <strong>' + ST.escapeHtml(p.tip) + '</strong>' + (p.odds ? ' (' + ST.formatOdds(p.odds) + ')' : '')) +
+        (locked ? ' — <span class="text-soft">🔒 VIP pick</span>' : ' — <strong>' + ST.escapeHtml(p.tip) + '</strong>' + (p.odds ? ' (' + ST.formatOdds(p.odds) + ')' : '') + (p.intelligence_score ? ' <span class="text-soft">· ' + p.intelligence_score + '% confidence</span>' : '')) +
       '</span>' +
       (locked ? '' : '<button type="button" class="btn btn-sm ' + (isSelected ? 'btn-outline' : 'btn-primary') + '" data-toggle-leg=\'' + JSON.stringify({ id: p.id, home_team: p.home_team, away_team: p.away_team, tip: p.tip, odds: p.odds }).replace(/'/g, '&apos;') + '\'>' + (isSelected ? 'Remove' : 'Add') + '</button>') +
     '</div>';
@@ -79,12 +128,11 @@
     var list = document.getElementById('picker-list');
     if (!append) list.innerHTML = '<div class="skeleton" style="height:60px;border-radius:10px;"></div>';
     var mySeq = ++requestSeq;
-    var params = new URLSearchParams({ date: state.date, category: 'all', page: state.page, limit: 15 });
-    if (state.search) params.set('search', state.search);
+    var params = new URLSearchParams({ date: state.date, category: state.category || 'all', page: state.page, limit: 15 });
     try {
       var res = await ST.api('/predictions?' + params.toString());
       if (mySeq !== requestSeq) return;
-      var html = res.data.map(pickerRowHtml).join('') || '<div class="empty-state">No predictions found.</div>';
+      var html = res.data.map(pickerRowHtml).join('') || '<div class="bb-empty"><span class="material-icons-round">sports_soccer</span><h3 style="margin:8px 0 4px;">No predictions available</h3><p class="text-soft">Check back closer to kick-off or try tomorrow\'s games.</p></div>';
       if (append) list.insertAdjacentHTML('beforeend', html); else list.innerHTML = html;
       state.hasNextPage = res.meta.hasNextPage;
     } catch (e) { if (mySeq === requestSeq) list.innerHTML = '<div class="empty-state">Could not load predictions.</div>'; }
@@ -103,23 +151,29 @@
     btn.classList.add('active');
     state.date = btn.getAttribute('data-date'); state.page = 1; loadPicker(false);
   });
-  document.getElementById('search-input').addEventListener('input', function () {
-    var val = this.value;
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(function () { state.search = val; state.page = 1; loadPicker(false); }, 400);
+  document.getElementById('market-tabs').addEventListener('click', function (e) {
+    var btn = e.target.closest('.category-tab');
+    if (!btn) return;
+    document.querySelectorAll('#market-tabs .category-tab').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    state.category = btn.getAttribute('data-category'); state.page = 1; loadPicker(false);
   });
 
   function renderSlip() {
-    document.getElementById('slip-count').textContent = mySlip.length;
+    document.getElementById('slip-count-badge').textContent = mySlip.length;
     var withOdds = mySlip.filter(function (l) { return l.odds; });
-    document.getElementById('slip-odds').textContent = withOdds.length ? withOdds.reduce(function (acc, l) { return acc * Number(l.odds); }, 1).toFixed(2) : '—';
-    document.getElementById('my-slip').innerHTML = mySlip.map(function (l, i) {
-      return '<div class="flex justify-between items-center" style="padding:6px 0;border-bottom:1px dashed var(--border);font-size:0.85rem;">' +
-        '<span>' + ST.escapeHtml(l.home_team) + ' vs ' + ST.escapeHtml(l.away_team) + '<br><span class="text-soft">' + ST.escapeHtml(l.tip) + '</span></span>' +
+    var combined = withOdds.length ? withOdds.reduce(function (acc, l) { return acc * Number(l.odds); }, 1) : null;
+    document.getElementById('slip-odds').textContent = combined ? combined.toFixed(2) : '—';
+    var stake = Number(document.getElementById('stake-input').value) || 0;
+    document.getElementById('slip-payout').textContent = combined ? '₦' + Math.round(stake * combined).toLocaleString() : '—';
+    document.getElementById('my-slip').innerHTML = mySlip.length ? mySlip.map(function (l, i) {
+      return '<div class="bb-slip-leg">' +
+        '<span>' + ST.escapeHtml(l.home_team) + ' vs ' + ST.escapeHtml(l.away_team) + '<br><span class="text-soft">' + ST.escapeHtml(l.tip) + (l.odds ? ' (' + ST.formatOdds(l.odds) + ')' : '') + '</span></span>' +
         '<button type="button" class="icon-btn" data-remove-slip-leg="' + i + '"><span class="material-icons-round" style="font-size:1rem;">close</span></button>' +
       '</div>';
-    }).join('') || '<p class="text-soft" style="font-size:0.85rem;">Add at least 2 picks to build a combo.</p>';
+    }).join('') : '<div class="bb-empty"><span class="material-icons-round">add_circle_outline</span><p style="margin-top:6px;">Select games or use Auto-Generate</p></div>';
   }
+  document.getElementById('stake-input').addEventListener('input', renderSlip);
 
   document.getElementById('picker-list').addEventListener('click', function (e) {
     var btn = e.target.closest('[data-toggle-leg]');
@@ -136,6 +190,27 @@
     mySlip.splice(Number(btn.getAttribute('data-remove-slip-leg')), 1);
     renderSlip();
     loadPicker(false);
+  });
+
+  document.getElementById('auto-generate-btn').addEventListener('click', async function (e) {
+    e.target.disabled = true;
+    try {
+      var count = document.getElementById('auto-count').value;
+      var confidence = document.getElementById('auto-confidence').value;
+      var params = new URLSearchParams({ date: state.date, category: state.category || 'all', min_confidence: confidence, sort: 'confidence', limit: 30 });
+      var res = await ST.api('/predictions?' + params.toString());
+      var picks = res.data.filter(function (p) { return !p.lockReason; }).slice(0, Number(count));
+      if (!picks.length) { ST.showToast('No predictions match that confidence level right now', 'error'); e.target.disabled = false; return; }
+      mySlip = picks.map(function (p) { return { id: p.id, home_team: p.home_team, away_team: p.away_team, tip: p.tip, odds: p.odds }; });
+      renderSlip();
+      loadPicker(false);
+      ST.showToast('Added ' + mySlip.length + ' picks to your slip', 'success');
+    } catch (err) { ST.showToast(err.message, 'error'); }
+    e.target.disabled = false;
+  });
+
+  document.getElementById('clear-slip-btn').addEventListener('click', function () {
+    mySlip = []; renderSlip(); loadPicker(false);
   });
 
   async function loadSavedSlips() {
@@ -170,6 +245,91 @@
       ST.showToast('Combo saved', 'success');
       mySlip = []; renderSlip(); loadPicker(false); loadSavedSlips();
     } catch (err) { ST.showToast(err.message, 'error'); }
+  });
+
+  // ---- Copy as text --------------------------------------------------------
+  document.getElementById('copy-text-btn').addEventListener('click', async function () {
+    if (!mySlip.length) { ST.showToast('Add picks to your slip first', 'error'); return; }
+    var withOdds = mySlip.filter(function (l) { return l.odds; });
+    var combined = withOdds.length === mySlip.length ? mySlip.reduce(function (acc, l) { return acc * Number(l.odds); }, 1) : null;
+    var stake = Number(document.getElementById('stake-input').value) || 0;
+    var lines = ['StakeTruth Bet Builder', ''];
+    mySlip.forEach(function (l, i) { lines.push((i + 1) + '. ' + l.home_team + ' vs ' + l.away_team + ' — ' + l.tip + (l.odds ? ' (' + ST.formatOdds(l.odds) + ')' : '')); });
+    lines.push('');
+    if (combined) lines.push('Combined Odds: ' + combined.toFixed(2));
+    if (combined && stake) lines.push('Stake: ₦' + stake.toLocaleString() + ' → Potential Payout: ₦' + Math.round(stake * combined).toLocaleString());
+    lines.push('', 'staketruth.com');
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'));
+      ST.showToast('Copied to clipboard', 'success');
+    } catch (e) { ST.showToast('Could not copy — try again', 'error'); }
+  });
+
+  // ---- Share as image -------------------------------------------------------
+  function buildShareCard() {
+    var withOdds = mySlip.filter(function (l) { return l.odds; });
+    var combined = withOdds.length === mySlip.length ? mySlip.reduce(function (acc, l) { return acc * Number(l.odds); }, 1) : null;
+    var stake = Number(document.getElementById('stake-input').value) || 0;
+    var card = document.createElement('div');
+    card.className = 'bb-share-card';
+    card.innerHTML =
+      '<div class="bb-share-card__header"><img src="/images/logo.png"><strong>StakeTruth Bet Builder</strong></div>' +
+      mySlip.map(function (l) {
+        return '<div class="bb-share-card__leg"><strong>' + l.home_team + ' vs ' + l.away_team + '</strong><br>' + l.tip + (l.odds ? ' &middot; Odds ' + ST.formatOdds(l.odds) : '') + '</div>';
+      }).join('') +
+      (combined ? '<div class="bb-share-card__footer"><span>Combined Odds: ' + combined.toFixed(2) + '</span>' + (stake ? '<span>Payout: ₦' + Math.round(stake * combined).toLocaleString() + '</span>' : '') + '</div>' : '') +
+      '<p style="text-align:center;color:var(--text-soft);font-size:0.75rem;margin-top:14px;margin-bottom:0;">staketruth.com &middot; Personal planning tool, not a real bet slip. Gamble responsibly.</p>';
+    return card;
+  }
+
+  async function generateShareImage() {
+    var card = buildShareCard();
+    card.style.position = 'fixed'; card.style.left = '-9999px'; card.style.top = '0';
+    document.body.appendChild(card);
+    var canvas;
+    try {
+      canvas = await html2canvas(card, { backgroundColor: '#faf6f2', scale: 2 });
+    } finally {
+      document.body.removeChild(card);
+    }
+    // Brand logo as a multiply watermark, centered, low-opacity so it sits
+    // behind the text rather than competing with it.
+    try {
+      var logo = new Image();
+      await new Promise(function (resolve) {
+        logo.onload = resolve; logo.onerror = resolve; logo.src = '/images/logo.png';
+      });
+      if (logo.width) {
+        var ctx = canvas.getContext('2d');
+        var wm = canvas.width * 0.5;
+        ctx.save();
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.globalAlpha = 0.12;
+        ctx.drawImage(logo, (canvas.width - wm) / 2, (canvas.height - wm) / 2, wm, wm);
+        ctx.restore();
+      }
+    } catch (e) { /* watermark is a nice-to-have -- ship the image without it if this fails */ }
+    return new Promise(function (resolve) { canvas.toBlob(resolve, 'image/png'); });
+  }
+
+  document.getElementById('share-image-btn').addEventListener('click', async function (e) {
+    if (!mySlip.length) { ST.showToast('Add picks to your slip first', 'error'); return; }
+    e.target.disabled = true;
+    try {
+      var blob = await generateShareImage();
+      var file = new File([blob], 'staketruth-combo.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'My StakeTruth Combo' });
+      } else {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'staketruth-combo.png';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+        ST.showToast('Image saved — share it from your downloads', 'success');
+      }
+    } catch (err) { if (err.name !== 'AbortError') ST.showToast('Could not generate image', 'error'); }
+    e.target.disabled = false;
   });
 
   renderSlip();
