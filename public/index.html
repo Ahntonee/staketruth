@@ -72,8 +72,18 @@
   .featured-post-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; display: block; color: inherit; text-decoration: none; }
   .featured-post-card img { width: 100%; height: 140px; object-fit: cover; display: block; }
   .featured-post-card__body { padding: 14px; }
-  .home-seo-content h2 { font-size: 1.15rem; margin: 20px 0 8px; }
-  .home-seo-content p, .home-seo-content li { color: var(--text-soft); line-height: 1.7; }
+  /* Explicit, on-the-lighter-side sizing/weight -- without this the block
+     just inherits the page's base styles, and this much running text at
+     full body size/weight (plus every **bold** span from the markdown
+     rendering as a heavy 700-weight <strong>) reads noticeably larger and
+     thicker on a phone than intended. */
+  .home-seo-content h2 { font-size: 1.1rem; font-weight: 700; margin: 20px 0 8px; }
+  .home-seo-content p, .home-seo-content li { font-size: 0.95rem; font-weight: 400; color: var(--text-soft); line-height: 1.7; }
+  .home-seo-content strong { font-weight: 600; }
+  @media (max-width: 640px) {
+    .home-seo-content h2 { font-size: 1rem; }
+    .home-seo-content p, .home-seo-content li { font-size: 0.88rem; line-height: 1.65; }
+  }
 </style>
 </head>
 <body>

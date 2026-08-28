@@ -181,6 +181,15 @@ section { padding: 28px 0; }
 }
 
 .header-actions { display: flex; align-items: center; gap: 8px; justify-self: end; }
+/* On mobile the nav links are hidden, so .header-inner's right grid track
+   (equal width to the logo's track, per 1fr auto 1fr) has real space the
+   theme toggle/Join VIP/hamburger group wasn't using -- justify-self:end
+   just crammed them together at the far right instead. Stretching the
+   group across that track and spacing its children out uses that width
+   instead of leaving it empty. */
+@media (max-width: 899px) {
+  .header-actions { justify-self: stretch; justify-content: space-between; }
+}
 .theme-toggle {
   background: var(--card-2); border: 1px solid var(--border); border-radius: 50%;
   width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
