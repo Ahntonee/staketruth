@@ -188,7 +188,15 @@ section { padding: 28px 0; }
    group across that track and spacing its children out uses that width
    instead of leaving it empty. */
 @media (max-width: 899px) {
-  .header-actions { justify-self: stretch; justify-content: space-between; }
+  .header-actions { justify-self: stretch; justify-content: space-between; gap: 6px; }
+  /* Desktop sizing (40px circles, standard btn-sm padding) reads oversized
+     and cramped once four items share a mobile-width header -- scale
+     everything down together so spacing and icon size read proportionate. */
+  .header-actions .theme-toggle, .header-actions .avatar-btn { width: 32px; height: 32px; }
+  .header-actions .theme-toggle .material-icons-round { font-size: 1.1rem; }
+  .header-actions .avatar-btn { font-weight: 700; font-size: 0.85rem; }
+  .header-actions .mobile-vip-btn { padding: 6px 10px; font-size: 0.78rem; }
+  .header-actions .mobile-menu-toggle { width: 36px; height: 36px; }
 }
 .theme-toggle {
   background: var(--card-2); border: 1px solid var(--border); border-radius: 50%;
