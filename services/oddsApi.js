@@ -54,18 +54,20 @@ async function fetchSoccerOdds() {
 }
 
 /**
- * Finds live bookmaker odds for a specific fixture by fuzzy team-name match
- * within ±1 day of the given kickoff.
+ * Matches a specific fixture against an already-fetched odds feed (see
+ * fetchSoccerOdds) by fuzzy team-name match within ±1 day of kickoff. Takes
+ * the feed as a parameter rather than fetching it itself -- fetchSoccerOdds
+ * returns the ENTIRE soccer odds feed in one call regardless of which
+ * fixture you're looking for, so calling it once per fixture inside a loop
+ * (the previous shape of this function) burned one full-feed API call per
+ * fixture for identical data every time.
  */
-async function getLiveOddsForFixture(homeTeam, awayTeam, commenceDateISO) {
-  const result = await fetchSoccerOdds();
-  if (result.skipped || !Array.isArray(result.events)) return null;
-
+function matchOddsForFixture(events, homeTeam, awayTeam, commenceDateISO) {
   const home = normaliseName(homeTeam);
   const away = normaliseName(awayTeam);
   const target = new Date(commenceDateISO).getTime();
 
-  const match = result.events.find((event) => {
+  const match = events.find((event) => {
     const eh = normaliseName(event.home_team);
     const ea = normaliseName(event.away_team);
     const sameFixture = (eh.includes(home) || home.includes(eh)) && (ea.includes(away) || away.includes(ea));
@@ -111,14 +113,13 @@ async function getAvailableSports() {
   }
 }
 
-async function syncOddsForTodayFixtures() {
-  const [predictions] = await pool.query(
-    `SELECT id, home_team, away_team, match_date FROM predictions
-     WHERE result = 'pending' AND match_date >= NOW() AND match_date <= DATE_ADD(NOW(), INTERVAL 2 DAY)`
-  );
+// Applies one already-fetched odds feed against a list of predictions,
+// in-memory only -- shared by both sync functions below so neither makes
+// more than the single fetchSoccerOdds() call the whole run needs.
+async function applyOddsToPredictions(predictions, events) {
   let updated = 0;
   for (const pred of predictions) {
-    const odds = await getLiveOddsForFixture(pred.home_team, pred.away_team, pred.match_date);
+    const odds = matchOddsForFixture(events, pred.home_team, pred.away_team, pred.match_date);
     if (odds && odds.bookmakers.length) {
       await pool.query('UPDATE predictions SET bookies_available = ? WHERE id = ?', [
         JSON.stringify(odds.bookmakers), pred.id,
@@ -126,13 +127,42 @@ async function syncOddsForTodayFixtures() {
       updated++;
     }
   }
+  return updated;
+}
+
+async function syncOddsForTodayFixtures() {
+  const [predictions] = await pool.query(
+    `SELECT id, home_team, away_team, match_date FROM predictions
+     WHERE result = 'pending' AND match_date >= NOW() AND match_date <= DATE_ADD(NOW(), INTERVAL 2 DAY)`
+  );
+  if (!predictions.length) return { checked: 0, updated: 0 };
+  const result = await fetchSoccerOdds();
+  if (result.skipped) return { checked: predictions.length, updated: 0, skipped: true, reason: result.reason };
+  const updated = await applyOddsToPredictions(predictions, result.events);
+  return { checked: predictions.length, updated };
+}
+
+// Broader than the above: every pending prediction still missing odds,
+// regardless of date, not just the next 2 days. The-odds-api itself only
+// carries odds for near-term matches, so anything far in the future simply
+// won't find a match and is skipped -- harmless, not an extra API cost,
+// since this still only ever calls fetchSoccerOdds() once for the whole run.
+async function syncOddsForAllPendingFixtures() {
+  const [predictions] = await pool.query(
+    `SELECT id, home_team, away_team, match_date FROM predictions
+     WHERE result = 'pending' AND (bookies_available IS NULL OR bookies_available = '[]')`
+  );
+  if (!predictions.length) return { checked: 0, updated: 0 };
+  const result = await fetchSoccerOdds();
+  if (result.skipped) return { checked: predictions.length, updated: 0, skipped: true, reason: result.reason };
+  const updated = await applyOddsToPredictions(predictions, result.events);
   return { checked: predictions.length, updated };
 }
 
 module.exports = {
-  getLiveOddsForFixture,
   getAvailableSports,
   syncOddsForTodayFixtures,
+  syncOddsForAllPendingFixtures,
   getCallsToday,
   resetCallsToday,
 };

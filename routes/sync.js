@@ -92,6 +92,12 @@ router.post('/auto-predict/:id', asyncHandler(async (req, res) => {
 
 router.post('/odds', asyncHandler(async (req, res) => successResponse(res, await oddsApi.syncOddsForTodayFixtures())));
 
+// Broader than /odds: every pending prediction still missing odds, not just
+// the next 2 days -- still only one Odds API call total per run (see
+// oddsApi.syncOddsForAllPendingFixtures), just applied against a wider set
+// of predictions already sitting in the database.
+router.post('/odds-backfill', asyncHandler(async (req, res) => successResponse(res, await oddsApi.syncOddsForAllPendingFixtures())));
+
 router.post('/statistics', asyncHandler(async (req, res) => {
   const team = await statistics.refreshTeamStatistics();
   const league = await statistics.refreshLeagueStatistics();
