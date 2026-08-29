@@ -7,6 +7,7 @@ router.get('/', ctrl.listPublic);
 router.get('/admin', requireAdmin, ctrl.listAdmin);
 router.post('/', requireAdmin, ctrl.create);
 router.put('/:id', requireAdmin, ctrl.update);
+router.post('/:id/publish', requireAdmin, ctrl.publish);
 router.delete('/:id', requireAdmin, ctrl.remove);
 
 module.exports = router;

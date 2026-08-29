@@ -64,8 +64,6 @@
   .home-layout #predictions-grid .prediction-card { margin-bottom: 14px; }
   .home-aside-widget { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 16px; }
   .home-aside-widget h3 { font-size: 0.95rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-  .announcement-card { padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem; }
-  .announcement-card:last-child { border-bottom: none; }
   .latest-post-card img { width: 100%; height: 90px; object-fit: cover; border-radius: var(--radius); margin-bottom: 8px; }
   .featured-posts-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
   @media (min-width: 640px) { .featured-posts-grid { grid-template-columns: repeat(3, 1fr); } }
@@ -280,21 +278,6 @@
     } catch (e) { el.style.display = 'none'; }
   }
 
-  // ---- Left aside: announcements --------------------------------------------
-  async function loadAnnouncements() {
-    var el = document.getElementById('announcements-widget');
-    try {
-      var res = await ST.api('/announcements');
-      if (!res.data.length) { el.style.display = 'none'; return; }
-      el.innerHTML = '<h3><span class="material-icons-round" style="color:var(--accent);">campaign</span>Announcements</h3>' +
-        res.data.map(function (a) {
-          return '<div class="announcement-card"><strong>' + ST.escapeHtml(a.title) + '</strong>' +
-            (a.content ? '<p style="margin:4px 0 0;">' + ST.escapeHtml(a.content) + '</p>' : '') +
-            (a.link_url ? '<a href="' + a.link_url + '" style="font-size:0.8rem;">' + ST.escapeHtml(a.link_label || 'Learn more') + ' &rarr;</a>' : '') +
-          '</div>';
-        }).join('');
-    } catch (e) { el.style.display = 'none'; }
-  }
 
   // ---- Featured posts ---------------------------------------------------------
   async function loadFeaturedPosts() {
@@ -329,7 +312,7 @@
   ST.renderTruthSafePicks(document.getElementById('truth-safe-picks-widget'));
   ST.renderRecentWins(document.getElementById('recent-wins-widget'));
   loadLatestPostWidget();
-  loadAnnouncements();
+  ST.renderAnnouncements(document.getElementById('announcements-widget'));
   loadFeaturedPosts();
   loadHomeSeoContent();
 })();

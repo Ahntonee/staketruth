@@ -638,6 +638,15 @@ async function migrate() {
   // moment, at which point the scheduler cron flips is_published to 1.
   await ensureColumn('blog_posts', 'scheduled_publish_at', "DATETIME NULL");
 
+  // Announcements: replaced the original plain is_active flag with a proper
+  // draft/published workflow plus a visual type, matching how every other
+  // publishable content type in the admin already works (blog posts, SEO
+  // pages). is_active is kept and backfilled from status for callers that
+  // haven't been updated yet, rather than dropped outright.
+  await ensureColumn('announcements', 'status', "ENUM('draft','published') DEFAULT 'draft'");
+  await ensureColumn('announcements', 'type', "ENUM('info','success','warning','danger') DEFAULT 'info'");
+  await pool.query(`UPDATE announcements SET status = IF(is_active = 1, 'published', 'draft') WHERE status = 'draft' AND is_active = 1`);
+
   // Seed admin
   const [existingAdmin] = await pool.query('SELECT id FROM users WHERE email = ?', ['admin@staketruth.com']);
   if (existingAdmin.length === 0) {

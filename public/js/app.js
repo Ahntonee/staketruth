@@ -501,6 +501,32 @@
     } catch (e) { container.innerHTML = ''; if (wrapper) wrapper.style.display = 'none'; }
   };
 
+  // Shared by the homepage sidebar and the logged-in user dashboard -- same
+  // published, non-expired announcements either way, just styled to fit
+  // whichever container calls it.
+  ST.renderAnnouncements = async function (container, opts) {
+    if (!container) return;
+    opts = opts || {};
+    var icons = { info: 'info', success: 'check_circle', warning: 'warning', danger: 'error' };
+    try {
+      var res = await api('/announcements');
+      if (!res.data.length) { container.innerHTML = ''; if (opts.hideWhenEmpty !== false) container.style.display = 'none'; return; }
+      container.style.display = '';
+      var heading = opts.heading !== false ? '<h3 style="display:flex;align-items:center;gap:6px;"><span class="material-icons-round" style="color:var(--accent);">campaign</span>Announcements</h3>' : '';
+      container.innerHTML = heading + res.data.map(function (a) {
+        return '<div class="announcement-card announcement-card--' + a.type + '">' +
+          '<div style="display:flex;align-items:flex-start;gap:8px;">' +
+            '<span class="material-icons-round" style="font-size:1.05rem;margin-top:1px;">' + (icons[a.type] || 'info') + '</span>' +
+            '<div><strong>' + ST.escapeHtml(a.title) + '</strong>' +
+            (a.content ? '<p style="margin:4px 0 0;">' + ST.escapeHtml(a.content) + '</p>' : '') +
+            (a.link_url ? '<a href="' + a.link_url + '" style="font-size:0.8rem;">' + ST.escapeHtml(a.link_label || 'Learn more') + ' &rarr;</a>' : '') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    } catch (e) { container.innerHTML = ''; if (opts.hideWhenEmpty !== false) container.style.display = 'none'; }
+  };
+
   ST.renderTruthSafePicks = async function (container) {
     if (!container) return;
     try {

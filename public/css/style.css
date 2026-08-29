@@ -662,3 +662,11 @@ textarea.form-control { min-height: 120px; resize: vertical; }
 .back-to-top:hover { filter: brightness(1.08); }
 .back-to-top--visible { opacity: 1; visibility: visible; transform: translateY(0); }
 @media (max-width: 480px) { .back-to-top { right: 14px; bottom: 14px; } }
+
+/* ---- Announcements (homepage sidebar + user dashboard) -------------------- */
+.announcement-card { padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem; }
+.announcement-card:last-child { border-bottom: none; }
+.announcement-card--info .material-icons-round { color: #2563eb; }
+.announcement-card--success .material-icons-round { color: var(--success-dim); }
+.announcement-card--warning .material-icons-round { color: var(--warning); }
+.announcement-card--danger .material-icons-round { color: var(--danger); }

@@ -8,6 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <link href="/css/style.css" rel="stylesheet">
+<style>
+  .ann-type-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 100px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+  .ann-type-badge.info { background: rgba(59,130,246,0.14); color: #2563eb; }
+  .ann-type-badge.success { background: var(--success-light); color: var(--success-dim); }
+  .ann-type-badge.warning { background: rgba(212,160,23,0.16); color: var(--warning); }
+  .ann-type-badge.danger { background: rgba(214,69,90,0.14); color: var(--danger); }
+  .ann-preview { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--card-2); }
+  .ann-preview .material-icons-round { font-size: 1.2rem; margin-top: 1px; }
+  .ann-preview.info .material-icons-round { color: #2563eb; }
+  .ann-preview.success .material-icons-round { color: var(--success-dim); }
+  .ann-preview.warning .material-icons-round { color: var(--warning); }
+  .ann-preview.danger .material-icons-round { color: var(--danger); }
+</style>
 </head>
 <body>
 <div class="admin-shell">
@@ -20,8 +33,9 @@
       <div id="admin-user-slot"></div>
     </div>
     <div class="admin-content">
-      <div class="card card-pad" style="margin-bottom:16px;">
-        <p class="text-soft" style="font-size:0.85rem;margin:0;">Short cards shown in the homepage's left sidebar. Active, non-expired announcements show newest first, up to 5 at a time.</p>
+      <div class="card card-pad" style="margin-bottom:16px;background:var(--card-2);">
+        <p style="font-size:0.85rem;margin:0;"><span class="material-icons-round" style="vertical-align:middle;font-size:1.1rem;color:var(--primary);">campaign</span>
+        <strong>Announcements:</strong> Published announcements appear on the homepage sidebar and at the top of every logged-in user's dashboard. Use them for site updates, maintenance notices, VIP promotions, or important tips. Set an expiry date and the announcement disappears automatically.</p>
       </div>
       <div class="flex justify-between items-center" style="margin-bottom:14px;">
         <div></div>
@@ -29,8 +43,8 @@
       </div>
       <div class="table-scroll">
         <table class="data-table" id="announcements-table">
-          <thead><tr><th>Title</th><th>Status</th><th>Expires</th><th>Actions</th></tr></thead>
-          <tbody id="announcements-tbody"><tr><td colspan="4">Loading…</td></tr></tbody>
+          <thead><tr><th>Title</th><th>Type</th><th>Status</th><th>Published</th><th>Expires</th><th>Actions</th></tr></thead>
+          <tbody id="announcements-tbody"><tr><td colspan="6">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -42,15 +56,29 @@
     <div class="modal-header"><h3 id="modal-title">New Announcement</h3><button class="modal-close" id="modal-close">&times;</button></div>
     <form id="announcement-form">
       <input type="hidden" name="id">
-      <div class="form-group"><label class="form-label">Title</label><input required name="title" class="form-control"></div>
-      <div class="form-group"><label class="form-label">Content</label><textarea name="content" class="form-control" rows="4"></textarea></div>
+      <div class="form-group"><label class="form-label">Title <span style="color:var(--danger);">*</span></label><input required name="title" class="form-control" placeholder="e.g. Site maintenance this Saturday"></div>
+      <div class="form-group"><label class="form-label">Message <span style="color:var(--danger);">*</span></label><textarea required name="content" class="form-control" rows="3" placeholder="Write the announcement text visible to all users on their dashboard…"></textarea></div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+        <div class="form-group"><label class="form-label">Type</label><select name="type" class="form-control">
+          <option value="info">Info</option><option value="success">Success</option><option value="warning">Warning</option><option value="danger">Danger</option>
+        </select></div>
+        <div class="form-group"><label class="form-label">Status</label><select name="status" class="form-control">
+          <option value="draft">Draft</option><option value="published">Published</option>
+        </select></div>
+      </div>
       <div class="grid-2" style="grid-template-columns:1fr 1fr;">
         <div class="form-group"><label class="form-label">Link URL (optional)</label><input name="link_url" class="form-control" placeholder="https://…"></div>
         <div class="form-group"><label class="form-label">Link Label</label><input name="link_label" class="form-control" placeholder="Learn more"></div>
       </div>
-      <div class="form-group"><label class="form-label">Expires (optional)</label><input type="datetime-local" name="expires_at" class="form-control"></div>
-      <label class="flex items-center gap-8" style="margin-bottom:16px;"><input type="checkbox" name="is_active" checked> Active</label>
-      <button class="btn btn-primary btn-block">Save Announcement</button>
+      <div class="form-group"><label class="form-label">Expiry Date (optional — leave blank for permanent)</label><input type="datetime-local" name="expires_at" class="form-control"></div>
+      <div class="form-group">
+        <label class="form-label">Preview</label>
+        <div class="ann-preview info" id="ann-preview">
+          <span class="material-icons-round" id="ann-preview-icon">info</span>
+          <div><strong id="ann-preview-title">—</strong><div class="text-soft" style="font-size:0.85rem;" id="ann-preview-content">—</div></div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:8px;">Save Announcement</button>
     </form>
   </div>
 </div>
@@ -59,54 +87,79 @@
 <script>
 (function () {
   var cache = [];
+  var TYPE_ICONS = { info: 'info', success: 'check_circle', warning: 'warning', danger: 'error' };
 
   function rowHtml(a) {
     var expired = a.expires_at && new Date(a.expires_at) < new Date();
     return '<tr>' +
-      '<td data-label="Title">' + AD.escapeHtml(a.title) + '</td>' +
-      '<td data-label="Status">' + (expired ? '<span class="badge badge-lost">Expired</span>' : a.is_active ? '<span class="badge badge-won">Active</span>' : '<span class="badge badge-pending">Inactive</span>') + '</td>' +
-      '<td data-label="Expires">' + (a.expires_at ? AD.formatDate(a.expires_at) : '—') + '</td>' +
-      '<td data-label="Actions">' +
-        '<button class="btn btn-outline btn-sm" data-edit="' + a.id + '">Edit</button> ' +
-        '<button class="btn btn-danger btn-sm" data-delete="' + a.id + '">Delete</button>' +
-      '</td>' +
+      '<td data-label="Title"><strong>' + AD.escapeHtml(a.title) + '</strong><br><span class="text-soft" style="font-size:0.8rem;">' + AD.escapeHtml((a.content || '').slice(0, 60)) + (a.content && a.content.length > 60 ? '…' : '') + '</span></td>' +
+      '<td data-label="Type"><span class="ann-type-badge ' + a.type + '">' + a.type + '</span></td>' +
+      '<td data-label="Status">' + (expired ? '<span class="badge badge-lost">Expired</span>' : a.status === 'published' ? '<span class="badge badge-won">Published</span>' : '<span class="badge badge-pending">Draft</span>') + '</td>' +
+      '<td data-label="Published">' + (a.status === 'published' ? AD.formatDate(a.updated_at || a.created_at) : '—') + '</td>' +
+      '<td data-label="Expires">' + (a.expires_at ? AD.formatDate(a.expires_at) : 'Never') + '</td>' +
+      '<td data-label="Actions"><div class="icon-btn-row">' +
+        (a.status !== 'published' ? '<button class="icon-btn" data-publish="' + a.id + '" title="Publish"><span class="material-icons-round">publish</span></button>' : '') +
+        '<button class="icon-btn" data-edit="' + a.id + '" title="Edit"><span class="material-icons-round">edit</span></button>' +
+        '<button class="icon-btn icon-btn-danger" data-delete="' + a.id + '" title="Delete"><span class="material-icons-round">delete</span></button>' +
+      '</div></td>' +
     '</tr>';
   }
 
   async function load() {
     var tbody = document.getElementById('announcements-tbody');
-    tbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
     try {
       var res = await AD.api('/announcements/admin');
       cache = res.data;
-      tbody.innerHTML = cache.map(rowHtml).join('') || '<tr><td colspan="4">No announcements yet.</td></tr>';
-    } catch (e) { tbody.innerHTML = '<tr><td colspan="4">Failed to load.</td></tr>'; }
+      tbody.innerHTML = cache.map(rowHtml).join('') || '<tr><td colspan="6">No announcements yet.</td></tr>';
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="6">Failed to load.</td></tr>'; }
   }
 
   function openModal() { document.getElementById('edit-modal').classList.add('open'); }
   function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
 
+  function updatePreview() {
+    var form = document.getElementById('announcement-form');
+    var type = form.type.value;
+    var preview = document.getElementById('ann-preview');
+    preview.className = 'ann-preview ' + type;
+    document.getElementById('ann-preview-icon').textContent = TYPE_ICONS[type] || 'info';
+    document.getElementById('ann-preview-title').textContent = form.title.value || '—';
+    document.getElementById('ann-preview-content').textContent = form.content.value || '—';
+  }
+  document.getElementById('announcement-form').addEventListener('input', updatePreview);
+
   document.getElementById('add-btn').addEventListener('click', function () {
     document.getElementById('announcement-form').reset();
     document.getElementById('announcement-form').id.value = '';
     document.getElementById('modal-title').textContent = 'New Announcement';
+    updatePreview();
     openModal();
   });
   document.getElementById('modal-close').addEventListener('click', closeModal);
 
   document.getElementById('announcements-tbody').addEventListener('click', async function (e) {
-    var editId = e.target.getAttribute('data-edit');
-    var deleteId = e.target.getAttribute('data-delete');
+    var btn = e.target.closest('[data-edit],[data-delete],[data-publish]');
+    if (!btn) return;
+    var editId = btn.getAttribute('data-edit');
+    var deleteId = btn.getAttribute('data-delete');
+    var publishId = btn.getAttribute('data-publish');
     if (editId) {
       var a = cache.find(function (x) { return String(x.id) === editId; });
       if (!a) return;
       var form = document.getElementById('announcement-form');
       form.id.value = a.id; form.title.value = a.title; form.content.value = a.content || '';
       form.link_url.value = a.link_url || ''; form.link_label.value = a.link_label || '';
+      form.type.value = a.type || 'info'; form.status.value = a.status || 'draft';
       form.expires_at.value = a.expires_at ? a.expires_at.slice(0, 16) : '';
-      form.is_active.checked = !!a.is_active;
       document.getElementById('modal-title').textContent = 'Edit Announcement';
+      updatePreview();
       openModal();
+    }
+    if (publishId) {
+      await AD.api('/announcements/' + publishId + '/publish', { method: 'POST' });
+      AD.showToast('Published', 'success');
+      load();
     }
     if (deleteId) {
       if (!AD.confirmAction('Delete this announcement?')) return;
@@ -122,7 +175,8 @@
     var body = {
       title: fd.get('title'), content: fd.get('content'),
       link_url: fd.get('link_url') || null, link_label: fd.get('link_label') || null,
-      expires_at: fd.get('expires_at') || null, is_active: fd.get('is_active') === 'on',
+      type: fd.get('type'), status: fd.get('status'),
+      expires_at: fd.get('expires_at') || null,
     };
     try {
       if (id) await AD.api('/announcements/' + id, { method: 'PUT', body: body });

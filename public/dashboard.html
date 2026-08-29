@@ -24,6 +24,7 @@
       </div>
 
       <div id="dashboard-content" class="hidden">
+        <div id="dashboard-announcements" class="card card-pad" style="margin-bottom:16px;display:none;"></div>
         <div class="grid-2" style="grid-template-columns: 1fr 1fr; margin-bottom:20px;">
           <div class="card card-pad" id="profile-card"></div>
           <div class="card card-pad" id="subscription-card"></div>
@@ -53,6 +54,7 @@
     var user = await ST.refreshAuth();
     if (!user) { document.getElementById('guest-block').classList.remove('hidden'); return; }
     document.getElementById('dashboard-content').classList.remove('hidden');
+    ST.renderAnnouncements(document.getElementById('dashboard-announcements'), { heading: false });
 
     document.getElementById('profile-card').innerHTML =
       '<h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">person</span>Profile</h3>' +

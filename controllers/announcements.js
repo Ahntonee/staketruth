@@ -1,11 +1,11 @@
 const { pool } = require('../config/db');
 const { successResponse, errorResponse, asyncHandler } = require('../utils/helpers');
 
-// Public: active, non-expired announcements only, most recent first.
+// Public: published, non-expired announcements only, most recent first.
 const listPublic = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(
-    `SELECT id, title, content, link_url, link_label, created_at FROM announcements
-     WHERE is_active = 1 AND (expires_at IS NULL OR expires_at > NOW())
+    `SELECT id, title, content, link_url, link_label, type, created_at FROM announcements
+     WHERE status = 'published' AND (expires_at IS NULL OR expires_at > NOW())
      ORDER BY created_at DESC LIMIT 5`
   );
   return successResponse(res, rows);
@@ -17,22 +17,30 @@ const listAdmin = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
-  const { title, content, link_url, link_label, is_active, expires_at } = req.body;
+  const { title, content, link_url, link_label, type, status, expires_at } = req.body;
   if (!title) return errorResponse(res, 'Title is required', 400);
+  const finalStatus = status === 'published' ? 'published' : 'draft';
   const [result] = await pool.query(
-    `INSERT INTO announcements (title, content, link_url, link_label, is_active, expires_at) VALUES (?, ?, ?, ?, ?, ?)`,
-    [title, content || null, link_url || null, link_label || null, is_active === false ? 0 : 1, expires_at || null]
+    `INSERT INTO announcements (title, content, link_url, link_label, type, status, is_active, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [title, content || null, link_url || null, link_label || null, type || 'info', finalStatus, finalStatus === 'published' ? 1 : 0, expires_at || null]
   );
   return successResponse(res, { id: result.insertId }, null, 201);
 });
 
 const update = asyncHandler(async (req, res) => {
-  const { title, content, link_url, link_label, is_active, expires_at } = req.body;
+  const { title, content, link_url, link_label, type, status, expires_at } = req.body;
+  const finalStatus = status === 'published' ? 'published' : 'draft';
   await pool.query(
-    `UPDATE announcements SET title = ?, content = ?, link_url = ?, link_label = ?, is_active = ?, expires_at = ? WHERE id = ?`,
-    [title, content || null, link_url || null, link_label || null, is_active ? 1 : 0, expires_at || null, req.params.id]
+    `UPDATE announcements SET title = ?, content = ?, link_url = ?, link_label = ?, type = ?, status = ?, is_active = ?, expires_at = ? WHERE id = ?`,
+    [title, content || null, link_url || null, link_label || null, type || 'info', finalStatus, finalStatus === 'published' ? 1 : 0, expires_at || null, req.params.id]
   );
   return successResponse(res, { message: 'Updated' });
+});
+
+// Quick "publish this draft" action from the list, separate from a full edit.
+const publish = asyncHandler(async (req, res) => {
+  await pool.query(`UPDATE announcements SET status = 'published', is_active = 1 WHERE id = ?`, [req.params.id]);
+  return successResponse(res, { message: 'Published' });
 });
 
 const remove = asyncHandler(async (req, res) => {
@@ -40,4 +48,4 @@ const remove = asyncHandler(async (req, res) => {
   return successResponse(res, { message: 'Deleted' });
 });
 
-module.exports = { listPublic, listAdmin, create, update, remove };
+module.exports = { listPublic, listAdmin, create, update, publish, remove };
