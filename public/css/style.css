@@ -181,22 +181,26 @@ section { padding: 28px 0; }
 }
 
 .header-actions { display: flex; align-items: center; gap: 8px; justify-self: end; }
-/* On mobile the nav links are hidden, so .header-inner's right grid track
-   (equal width to the logo's track, per 1fr auto 1fr) has real space the
-   theme toggle/Join VIP/hamburger group wasn't using -- justify-self:end
-   just crammed them together at the far right instead. Stretching the
-   group across that track and spacing its children out uses that width
-   instead of leaving it empty. */
+/* The previous mobile fix (stretching .header-actions across the right 1fr
+   track via justify-self:stretch + space-between) didn't actually reach the
+   true screen edge -- the icon group still sat bunched in the middle rather
+   than logo-left/hamburger-right. Switching the grid itself to
+   auto 1fr auto on mobile is more direct: the middle track absorbs all
+   leftover space unconditionally, which mechanically forces the logo and
+   the action group to their true edges regardless of how wide either one
+   naturally is, rather than relying on stretch/justify-content on the
+   group itself. */
 @media (max-width: 899px) {
-  .header-actions { justify-self: stretch; justify-content: space-between; gap: 6px; }
+  .header-inner { grid-template-columns: auto 1fr auto; }
+  .header-actions { justify-self: end; gap: 6px; }
   /* Desktop sizing (40px circles, standard btn-sm padding) reads oversized
      and cramped once four items share a mobile-width header -- scale
      everything down together so spacing and icon size read proportionate. */
   .header-actions .theme-toggle, .header-actions .avatar-btn { width: 32px; height: 32px; }
   .header-actions .theme-toggle .material-icons-round { font-size: 1.1rem; }
   .header-actions .avatar-btn { font-weight: 700; font-size: 0.85rem; }
-  .header-actions .mobile-vip-btn { padding: 6px 10px; font-size: 0.78rem; }
-  .header-actions .mobile-menu-toggle { width: 36px; height: 36px; }
+  .header-actions .mobile-vip-btn { padding: 4px 8px; font-size: 0.72rem; }
+  .header-actions .mobile-menu-toggle { width: 34px; height: 34px; }
 }
 .theme-toggle {
   background: var(--card-2); border: 1px solid var(--border); border-radius: 50%;
