@@ -115,45 +115,66 @@ async function syncTodayAndTomorrow() {
  * Pulls final results for fixtures still marked pending, grades them, and appends
  * the finished match into historical_fixtures for permanent H2H/learning memory.
  */
+// Batches up to 20 fixture IDs per API-Football request (their documented
+// max for the ids= param, dash-separated) instead of one request per fixture.
+// This used to be a plain for-loop making one /fixtures?id=X call per pending
+// row -- with a backlog of even a few hundred unfinished fixtures (easy to
+// reach once fixtures are synced weeks ahead), that meant hundreds of calls
+// EVERY 20 minutes (this runs on a cron), which is what was actually burning
+// through the whole daily API budget, not routine day-to-day usage.
+const FIXTURE_BATCH_SIZE = 20;
+
 async function syncResults() {
   if (!isConfigured()) return { skipped: true, reason: 'API_FOOTBALL_KEY not configured' };
   const [pending] = await pool.query(
     `SELECT id, api_fixture_id, home_team, away_team, tip, market, league_id, match_date
      FROM predictions WHERE result = 'pending' AND api_fixture_id IS NOT NULL AND match_date <= NOW()`
   );
+  if (!pending.length) return { skipped: false, graded: 0 };
+
+  const byFixtureId = new Map(pending.map((p) => [String(p.api_fixture_id), p]));
   let graded = 0;
-  for (const pred of pending) {
+  let apiCalls = 0;
+
+  for (let i = 0; i < pending.length; i += FIXTURE_BATCH_SIZE) {
+    const batch = pending.slice(i, i + FIXTURE_BATCH_SIZE);
     try {
-      const { data } = await client().get('/fixtures', { params: { id: pred.api_fixture_id } });
-      const fx = data.response?.[0];
-      if (!fx || fx.fixture.status.short !== 'FT') continue;
+      apiCalls++;
+      const { data } = await client().get('/fixtures', { params: { ids: batch.map((p) => p.api_fixture_id).join('-') } });
+      for (const fx of data.response || []) {
+        const pred = byFixtureId.get(String(fx.fixture.id));
+        if (!pred || fx.fixture.status.short !== 'FT') continue;
 
-      const homeScore = fx.goals.home;
-      const awayScore = fx.goals.away;
-      const isCorrect = evaluateTipOutcome(pred.tip, pred.market, homeScore, awayScore);
+        const homeScore = fx.goals.home;
+        const awayScore = fx.goals.away;
+        const isCorrect = evaluateTipOutcome(pred.tip, pred.market, homeScore, awayScore);
 
-      await pool.query(
-        `UPDATE predictions SET result = ?, home_score = ?, away_score = ? WHERE id = ?`,
-        [isCorrect ? 'won' : 'lost', homeScore, awayScore, pred.id]
-      );
+        await pool.query(
+          `UPDATE predictions SET result = ?, home_score = ?, away_score = ? WHERE id = ?`,
+          [isCorrect ? 'won' : 'lost', homeScore, awayScore, pred.id]
+        );
 
-      const [leagueRow] = await pool.query('SELECT api_league_id FROM leagues WHERE id = ?', [pred.league_id]);
-      await pool.query(
-        `INSERT INTO historical_fixtures
-         (api_fixture_id, league_id, api_league_id, season, home_team, away_team, match_date,
-          home_score, away_score, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'FT')
-         ON DUPLICATE KEY UPDATE home_score = VALUES(home_score), away_score = VALUES(away_score)`,
-        [pred.api_fixture_id, pred.league_id, leagueRow[0]?.api_league_id || null,
-          process.env.API_FOOTBALL_SEASON || new Date().getFullYear(),
-          pred.home_team, pred.away_team, pred.match_date, homeScore, awayScore]
-      );
-      graded++;
+        const [leagueRow] = await pool.query('SELECT api_league_id FROM leagues WHERE id = ?', [pred.league_id]);
+        await pool.query(
+          `INSERT INTO historical_fixtures
+           (api_fixture_id, league_id, api_league_id, season, home_team, away_team, match_date,
+            home_score, away_score, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'FT')
+           ON DUPLICATE KEY UPDATE home_score = VALUES(home_score), away_score = VALUES(away_score)`,
+          [pred.api_fixture_id, pred.league_id, leagueRow[0]?.api_league_id || null,
+            process.env.API_FOOTBALL_SEASON || new Date().getFullYear(),
+            pred.home_team, pred.away_team, pred.match_date, homeScore, awayScore]
+        );
+        graded++;
+      }
     } catch (err) {
-      console.error(`[apiFootball] syncResults fixture=${pred.api_fixture_id} failed:`, err.message);
+      console.error(`[apiFootball] syncResults batch starting at ${i} failed:`, err.message);
+      // A 429 means the whole day's budget is gone -- no point burning
+      // further batches on it, they'll all fail the same way.
+      if (err.response?.status === 429) break;
     }
   }
-  return { skipped: false, graded };
+  return { skipped: false, graded, apiCalls };
 }
 
 function evaluateTipOutcome(tip, market, homeScore, awayScore) {
