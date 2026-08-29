@@ -46,11 +46,21 @@
     <div class="modal-header"><h3 id="modal-title">Add SEO Page</h3><button class="modal-close" id="modal-close">&times;</button></div>
     <form id="page-form">
       <input type="hidden" name="id">
-      <div class="form-group"><label class="form-label">Title (page &lt;title&gt; tag)</label><input required name="title" class="form-control" placeholder="e.g. Premier League Predictions Today | StakeTruth"></div>
-      <div class="form-group"><label class="form-label">URL Slug</label><input required name="slug" class="form-control" placeholder="premier-league-predictions"><div class="text-soft" style="font-size:0.75rem;margin-top:4px;">Lives at /topic/&lt;slug&gt;</div></div>
+      <div class="form-group"><label class="form-label">Title (page &lt;title&gt; tag) <span style="color:var(--danger);">*</span></label><input required name="title" class="form-control" placeholder="e.g. Premier League Predictions Today | StakeTruth"></div>
+      <div class="form-group"><label class="form-label">URL Slug <span class="text-soft" style="font-weight:400;">(leave blank to auto-generate from title)</span></label>
+        <div class="flex items-center gap-8"><span class="text-soft">/topic/</span><input name="slug" class="form-control" placeholder="auto-generated-from-title"></div>
+      </div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+        <div class="form-group"><label class="form-label">Status</label><select name="is_published" class="form-control"><option value="0">Draft</option><option value="1" selected>Published</option></select></div>
+        <div class="form-group"><label class="form-label">Import from Blog Post</label><select id="import-post-select" class="form-control"><option value="">— start from scratch —</option></select></div>
+      </div>
       <div class="form-group"><label class="form-label">H1 Heading</label><input name="h1" class="form-control" placeholder="Premier League Predictions Today"></div>
-      <div class="form-group"><label class="form-label">Meta Description</label><textarea name="meta_description" class="form-control" rows="2" maxlength="300"></textarea></div>
-      <div class="form-group"><label class="form-label">Intro Content (Markdown)</label><textarea id="content-editor" name="intro_content" placeholder="Real, useful intro copy about this league/market..."></textarea></div>
+      <div class="form-group"><label class="form-label">Meta Description <span class="text-soft" style="font-weight:400;">(&le;160 chars — shown in Google results)</span></label>
+        <textarea name="meta_description" class="form-control" rows="2" maxlength="160" id="meta-desc-input"></textarea>
+        <div class="text-soft" style="font-size:0.75rem;margin-top:2px;text-align:right;"><span id="meta-desc-count">0</span>/160</div>
+      </div>
+      <div class="form-group"><label class="form-label">Meta Keywords <span class="text-soft" style="font-weight:400;">(comma separated)</span></label><input name="meta_keywords" class="form-control" placeholder="football predictions today, premier league tips, free picks"></div>
+      <div class="form-group"><label class="form-label">Article Content <span class="text-soft" style="font-weight:400;">(appears above predictions on the public page)</span></label><textarea id="content-editor" name="intro_content" placeholder="Real, useful intro copy about this league/market..."></textarea></div>
       <div class="grid-2" style="grid-template-columns:1fr 1fr;">
         <div class="form-group"><label class="form-label">League Filter</label>
           <input name="league_text_filter" class="form-control" list="league-suggestions" placeholder="Any league (type anything, e.g. Premier League)">
@@ -68,8 +78,7 @@
           <div class="text-soft" style="font-size:0.75rem;margin-top:4px;">Pick a suggestion or type your own. Leave blank for any category.</div>
         </div>
       </div>
-      <label class="flex items-center gap-8" style="margin-bottom:16px;"><input type="checkbox" name="is_published" checked> Published</label>
-      <button class="btn btn-primary btn-block">Save Page</button>
+      <button class="btn btn-primary btn-block" style="margin-top:8px;">Save Page</button>
     </form>
   </div>
 </div>
@@ -122,14 +131,62 @@
     });
   }
 
+  function slugify(text) {
+    return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 200);
+  }
+
+  var slugManuallyEdited = false;
   document.getElementById('add-btn').addEventListener('click', function () {
     document.getElementById('page-form').reset();
     document.getElementById('page-form').id.value = '';
+    document.getElementById('import-post-select').value = '';
+    document.getElementById('meta-desc-count').textContent = '0';
     document.getElementById('modal-title').textContent = 'Add SEO Page';
+    slugManuallyEdited = false;
     if (mde) mde.value('');
     openModal('edit-modal');
   });
   document.getElementById('modal-close').addEventListener('click', function () { closeModal('edit-modal'); });
+
+  // Auto-fill the slug from the title as the admin types, but only while
+  // they haven't touched the slug field themselves -- once they type into it
+  // directly, their value wins and this stops overwriting it.
+  document.querySelector('[name="slug"]').addEventListener('input', function () { slugManuallyEdited = true; });
+  document.querySelector('[name="title"]').addEventListener('input', function () {
+    if (!slugManuallyEdited) document.querySelector('[name="slug"]').value = slugify(this.value);
+  });
+
+  document.getElementById('meta-desc-input').addEventListener('input', function () {
+    document.getElementById('meta-desc-count').textContent = this.value.length;
+  });
+
+  async function loadImportOptions() {
+    try {
+      var res = await AD.api('/blog/admin/list');
+      var select = document.getElementById('import-post-select');
+      res.data.forEach(function (p) {
+        var opt = document.createElement('option');
+        opt.value = p.id; opt.textContent = p.title;
+        select.appendChild(opt);
+      });
+    } catch (e) { /* optional */ }
+  }
+
+  document.getElementById('import-post-select').addEventListener('change', async function () {
+    if (!this.value) return;
+    try {
+      var res = await AD.api('/blog/admin/' + this.value);
+      var p = res.data;
+      var form = document.getElementById('page-form');
+      form.title.value = p.title;
+      if (!slugManuallyEdited) form.slug.value = slugify(p.title);
+      form.meta_description.value = (p.meta_description || p.excerpt || '').slice(0, 160);
+      document.getElementById('meta-desc-count').textContent = form.meta_description.value.length;
+      form.meta_keywords.value = p.keywords || '';
+      if (mde) mde.value(p.content || '');
+      AD.showToast('Imported from "' + p.title + '" — review before saving', 'success');
+    } catch (err) { AD.showToast(err.message, 'error'); }
+  });
 
   document.getElementById('pages-tbody').addEventListener('click', async function (e) {
     var editId = e.target.getAttribute('data-edit');
@@ -142,9 +199,13 @@
         var form = document.getElementById('page-form');
         form.id.value = p.id; form.title.value = p.title; form.slug.value = p.slug; form.h1.value = p.h1 || '';
         form.meta_description.value = p.meta_description || '';
+        document.getElementById('meta-desc-count').textContent = form.meta_description.value.length;
+        form.meta_keywords.value = p.meta_keywords || '';
         if (mde) mde.value(p.intro_content || '');
         form.league_text_filter.value = p.league_text_filter || ''; form.category.value = p.category || '';
-        form.is_published.checked = !!p.is_published;
+        form.is_published.value = p.is_published ? '1' : '0';
+        document.getElementById('import-post-select').value = '';
+        slugManuallyEdited = true;
         document.getElementById('modal-title').textContent = 'Edit SEO Page';
         openModal('edit-modal');
       } catch (err) { AD.showToast(err.message, 'error'); }
@@ -166,11 +227,16 @@
     if (!mde) { AD.showToast('The editor failed to load — refresh the page and try again.', 'error'); return; }
     var fd = new FormData(e.target);
     var id = fd.get('id');
+    // Slug can legitimately be empty here (admin left it blank and never
+    // typed a title either) -- fall back to slugifying the title so the
+    // request never goes out with an empty slug the backend would reject.
+    var slug = fd.get('slug') || slugify(fd.get('title') || '');
     var body = {
-      title: fd.get('title'), slug: fd.get('slug'), h1: fd.get('h1'),
-      meta_description: fd.get('meta_description'), intro_content: mde.value(),
+      title: fd.get('title'), slug: slug, h1: fd.get('h1'),
+      meta_description: fd.get('meta_description'), meta_keywords: fd.get('meta_keywords') || null,
+      intro_content: mde.value(),
       league_text_filter: fd.get('league_text_filter') || null, category: fd.get('category') || null,
-      is_published: fd.get('is_published') === 'on',
+      is_published: fd.get('is_published') === '1',
     };
     try {
       if (id) await AD.api('/seo-pages/' + id, { method: 'PUT', body: body });
@@ -204,6 +270,7 @@
       AD.showToast('Editor failed to load — you can still manage existing pages, but new/edited content needs a page refresh first.', 'error');
     }
     loadLeagueOptions();
+    loadImportOptions();
     load();
   }
   init();

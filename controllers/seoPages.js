@@ -2,7 +2,7 @@ const { pool } = require('../config/db');
 const { successResponse, errorResponse, asyncHandler } = require('../utils/helpers');
 const { serializePrediction } = require('./predictions');
 
-const ALLOWED_FIELDS = ['slug', 'title', 'meta_description', 'h1', 'intro_content', 'league_id', 'league_text_filter', 'category', 'is_published'];
+const ALLOWED_FIELDS = ['slug', 'title', 'meta_description', 'meta_keywords', 'h1', 'intro_content', 'league_id', 'league_text_filter', 'category', 'is_published'];
 
 const adminList = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(`SELECT * FROM seo_landing_pages ORDER BY created_at DESC`);
@@ -19,9 +19,9 @@ const create = asyncHandler(async (req, res) => {
   const b = req.body;
   if (!b.slug || !b.title) return errorResponse(res, 'slug and title are required', 400);
   const [result] = await pool.query(
-    `INSERT INTO seo_landing_pages (slug, title, meta_description, h1, intro_content, league_text_filter, category, is_published)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [b.slug, b.title, b.meta_description || null, b.h1 || b.title, b.intro_content || null,
+    `INSERT INTO seo_landing_pages (slug, title, meta_description, meta_keywords, h1, intro_content, league_text_filter, category, is_published)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [b.slug, b.title, b.meta_description || null, b.meta_keywords || null, b.h1 || b.title, b.intro_content || null,
       b.league_text_filter || null, b.category || null, b.is_published === false ? 0 : 1]
   );
   return successResponse(res, { id: result.insertId }, undefined, 201);

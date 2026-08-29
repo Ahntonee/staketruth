@@ -633,6 +633,7 @@ async function migrate() {
   // one already seeded in the leagues table. Matched by LIKE against the
   // predictions' own league name at render time, not by id.
   await ensureColumn('seo_landing_pages', 'league_text_filter', "VARCHAR(255)");
+  await ensureColumn('seo_landing_pages', 'meta_keywords', "VARCHAR(500)");
 
   // Blog post scheduling: when set, the post stays a draft until this
   // moment, at which point the scheduler cron flips is_published to 1.

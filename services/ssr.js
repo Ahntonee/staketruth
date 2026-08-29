@@ -114,6 +114,9 @@ function renderTopicPage(html, page) {
   const canonical = `${process.env.SITE_URL}/topic/${page.slug}`;
 
   let out = injectHead(html, { title, description, canonical });
+  if (page.meta_keywords) {
+    out = out.replace(/(<meta id="meta-keywords" name="keywords" content=")[^"]*(")/, `$1${escapeHtml(page.meta_keywords)}$2`);
+  }
   out = out.replace('<span id="breadcrumb-current">Predictions</span>', `<span id="breadcrumb-current">${escapeHtml(page.h1 || page.title)}</span>`);
   const body = `<h1>${escapeHtml(page.h1 || page.title)}</h1>`;
   out = out.replace(
