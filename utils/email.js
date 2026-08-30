@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const axios = require('axios');
 
 let transporter = null;
 function getTransporter() {
@@ -13,6 +14,22 @@ function getTransporter() {
     });
   }
   return transporter;
+}
+
+// Resend's SMTP relay (smtp.resend.com) sits behind a shared AWS load
+// balancer whose IPs are unreachable from this droplet -- every port
+// (587, 465, even 443) times out connecting to that specific host, while
+// everything else (including Resend's own api.resend.com, a completely
+// different Cloudflare-fronted host) connects fine. Sending through
+// Resend's REST API instead sidesteps the blocked IPs entirely, using
+// the exact same API key either way.
+async function sendViaResendApi({ to, subject, html }) {
+  await axios.post('https://api.resend.com/emails', {
+    from: process.env.EMAIL_FROM, to, subject, html,
+  }, {
+    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    timeout: 15000,
+  });
 }
 
 const BRAND = {
@@ -47,6 +64,15 @@ function wrapTemplate(title, bodyHtml, ctaText, ctaUrl) {
 }
 
 async function sendMail({ to, subject, html }) {
+  if (process.env.RESEND_API_KEY) {
+    try {
+      await sendViaResendApi({ to, subject, html });
+      return { sent: true };
+    } catch (err) {
+      console.error(`[email] Resend API failed to send "${subject}" to ${to}:`, err.response?.data || err.message);
+      return { error: err.message };
+    }
+  }
   if (!process.env.SMTP_USER || process.env.SMTP_USER === 'noreply@staketruth.com' && !process.env.SMTP_PASS) {
     // No real SMTP configured yet — log instead of throwing, so local dev/testing isn't blocked.
     console.log(`[email] SMTP not configured — would have sent "${subject}" to ${to}`);
