@@ -51,12 +51,6 @@ function startScheduler() {
 
   cron.schedule('0 0 * * *', safeRun('daily auto-push + VIP picks finalise', () => intelligence.runDailyPush()));
 
-  cron.schedule('30 23 * * *', safeRun('sync results', async () => {
-    const r = await apiFootball.syncResults();
-    await setLastRun('last_sync_results');
-    return r;
-  }));
-
   cron.schedule('45 23 * * *', safeRun('log accuracy outcomes', async () => {
     const logged = await accuracy.logUntracked();
     const stats = await accuracy.recalculateStats();
@@ -129,7 +123,11 @@ function startScheduler() {
     return apiFootball.syncLiveScores();
   }));
 
-  cron.schedule('*/20 * * * *', safeRun('grade finished matches', () => apiFootball.syncResults()));
+  cron.schedule('*/20 * * * *', safeRun('grade finished matches', async () => {
+    const r = await apiFootball.syncResults();
+    await setLastRun('last_sync_results');
+    return r;
+  }));
 
   cron.schedule('0 3 * * *', safeRun('reset odds API budget', () => oddsApi.resetCallsToday()));
 
