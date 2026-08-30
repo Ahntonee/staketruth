@@ -28,6 +28,16 @@
   .bb-share-card__header strong { font-size: 1.2rem; }
   .bb-share-card__leg { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
   .bb-share-card__footer { margin-top: 16px; padding-top: 14px; border-top: 2px solid var(--primary); display: flex; justify-content: space-between; font-weight: 800; }
+  /* On mobile the shared .main-with-aside layout stacks content then aside
+     in source order. On this page specifically the aside IS the auto-generated
+     Bet Slip -- users want to see what got generated right away, not scroll
+     past the full predictions picker list first. Scoped to this page only so
+     other pages using .main-with-aside (with an ads/announcements aside) keep
+     their normal order. */
+  @media (max-width: 1023px) {
+    .main-with-aside { display: flex; flex-direction: column; }
+    .main-with-aside__aside { order: -1; margin-top: 0; margin-bottom: 16px; }
+  }
 </style>
 </head>
 <body>
