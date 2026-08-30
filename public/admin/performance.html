@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance &amp; Analytics | StakeTruth Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="/css/style.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  .perf-period-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .perf-period-tabs { display: flex; gap: 8px; align-items: center; }
+  .perf-period-tabs span { font-size: 0.85rem; color: var(--text-soft); margin-right: 4px; }
+  .perf-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  @media (min-width: 640px) { .perf-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 1024px) { .perf-kpi-grid { grid-template-columns: repeat(6, 1fr); } }
+  .perf-kpi { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; text-align: center; }
+  .perf-kpi__value { font-size: 1.7rem; font-weight: 800; font-family: var(--font-head); color: var(--primary); line-height: 1.1; }
+  .perf-kpi__label { font-size: 0.72rem; color: var(--text-soft); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .perf-main-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (min-width: 1024px) { .perf-main-grid { grid-template-columns: 2fr 1fr; align-items: start; } }
+  .perf-legend { display: flex; gap: 16px; margin-bottom: 10px; font-size: 0.82rem; }
+  .perf-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .perf-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .perf-revenue { background: var(--gradient-green); border-radius: var(--radius-lg); padding: 20px; color: #241a0d; }
+  .perf-revenue h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 14px; font-size: 1rem; }
+  .perf-revenue__label { font-size: 0.78rem; opacity: 0.75; }
+  .perf-revenue__value { font-size: 2.1rem; font-weight: 800; font-family: var(--font-head); line-height: 1.1; margin: 4px 0; }
+  .perf-revenue__range { font-size: 0.85rem; opacity: 0.8; margin-bottom: 10px; }
+  .perf-revenue__note { font-size: 0.75rem; opacity: 0.75; margin-bottom: 14px; }
+  .perf-revenue hr { border: none; border-top: 1px solid rgba(36,26,13,0.2); margin: 14px 0; }
+  .perf-revenue ul { margin: 0; padding-left: 18px; font-size: 0.82rem; line-height: 1.6; }
+  .perf-two-col { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 1024px) { .perf-two-col { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <aside class="admin-sidebar" id="admin-sidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Performance &amp; Analytics</h1>
+      <div id="admin-user-slot"></div>
+    </div>
+    <div class="admin-content">
+      <div class="perf-period-row">
+        <div class="perf-period-tabs">
+          <span>Period:</span>
+          <button class="btn btn-sm btn-outline" data-days="7">7 days</button>
+          <button class="btn btn-sm btn-primary" data-days="30">30 days</button>
+          <button class="btn btn-sm btn-outline" data-days="90">90 days</button>
+          <button class="btn btn-sm btn-outline" data-days="365">1 year</button>
+        </div>
+        <button class="btn btn-outline btn-sm" id="refresh-btn"><span class="material-icons-round" style="font-size:1rem;">refresh</span> Refresh</button>
+      </div>
+
+      <div class="perf-kpi-grid" id="kpi-grid"></div>
+
+      <div class="perf-main-grid">
+        <div class="card card-pad">
+          <h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">bar_chart</span>Daily Views</h3>
+          <div class="perf-legend">
+            <span><i style="background:var(--primary);"></i>Predictions</span>
+            <span><i style="background:var(--accent);"></i>Blog</span>
+          </div>
+          <canvas id="chart-daily" height="220"></canvas>
+        </div>
+
+        <div class="perf-revenue">
+          <h3><span class="material-icons-round">payments</span>Revenue Estimate</h3>
+          <div class="perf-revenue__label">Potential (display ads)</div>
+          <div class="perf-revenue__value" id="rev-low">$0.00</div>
+          <div class="perf-revenue__range" id="rev-range">&ndash; $0.00</div>
+          <div class="perf-revenue__note">Estimate based on $2&ndash;$5 CPM display ad rates</div>
+          <hr>
+          <strong style="font-size:0.85rem;">Tips to grow revenue:</strong>
+          <ul>
+            <li>Add display ad slots (e.g., Google AdSense)</li>
+            <li>Promote VIP subscription upsells</li>
+            <li>Drive traffic via social share &amp; SEO</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="perf-two-col">
+        <div class="card card-pad">
+          <h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">sports_soccer</span>Top Predictions</h3>
+          <div class="table-scroll"><table class="data-table">
+            <thead><tr><th>Match</th><th>Tip</th><th>Views</th></tr></thead>
+            <tbody id="top-predictions-tbody"><tr><td colspan="3">Loading&hellip;</td></tr></tbody>
+          </table></div>
+        </div>
+        <div class="card card-pad">
+          <h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">article</span>Top Blog Posts</h3>
+          <div class="table-scroll"><table class="data-table">
+            <thead><tr><th>Title</th><th>Category</th><th>Views</th></tr></thead>
+            <tbody id="top-blog-tbody"><tr><td colspan="3">Loading&hellip;</td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/admin.js"></script>
+<script>
+(function () {
+  var days = 30;
+  var chart = null;
+
+  function rankBadge(n) { return '<span class="rank-badge">' + n + '</span>'; }
+
+  function kpi(value, label) {
+    return '<div class="perf-kpi"><div class="perf-kpi__value">' + value + '</div><div class="perf-kpi__label">' + label + '</div></div>';
+  }
+
+  async function load() {
+    var overview = await AD.api('/admin/performance/overview?days=' + days);
+    var o = overview.data;
+    document.getElementById('kpi-grid').innerHTML =
+      kpi(o.totalViews, 'Total Page Views') +
+      kpi(o.todayViews, 'Today') +
+      kpi(o.last7Views, 'Last 7 Days') +
+      kpi(o.predictionViews, 'Prediction Views') +
+      kpi(o.blogViews, 'Blog Views') +
+      kpi(o.activeDays, 'Active Days');
+
+    var daily = await AD.api('/admin/performance/daily?days=' + days);
+    var labels = daily.data.map(function (r) { return r.day; });
+    var predSeries = daily.data.map(function (r) { return Number(r.predictions); });
+    var blogSeries = daily.data.map(function (r) { return Number(r.blog); });
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById('chart-daily'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Predictions', data: predSeries, borderColor: '#ff6b35', backgroundColor: 'rgba(255,107,53,0.12)', tension: 0.3, fill: true },
+          { label: 'Blog', data: blogSeries, borderColor: '#f0b90b', backgroundColor: 'rgba(240,185,11,0.12)', tension: 0.3, fill: true },
+        ],
+      },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+    });
+
+    var revenue = await AD.api('/admin/performance/revenue-estimate?days=' + days);
+    document.getElementById('rev-low').textContent = '$' + Number(revenue.data.low).toFixed(2);
+    document.getElementById('rev-range').textContent = '– $' + Number(revenue.data.high).toFixed(2);
+
+    var topPreds = await AD.api('/admin/performance/top-predictions?days=' + days);
+    document.getElementById('top-predictions-tbody').innerHTML = topPreds.data.length ? topPreds.data.map(function (r, i) {
+      return '<tr><td data-label="Match"><a href="predictions.html">' + AD.escapeHtml(r.home_team) + ' vs ' + AD.escapeHtml(r.away_team) + '</a></td>' +
+        '<td data-label="Tip">' + AD.escapeHtml(r.tip) + '</td>' +
+        '<td data-label="Views">' + rankBadge(r.views) + '</td></tr>';
+    }).join('') : '<tr><td colspan="3">No prediction views recorded yet for this period.</td></tr>';
+
+    var topBlog = await AD.api('/admin/performance/top-blog?days=' + days);
+    document.getElementById('top-blog-tbody').innerHTML = topBlog.data.length ? topBlog.data.map(function (r) {
+      return '<tr><td data-label="Title"><a href="blog.html">' + AD.escapeHtml(r.title) + '</a></td>' +
+        '<td data-label="Category">' + AD.escapeHtml(r.category || '—') + '</td>' +
+        '<td data-label="Views">' + rankBadge(r.views) + '</td></tr>';
+    }).join('') : '<tr><td colspan="3">No blog views recorded yet for this period.</td></tr>';
+  }
+
+  document.querySelector('.perf-period-tabs').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-days]');
+    if (!btn) return;
+    document.querySelectorAll('.perf-period-tabs button[data-days]').forEach(function (b) { b.classList.remove('btn-primary'); b.classList.add('btn-outline'); });
+    btn.classList.remove('btn-outline'); btn.classList.add('btn-primary');
+    days = Number(btn.getAttribute('data-days'));
+    load();
+  });
+  document.getElementById('refresh-btn').addEventListener('click', load);
+
+  async function init() {
+    var user = await AD.requireAdmin();
+    if (!user) return;
+    AD.renderShell('performance', user, 'Performance & Analytics');
+    load();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

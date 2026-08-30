@@ -19,4 +19,10 @@ router.get('/revenue/by-month', ctrl.revenueByMonth);
 router.get('/revenue/plans', ctrl.revenuePlans);
 router.get('/revenue/churn', ctrl.revenueChurn);
 
+router.get('/performance/overview', ctrl.performanceOverview);
+router.get('/performance/daily', ctrl.performanceDaily);
+router.get('/performance/top-predictions', ctrl.performanceTopPredictions);
+router.get('/performance/top-blog', ctrl.performanceTopBlogPosts);
+router.get('/performance/revenue-estimate', ctrl.performanceRevenueEstimate);
+
 module.exports = router;

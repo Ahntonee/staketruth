@@ -111,7 +111,97 @@ const revenueChurn = asyncHandler(async (req, res) => {
   return successResponse(res, rows);
 });
 
+// ---- Content Performance (SEO / prediction + blog page tracking) ----------
+// Distinct from the generic site-wide "Website Analytics" above: this looks
+// only at the content pages that actually matter for SEO -- prediction and
+// blog detail pages -- and ties views back to the specific match/post via the
+// same slug the pretty URL is built from (see server.js's /prediction/:slug
+// and /blog/:slug routes).
+const CONTENT_PATH_FILTER = `(path LIKE '/prediction/%' OR path LIKE '/blog/%')`;
+
+const performanceOverview = asyncHandler(async (req, res) => {
+  const days = Number(req.query.days) || 30;
+  const [[period]] = await pool.query(
+    `SELECT COUNT(*) AS total,
+       SUM(CASE WHEN path LIKE '/prediction/%' THEN 1 ELSE 0 END) AS predictionViews,
+       SUM(CASE WHEN path LIKE '/blog/%' THEN 1 ELSE 0 END) AS blogViews,
+       COUNT(DISTINCT DATE(viewed_at)) AS activeDays
+     FROM page_views WHERE ${CONTENT_PATH_FILTER} AND viewed_at >= DATE_SUB(NOW(), INTERVAL ? DAY)`,
+    [days]
+  );
+  const [[today]] = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM page_views WHERE ${CONTENT_PATH_FILTER} AND DATE(viewed_at) = CURDATE()`
+  );
+  const [[last7]] = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM page_views WHERE ${CONTENT_PATH_FILTER} AND viewed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`
+  );
+  return successResponse(res, {
+    totalViews: Number(period.total) || 0,
+    todayViews: Number(today.cnt) || 0,
+    last7Views: Number(last7.cnt) || 0,
+    predictionViews: Number(period.predictionViews) || 0,
+    blogViews: Number(period.blogViews) || 0,
+    activeDays: Number(period.activeDays) || 0,
+  });
+});
+
+const performanceDaily = asyncHandler(async (req, res) => {
+  const days = Number(req.query.days) || 30;
+  const [rows] = await pool.query(
+    `SELECT DATE(viewed_at) AS day,
+       SUM(CASE WHEN path LIKE '/prediction/%' THEN 1 ELSE 0 END) AS predictions,
+       SUM(CASE WHEN path LIKE '/blog/%' THEN 1 ELSE 0 END) AS blog
+     FROM page_views WHERE ${CONTENT_PATH_FILTER} AND viewed_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+     GROUP BY DATE(viewed_at) ORDER BY day ASC`,
+    [days]
+  );
+  return successResponse(res, rows);
+});
+
+const performanceTopPredictions = asyncHandler(async (req, res) => {
+  const days = Number(req.query.days) || 30;
+  const limit = Math.min(Number(req.query.limit) || 10, 50);
+  const [rows] = await pool.query(
+    `SELECT p.id, p.home_team, p.away_team, p.tip, COUNT(*) AS views
+     FROM page_views pv JOIN predictions p ON pv.path = CONCAT('/prediction/', p.slug)
+     WHERE pv.viewed_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+     GROUP BY p.id ORDER BY views DESC LIMIT ?`,
+    [days, limit]
+  );
+  return successResponse(res, rows);
+});
+
+const performanceTopBlogPosts = asyncHandler(async (req, res) => {
+  const days = Number(req.query.days) || 30;
+  const limit = Math.min(Number(req.query.limit) || 10, 50);
+  const [rows] = await pool.query(
+    `SELECT b.id, b.title, b.category, COUNT(*) AS views
+     FROM page_views pv JOIN blog_posts b ON pv.path = CONCAT('/blog/', b.slug)
+     WHERE pv.viewed_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+     GROUP BY b.id ORDER BY views DESC LIMIT ?`,
+    [days, limit]
+  );
+  return successResponse(res, rows);
+});
+
+// Ballpark-only estimate for a $2-$5 CPM display-ad range applied to content
+// page views in the period -- not tied to any ad network actually being live.
+const performanceRevenueEstimate = asyncHandler(async (req, res) => {
+  const days = Number(req.query.days) || 30;
+  const [[period]] = await pool.query(
+    `SELECT COUNT(*) AS total FROM page_views WHERE ${CONTENT_PATH_FILTER} AND viewed_at >= DATE_SUB(NOW(), INTERVAL ? DAY)`,
+    [days]
+  );
+  const views = Number(period.total) || 0;
+  return successResponse(res, {
+    views,
+    low: Number(((views / 1000) * 2).toFixed(2)),
+    high: Number(((views / 1000) * 5).toFixed(2)),
+  });
+});
+
 module.exports = {
   trackPageView, overview, topPages, countries, devices, referrers, peakHours,
   revenueOverview, revenueByMonth, revenuePlans, revenueChurn,
+  performanceOverview, performanceDaily, performanceTopPredictions, performanceTopBlogPosts, performanceRevenueEstimate,
 };
