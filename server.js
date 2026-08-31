@@ -32,7 +32,7 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'", 'https://js.paystack.co', 'https://cdn.jsdelivr.net',
           'https://pagead2.googlesyndication.com', 'https://googleads.g.doubleclick.net',
-          'https://www.googletagmanager.com', 'https://www.google-analytics.com'],
+          'https://www.googletagmanager.com', 'https://www.google-analytics.com', 'https://tagassistant.google.com'],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net', 'data:'],
         imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
@@ -43,8 +43,13 @@ app.use(
         // hence the wildcard rather than listing the exact one in use today.
         connectSrc: ["'self'", 'https://api.paystack.co', 'https://pagead2.googlesyndication.com',
           'https://www.google-analytics.com', 'https://*.google-analytics.com',
-          'https://www.googletagmanager.com', 'https://analytics.google.com'],
-        frameSrc: ["'self'", 'https://js.paystack.co', 'https://googleads.g.doubleclick.net'],
+          'https://www.googletagmanager.com', 'https://analytics.google.com', 'https://tagassistant.google.com'],
+        // Tag Assistant's live "Test your website" mode drops a floating debug
+        // panel onto the page itself (separate from gtag.js/GA collection above)
+        // that phones home to tagassistant.google.com to report connection status
+        // -- without this, the tag can be installed and firing correctly and
+        // Tag Assistant will still show "Not Connected" / "Could not connect".
+        frameSrc: ["'self'", 'https://js.paystack.co', 'https://googleads.g.doubleclick.net', 'https://tagassistant.google.com'],
         objectSrc: ["'none'"],
       },
     },
