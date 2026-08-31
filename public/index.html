@@ -65,6 +65,23 @@
   .home-aside-widget { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 16px; }
   .home-aside-widget h3 { font-size: 0.95rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
   .latest-post-card img { width: 100%; height: 90px; object-fit: cover; border-radius: var(--radius); margin-bottom: 8px; }
+  /* Full-width "Latest from the Blog" card -- this section used to be a small
+     sidebar widget (narrow column, 90px thumbnail); moved into the main flow
+     it gets a proper horizontal layout instead of looking like a stray sliver. */
+  .latest-post-full { display: flex; gap: 20px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; text-decoration: none; color: inherit; }
+  .latest-post-full img { width: 280px; flex-shrink: 0; object-fit: cover; }
+  .latest-post-full__body { padding: 20px; display: flex; flex-direction: column; justify-content: center; }
+  .latest-post-full__body strong { font-size: 1.1rem; }
+  @media (max-width: 700px) {
+    .latest-post-full { flex-direction: column; }
+    .latest-post-full img { width: 100%; height: 180px; }
+  }
+  /* Recently Won Picks: the shared ST.renderRecentWins() markup was built for
+     a narrow sidebar (cards stacked one per row) -- full-width here, grid
+     them instead so 8 wins don't turn into one long vertical column. */
+  #recent-wins-widget .aside-widget { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  #recent-wins-widget .aside-widget h3 { grid-column: 1 / -1; margin-bottom: 2px; }
+  #recent-wins-widget .recent-win-card { margin-bottom: 0; }
   .featured-posts-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
   @media (min-width: 640px) { .featured-posts-grid { grid-template-columns: repeat(3, 1fr); } }
   .featured-post-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; display: block; color: inherit; text-decoration: none; }
@@ -103,7 +120,6 @@
         <!-- Left aside: ads, latest blog post, announcements -->
         <aside>
           <div class="ad-slot" data-placement="homepage_sidebar" style="margin-bottom:16px;"></div>
-          <div class="home-aside-widget" id="latest-post-widget"></div>
           <div class="home-aside-widget" id="announcements-widget"></div>
         </aside>
 
@@ -158,9 +174,23 @@
             <div class="aside-scroll-row" id="vip-picks-of-day"><div class="skeleton" style="height:140px;width:260px;border-radius:14px;"></div></div>
           </div>
           <div id="truth-safe-picks-widget" style="margin-top:16px;"></div>
-          <div id="recent-wins-widget"></div>
         </aside>
       </div>
+    </div>
+  </section>
+
+  <!-- Latest from the Blog — right after the day's predictions -->
+  <section id="latest-blog-section" style="display:none;">
+    <div class="container">
+      <h2 class="section-title"><span class="material-icons-round">article</span>Latest from the Blog</h2>
+      <div id="latest-post-widget"></div>
+    </div>
+  </section>
+
+  <!-- Recently Won Picks — directly under Latest from the Blog -->
+  <section>
+    <div class="container">
+      <div id="recent-wins-widget"></div>
     </div>
   </section>
 
@@ -262,20 +292,21 @@
     state.league_id = this.value; state.page = 1; loadPredictions(false);
   });
 
-  // ---- Left aside: latest blog post ----------------------------------------
+  // ---- Latest from the Blog -- full-width, right after today's predictions --
   async function loadLatestPostWidget() {
+    var section = document.getElementById('latest-blog-section');
     var el = document.getElementById('latest-post-widget');
     try {
       var res = await ST.api('/blog?limit=1');
-      if (!res.data.length) { el.style.display = 'none'; return; }
+      if (!res.data.length) return;
       var p = res.data[0];
-      el.innerHTML = '<h3><span class="material-icons-round" style="color:var(--accent);">article</span>Latest from the Blog</h3>' +
-        '<a href="/blog/' + p.slug + '" class="latest-post-card" style="display:block;color:inherit;text-decoration:none;">' +
+      el.innerHTML = '<a href="/blog/' + p.slug + '" class="latest-post-full">' +
         (p.featured_image ? '<img src="' + p.featured_image + '">' : '') +
-        '<strong style="font-size:0.9rem;">' + ST.escapeHtml(p.title) + '</strong>' +
-        (p.excerpt ? '<p class="text-soft" style="font-size:0.8rem;margin:4px 0 0;">' + ST.escapeHtml(p.excerpt).slice(0, 90) + '…</p>' : '') +
-        '</a>';
-    } catch (e) { el.style.display = 'none'; }
+        '<div class="latest-post-full__body"><strong>' + ST.escapeHtml(p.title) + '</strong>' +
+        (p.excerpt ? '<p class="text-soft" style="margin:8px 0 0;">' + ST.escapeHtml(p.excerpt).slice(0, 160) + '…</p>' : '') +
+        '</div></a>';
+      section.style.display = '';
+    } catch (e) { /* skip section if this fails */ }
   }
 
 
