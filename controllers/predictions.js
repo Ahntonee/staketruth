@@ -3,6 +3,7 @@ const {
   successResponse, errorResponse, asyncHandler, parsePagination, paginate, generatePredictionSlug,
 } = require('../utils/helpers');
 const accuracy = require('../services/accuracy');
+const intelligence = require('../services/intelligence');
 
 function safeParseJSON(value) {
   if (!value) return [];
@@ -318,10 +319,46 @@ function idsClause(ids) {
   return { placeholders: ids.map(() => '?').join(','), values: ids };
 }
 
+// Guards the same PUBLISHED_CAP the Intelligence Engine's auto-publish path
+// respects (see services/intelligence.js) -- room is counted against
+// everything published OUTSIDE this selection, then reclaimed from already-
+// graded published picks outside the selection if needed, before allowing
+// the batch through. Never exceeds the cap, even for IDs already published
+// within the same selection (those don't cost a new slot).
 const bulkPublish = asyncHandler(async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) return errorResponse(res, 'ids array is required', 400);
   const { placeholders, values } = idsClause(ids);
+
+  const [[{ alreadyPublished }]] = await pool.query(
+    `SELECT COUNT(*) AS alreadyPublished FROM predictions WHERE id IN (${placeholders}) AND is_published = 1`, values
+  );
+  const newPublishCount = ids.length - alreadyPublished;
+  if (newPublishCount > 0) {
+    // Cap only counts/reclaims predictions published at/after the cutover --
+    // see intelligence.getPublishCapCutover for why the pre-existing legacy
+    // backlog is intentionally excluded from this accounting.
+    const cutover = await intelligence.getPublishCapCutover();
+    const [[{ outsideTotal }]] = await pool.query(
+      `SELECT COUNT(*) AS outsideTotal FROM predictions WHERE is_published = 1 AND published_at >= ? AND id NOT IN (${placeholders})`, [cutover, ...values]
+    );
+    let room = intelligence.PUBLISHED_CAP - outsideTotal;
+    if (newPublishCount > room && room < intelligence.PUBLISHED_CAP) {
+      await pool.query(
+        `UPDATE predictions SET is_published = 0
+         WHERE is_published = 1 AND result != 'pending' AND published_at >= ? AND id NOT IN (${placeholders})
+         ORDER BY match_date ASC LIMIT ?`,
+        [cutover, ...values, Math.max(newPublishCount - room, 0)]
+      );
+      const [[{ outsideTotal: outsideTotal2 }]] = await pool.query(
+        `SELECT COUNT(*) AS outsideTotal FROM predictions WHERE is_published = 1 AND published_at >= ? AND id NOT IN (${placeholders})`, [cutover, ...values]
+      );
+      room = intelligence.PUBLISHED_CAP - outsideTotal2;
+    }
+    if (newPublishCount > room) {
+      return errorResponse(res, `Can only publish ${Math.max(room, 0)} more right now -- the published cap (${intelligence.PUBLISHED_CAP}) is full of still-pending picks. Wait for more to be graded, or unpublish some manually.`, 409);
+    }
+  }
   await pool.query(`UPDATE predictions SET is_published = 1, published_at = NOW() WHERE id IN (${placeholders})`, values);
   return successResponse(res, { updated: ids.length });
 });

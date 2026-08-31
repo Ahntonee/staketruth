@@ -146,10 +146,25 @@ router.get('/status', asyncHandler(async (req, res) => {
   );
   const apiBudget = await apiFootball.getRemainingCount();
   const oddsCallsToday = await oddsApi.getCallsToday();
+  const apiFootballCallsToday = await apiFootball.getCallsToday();
+  const publishCapCutover = await intelligence.getPublishCapCutover();
+  const [[{ publishedTotal }]] = await pool.query(`SELECT COUNT(*) AS publishedTotal FROM predictions WHERE is_published = 1`);
+  const [[{ publishedSinceCutover }]] = await pool.query(
+    `SELECT COUNT(*) AS publishedSinceCutover FROM predictions WHERE is_published = 1 AND published_at >= ?`, [publishCapCutover]
+  );
   return successResponse(res, {
     lastRuns: Object.fromEntries(rows.map((r) => [r.setting_key, r.setting_value])),
     apiFootballBudget: apiBudget,
+    apiFootballCallsToday,
+    apiFootballDailyCap: apiFootball.DAILY_CAP,
     oddsApiCallsToday: oddsCallsToday,
+    // publishedTotal includes ~25k legacy predictions published before this
+    // cap existed (left alone -- see intelligence.getPublishCapCutover);
+    // publishedSinceCutover/publishedPredictionsCap is the number the 40-cap
+    // actually governs going forward.
+    publishedPredictions: publishedTotal,
+    publishedSinceCutover,
+    publishedPredictionsCap: intelligence.PUBLISHED_CAP,
   });
 }));
 

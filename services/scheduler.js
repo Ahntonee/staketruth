@@ -130,6 +130,7 @@ function startScheduler() {
   }));
 
   cron.schedule('0 3 * * *', safeRun('reset odds API budget', () => oddsApi.resetCallsToday()));
+  cron.schedule('0 3 * * *', safeRun('reset API-Football daily cap', () => apiFootball.resetCallsToday()));
 
   cron.schedule('*/30 * * * *', safeRun('sync bookie odds', () => oddsApi.syncOddsForTodayFixtures()));
 

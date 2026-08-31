@@ -41,6 +41,10 @@ const getQueue = asyncHandler(async (req, res) => {
 });
 
 const approveQueueItem = asyncHandler(async (req, res) => {
+  const canPublish = await engine.tryReservePublishSlot(req.params.id);
+  if (!canPublish) {
+    return errorResponse(res, `Published predictions are at the cap (${engine.PUBLISHED_CAP}) -- wait for a graded pick to free up a slot, or unpublish one manually.`, 409);
+  }
   await pool.query('UPDATE predictions SET is_published = 1, published_at = NOW() WHERE id = ?', [req.params.id]);
   return successResponse(res, { message: 'Prediction published' });
 });

@@ -88,7 +88,8 @@
     var d = res.data;
     document.getElementById('status-card').innerHTML = Object.keys(d.lastRuns).map(function (k) {
       return '<div>' + k.replace('last_', '').replace(/_/g, ' ') + ': <strong>' + AD.formatDate(d.lastRuns[k]) + '</strong></div>';
-    }).join('') + '<div style="margin-top:8px;">API-Football: ' + (d.apiFootballBudget.configured ? (d.apiFootballBudget.remaining ?? '—') + ' calls remaining' : 'not configured') + ' &middot; Odds API calls today: ' + d.oddsApiCallsToday + '</div>';
+    }).join('') + '<div style="margin-top:8px;">API-Football: ' + (d.apiFootballBudget.configured ? (d.apiFootballBudget.remaining ?? '—') + ' calls remaining (provider plan)' : 'not configured') + ' &middot; Odds API calls today: ' + d.oddsApiCallsToday + '</div>' +
+      '<div style="margin-top:4px;">Internal daily cap: <strong>' + d.apiFootballCallsToday + ' / ' + d.apiFootballDailyCap + '</strong> calls used &middot; New publishes since cap started: <strong>' + d.publishedSinceCutover + ' / ' + d.publishedPredictionsCap + '</strong> <span class="text-soft">(' + d.publishedPredictions + ' published in total, incl. legacy)</span></div>';
   }
 
   document.getElementById('sync-buttons').addEventListener('click', async function (e) {

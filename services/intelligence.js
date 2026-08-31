@@ -4,6 +4,71 @@ const { computeConfidenceScore, getTeamPatternWinRate } = require('./confidence'
 const apiFootball = require('./apiFootball');
 const { generatePredictionSlug, clamp } = require('../utils/helpers');
 
+// ---- Published-prediction cap ----------------------------------------------
+// Hard ceiling on how many predictions can be publicly live (is_published=1)
+// at once. Deliberately does NOT touch anything still pending (upcoming or
+// in-progress) to publish a new one -- the GREATEST()-guarded UPDATE further
+// down already never un-publishes something a visitor may have seen, and this
+// cap respects that same rule: room is only reclaimed from predictions whose
+// match has already been graded (result != 'pending'), which are stale for
+// site display anyway. If there's no reclaimable room, the new pick simply
+// stays queued in the Review Queue until a slot frees up naturally as more
+// matches finish -- the cap is never exceeded, even momentarily.
+const PUBLISHED_CAP = 40;
+
+// The cap applies going FORWARD from whenever this feature first ran, not
+// retroactively -- there were already ~25,000 legacy published predictions
+// (built up over the site's history, long before this limit existed) still
+// live on the site when this shipped, and mass-unpublishing them would have
+// been a drastic, highly disruptive content change nobody asked for. So the
+// cap only counts/reclaims predictions published AT OR AFTER this cutover;
+// anything published before it is left alone indefinitely. Lazily set to
+// "now" the first time it's read, i.e. the moment this code first runs.
+let cachedCutover = null;
+async function getPublishCapCutover() {
+  if (cachedCutover) return cachedCutover;
+  const [[row]] = await pool.query(`SELECT setting_value FROM site_settings WHERE setting_key = 'published_cap_cutover_at'`);
+  if (row) { cachedCutover = row.setting_value; return cachedCutover; }
+  await pool.query(
+    `INSERT INTO site_settings (setting_key, setting_value) VALUES ('published_cap_cutover_at', NOW())
+     ON DUPLICATE KEY UPDATE setting_value = setting_value`
+  );
+  const [[fresh]] = await pool.query(`SELECT setting_value FROM site_settings WHERE setting_key = 'published_cap_cutover_at'`);
+  cachedCutover = fresh.setting_value;
+  return cachedCutover;
+}
+
+async function reclaimFinishedPublishSlots(excess) {
+  const cutover = await getPublishCapCutover();
+  const [result] = await pool.query(
+    `UPDATE predictions SET is_published = 0
+     WHERE is_published = 1 AND result != 'pending' AND published_at >= ?
+     ORDER BY match_date ASC LIMIT ?`,
+    [cutover, excess]
+  );
+  return result.affectedRows;
+}
+
+// Returns true if a slot is available (or was just reclaimed) for a NEW
+// publish of `predictionId`; false means the cap is full of still-pending
+// picks (published since the cutover) and this one must stay unpublished
+// for now. Only counts predictions published at/after the cutover -- see
+// getPublishCapCutover above.
+async function tryReservePublishSlot(predictionId) {
+  const cutover = await getPublishCapCutover();
+  const [[{ cnt }]] = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM predictions WHERE is_published = 1 AND published_at >= ? AND id != ?`,
+    [cutover, predictionId]
+  );
+  if (cnt < PUBLISHED_CAP) return true;
+  await reclaimFinishedPublishSlots(cnt - PUBLISHED_CAP + 1);
+  const [[{ cnt: cnt2 }]] = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM predictions WHERE is_published = 1 AND published_at >= ? AND id != ?`,
+    [cutover, predictionId]
+  );
+  return cnt2 < PUBLISHED_CAP;
+}
+
 function factorial(n) {
   let r = 1;
   for (let i = 2; i <= n; i++) r *= i;
@@ -176,7 +241,17 @@ async function runForPrediction(prediction) {
   // auto_publish_threshold skips the queue and goes live automatically.
   const isVip = intelligenceScore >= vipPickThreshold;
   const isVipPickOfDay = intelligenceScore >= vipPickThreshold;
-  const shouldAutoPublish = intelligenceScore >= autoPublishThreshold;
+  let shouldAutoPublish = intelligenceScore >= autoPublishThreshold;
+
+  // Only a NEW publish (currently unpublished, about to flip to 1) can grow
+  // the total published count -- re-affirming one that's already live is a
+  // no-op under the GREATEST() guard below and never needs a cap check.
+  if (shouldAutoPublish) {
+    const [[currentRow]] = await pool.query('SELECT is_published FROM predictions WHERE id = ?', [prediction.id]);
+    if (currentRow && currentRow.is_published === 0) {
+      shouldAutoPublish = await tryReservePublishSlot(prediction.id);
+    }
+  }
 
   const pattern = await getTeamPatternWinRate(/home/i.test(best.tip) ? prediction.home_team : prediction.away_team, best.market);
   const teamPatternNote = pattern !== null
@@ -337,4 +412,7 @@ module.exports = {
   getPatternInsights,
   getLearningPerformance,
   poissonPMF,
+  PUBLISHED_CAP,
+  tryReservePublishSlot,
+  getPublishCapCutover,
 };

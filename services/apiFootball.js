@@ -16,6 +16,69 @@ function client() {
   });
 }
 
+// ---- Self-imposed daily call cap -------------------------------------------
+// Independent of API-Football's own plan quota (see getRemainingCount, which
+// reads the PROVIDER's real remaining count) -- this is a hard ceiling WE
+// enforce ourselves so the app can never spend more than DAILY_CAP calls in a
+// day, no matter what triggers the work (cron backlog, an admin bulk backfill,
+// etc.). Persisted in site_settings so it survives restarts; getCallsToday()
+// self-heals across the UTC day boundary by checking the stored date, so a
+// missed midnight reset can't leave a stale count stuck for the next day.
+const DAILY_CAP = 2500;
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function getCallsToday() {
+  const [rows] = await pool.query(
+    `SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('api_football_calls_today', 'api_football_calls_date')`
+  );
+  const map = Object.fromEntries(rows.map((r) => [r.setting_key, r.setting_value]));
+  if (map.api_football_calls_date !== todayStr()) return 0; // count belongs to a previous day
+  return Number(map.api_football_calls_today) || 0;
+}
+
+async function incrementCallsToday(by = 1) {
+  const next = (await getCallsToday()) + by;
+  await pool.query(
+    `INSERT INTO site_settings (setting_key, setting_value) VALUES ('api_football_calls_today', ?)
+     ON DUPLICATE KEY UPDATE setting_value = ?`,
+    [String(next), String(next)]
+  );
+  await pool.query(
+    `INSERT INTO site_settings (setting_key, setting_value) VALUES ('api_football_calls_date', ?)
+     ON DUPLICATE KEY UPDATE setting_value = ?`,
+    [todayStr(), todayStr()]
+  );
+  return next;
+}
+
+async function resetCallsToday() {
+  await pool.query(
+    `INSERT INTO site_settings (setting_key, setting_value) VALUES ('api_football_calls_today', '0')
+     ON DUPLICATE KEY UPDATE setting_value = '0'`
+  );
+  await pool.query(
+    `INSERT INTO site_settings (setting_key, setting_value) VALUES ('api_football_calls_date', ?)
+     ON DUPLICATE KEY UPDATE setting_value = ?`,
+    [todayStr(), todayStr()]
+  );
+}
+
+// Call this immediately before every real (non-/status) API-Football request.
+// Reserves the call by incrementing the counter BEFORE the request goes out,
+// so a crash mid-request still counts it -- undercounting is how a cap gets
+// blown, overcounting by one on a rare crash is harmless. Returns false
+// without making any network call once the cap is hit; every call site below
+// treats that exactly like their existing "budget exhausted" skip path.
+async function reserveCall() {
+  const used = await getCallsToday();
+  if (used >= DAILY_CAP) return false;
+  await incrementCallsToday(1);
+  return true;
+}
+
 async function getRemainingCount() {
   if (!isConfigured()) return { configured: false, remaining: 0, limit: 0 };
   try {
@@ -72,6 +135,7 @@ async function ensureLeague(league) {
  */
 async function syncFixturesForDate(date) {
   if (!isConfigured()) return { skipped: true, reason: 'API_FOOTBALL_KEY not configured' };
+  if (!(await reserveCall())) return { skipped: true, reason: `Daily API-Football cap (${DAILY_CAP} calls) reached` };
   let created = 0;
 
   try {
@@ -138,6 +202,10 @@ async function syncResults() {
 
   for (let i = 0; i < pending.length; i += FIXTURE_BATCH_SIZE) {
     const batch = pending.slice(i, i + FIXTURE_BATCH_SIZE);
+    if (!(await reserveCall())) {
+      console.warn(`[apiFootball] syncResults stopping early -- daily cap (${DAILY_CAP} calls) reached`);
+      break;
+    }
     try {
       apiCalls++;
       const { data } = await client().get('/fixtures', { params: { ids: batch.map((p) => p.api_fixture_id).join('-') } });
@@ -197,6 +265,7 @@ function evaluateTipOutcome(tip, market, homeScore, awayScore) {
 
 async function syncLiveScores() {
   if (!isConfigured()) return { skipped: true, reason: 'API_FOOTBALL_KEY not configured' };
+  if (!(await reserveCall())) return { skipped: true, reason: `Daily API-Football cap (${DAILY_CAP} calls) reached` };
   try {
     const { data } = await client().get('/fixtures', { params: { live: 'all' } });
     let updated = 0;
@@ -305,6 +374,10 @@ async function syncHistoricalFixtures(apiLeagueId, seasonsBack = 3) {
 
   for (let s = 0; s < seasonsBack; s++) {
     const season = currentSeason - s;
+    if (!(await reserveCall())) {
+      console.warn(`[apiFootball] syncHistoricalFixtures stopping early -- daily cap (${DAILY_CAP} calls) reached`);
+      break;
+    }
     try {
       const { data } = await client().get('/fixtures', { params: { league: apiLeagueId, season } });
       for (const fx of data.response || []) {
@@ -342,6 +415,7 @@ async function syncStandingsForLeague(leagueId) {
   const [leagueRows] = await pool.query('SELECT id, api_league_id FROM leagues WHERE id = ?', [leagueId]);
   const league = leagueRows[0];
   if (!league || !league.api_league_id) return { skipped: true, reason: 'League not found or missing api_league_id' };
+  if (!(await reserveCall())) return { skipped: true, reason: `Daily API-Football cap (${DAILY_CAP} calls) reached` };
 
   const season = Number(process.env.API_FOOTBALL_SEASON) || new Date().getFullYear();
   try {
@@ -381,4 +455,7 @@ module.exports = {
   getTeamGoalAverages,
   syncHistoricalFixtures,
   syncStandingsForLeague,
+  DAILY_CAP,
+  getCallsToday,
+  resetCallsToday,
 };
