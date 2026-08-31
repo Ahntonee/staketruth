@@ -36,7 +36,14 @@ app.use(
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net', 'data:'],
         imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
-        connectSrc: ["'self'", 'https://api.paystack.co', 'https://pagead2.googlesyndication.com'],
+        // gtag.js loading (scriptSrc, above) is only half of Analytics working --
+        // it also needs to actually SEND hit data via fetch/beacon to Google's
+        // collection endpoints, which is gated by connectSrc, not scriptSrc. GA4
+        // uses region-sharded subdomains (region1.google-analytics.com etc.),
+        // hence the wildcard rather than listing the exact one in use today.
+        connectSrc: ["'self'", 'https://api.paystack.co', 'https://pagead2.googlesyndication.com',
+          'https://www.google-analytics.com', 'https://*.google-analytics.com',
+          'https://www.googletagmanager.com', 'https://analytics.google.com'],
         frameSrc: ["'self'", 'https://js.paystack.co', 'https://googleads.g.doubleclick.net'],
         objectSrc: ["'none'"],
       },
