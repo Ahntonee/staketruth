@@ -83,9 +83,13 @@ app.use(/^\/api\/predictions\/\d+\/votes$/, voteReadLimiter);
 // ---- Static files -------------------------------------------------------------
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-// Server-side <head> injection for Google Search Console (meta tag method) and
-// AdSense (auto-ads script) so verification works without depending on JS
-// execution — set GOOGLE_SITE_VERIFICATION / ADSENSE_PUBLISHER_ID in .env.
+// Server-side <head> injection for Google Search Console (meta tag method),
+// AdSense (auto-ads script), and Google Analytics (gtag.js) so verification/
+// tracking works without depending on JS execution or per-page edits — set
+// GOOGLE_SITE_VERIFICATION / ADSENSE_PUBLISHER_ID / GA_MEASUREMENT_ID in .env.
+// This one function is already wired into every HTML response (the catch-all
+// middleware below plus the /prediction, /blog, /topic detail routes), so a
+// single env var here covers the entire site with no per-page changes.
 function extraHeadTags() {
   let inject = '';
   if (process.env.GOOGLE_SITE_VERIFICATION) {
@@ -93,6 +97,11 @@ function extraHeadTags() {
   }
   if (process.env.ADSENSE_PUBLISHER_ID) {
     inject += `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.ADSENSE_PUBLISHER_ID}" crossorigin="anonymous"></script>`;
+  }
+  if (process.env.GA_MEASUREMENT_ID) {
+    const gaId = process.env.GA_MEASUREMENT_ID;
+    inject += `<script async src="https://www.googletagmanager.com/gtag/js?id=${gaId}"></script>` +
+      `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}');</script>`;
   }
   return inject;
 }
