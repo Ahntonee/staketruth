@@ -23,8 +23,6 @@
   .ann-delivery-icons { display: flex; gap: 6px; }
   .ann-delivery-icons .material-icons-round { font-size: 1.05rem; color: var(--border); }
   .ann-delivery-icons .material-icons-round.on { color: var(--primary); }
-  .ann-checkbox-row { display: flex; flex-wrap: wrap; gap: 16px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card-2); }
-  .ann-checkbox-row label { display: flex; align-items: center; gap: 6px; font-size: 0.88rem; }
 </style>
 </head>
 <body>
@@ -73,12 +71,12 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Delivery</label>
-        <div class="ann-checkbox-row">
-          <label><input type="checkbox" name="delivery_banner" checked> Banner (homepage sidebar + dashboard)</label>
-          <label><input type="checkbox" name="delivery_popup"> Popup (center-screen, on next visit)</label>
-          <label><input type="checkbox" name="delivery_email" id="delivery-email-check"> Email newsletter</label>
-        </div>
+        <label class="form-label">Delivery <span class="text-soft" style="font-weight:400;">(ctrl/cmd-click to pick more than one)</span></label>
+        <select name="delivery" id="delivery-select" class="form-control" multiple size="3">
+          <option value="banner" selected>Banner (homepage sidebar + dashboard)</option>
+          <option value="popup">Popup (center-screen, on next visit)</option>
+          <option value="email">Email newsletter</option>
+        </select>
       </div>
       <div class="form-group" id="email-subject-group" style="display:none;">
         <label class="form-label">Email Subject (optional — defaults to the title)</label>
@@ -87,11 +85,11 @@
 
       <div class="form-group">
         <label class="form-label">Publish</label>
-        <div class="ann-checkbox-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
-          <label class="flex items-center gap-8"><input type="radio" name="publish_mode" value="draft" checked> Save as Draft</label>
-          <label class="flex items-center gap-8"><input type="radio" name="publish_mode" value="now"> Publish Now</label>
-          <label class="flex items-center gap-8"><input type="radio" name="publish_mode" value="schedule"> Schedule for Later</label>
-        </div>
+        <select name="publish_mode" id="publish-mode-select" class="form-control">
+          <option value="draft">Save as Draft</option>
+          <option value="now">Publish Now</option>
+          <option value="schedule">Schedule for Later</option>
+        </select>
         <input type="datetime-local" name="scheduled_at" class="form-control" style="margin-top:8px;display:none;" id="schedule-input">
       </div>
 
@@ -176,28 +174,34 @@
   }
   document.getElementById('announcement-form').addEventListener('input', updatePreview);
 
-  document.getElementById('delivery-email-check').addEventListener('change', function () {
-    document.getElementById('email-subject-group').style.display = this.checked ? '' : 'none';
+  function getSelectedDelivery(form) {
+    var values = Array.from(form.delivery.selectedOptions).map(function (o) { return o.value; });
+    return { banner: values.indexOf('banner') !== -1, popup: values.indexOf('popup') !== -1, email: values.indexOf('email') !== -1 };
+  }
+  function setSelectedDelivery(form, d) {
+    Array.from(form.delivery.options).forEach(function (o) {
+      o.selected = (o.value === 'banner' && d.banner) || (o.value === 'popup' && d.popup) || (o.value === 'email' && d.email);
+    });
+    document.getElementById('email-subject-group').style.display = d.email ? '' : 'none';
+  }
+  document.getElementById('delivery-select').addEventListener('change', function () {
+    document.getElementById('email-subject-group').style.display = getSelectedDelivery(document.getElementById('announcement-form')).email ? '' : 'none';
   });
 
   function setPublishMode(mode, scheduledAt) {
-    var form = document.getElementById('announcement-form');
-    var radio = form.querySelector('[name="publish_mode"][value="' + mode + '"]');
-    if (radio) radio.checked = true;
+    document.getElementById('publish-mode-select').value = mode;
     document.getElementById('schedule-input').style.display = mode === 'schedule' ? '' : 'none';
     document.getElementById('schedule-input').value = scheduledAt || '';
   }
-  document.querySelectorAll('[name="publish_mode"]').forEach(function (r) {
-    r.addEventListener('change', function () {
-      document.getElementById('schedule-input').style.display = this.value === 'schedule' ? '' : 'none';
-    });
+  document.getElementById('publish-mode-select').addEventListener('change', function () {
+    document.getElementById('schedule-input').style.display = this.value === 'schedule' ? '' : 'none';
   });
 
   document.getElementById('add-btn').addEventListener('click', function () {
     document.getElementById('announcement-form').reset();
     document.getElementById('announcement-form').id.value = '';
     document.getElementById('modal-title').textContent = 'New Announcement';
-    document.getElementById('email-subject-group').style.display = 'none';
+    setSelectedDelivery(document.getElementById('announcement-form'), { banner: true, popup: false, email: false });
     setPublishMode('draft');
     updatePreview();
     openModal();
@@ -218,10 +222,7 @@
       form.id.value = a.id; form.title.value = a.title; form.content.value = a.content || '';
       form.link_url.value = a.link_url || ''; form.link_label.value = a.link_label || '';
       form.type.value = a.type || 'info'; form.audience.value = a.audience || 'all';
-      form.delivery_banner.checked = !!a.delivery_banner;
-      form.delivery_popup.checked = !!a.delivery_popup;
-      form.delivery_email.checked = !!a.delivery_email;
-      document.getElementById('email-subject-group').style.display = a.delivery_email ? '' : 'none';
+      setSelectedDelivery(form, { banner: !!a.delivery_banner, popup: !!a.delivery_popup, email: !!a.delivery_email });
       form.email_subject.value = a.email_subject || '';
       form.expires_at.value = a.expires_at ? a.expires_at.slice(0, 16) : '';
       setPublishMode(a.status === 'published' ? 'now' : (a.scheduled_at ? 'schedule' : 'draft'), a.scheduled_at ? a.scheduled_at.replace(' ', 'T').slice(0, 16) : '');
@@ -254,15 +255,16 @@
     var fd = new FormData(e.target);
     var id = fd.get('id');
     var mode = fd.get('publish_mode');
+    var delivery = fd.getAll('delivery');
     if (mode === 'schedule' && !fd.get('scheduled_at')) { AD.showToast('Pick a date and time to schedule this announcement', 'error'); return; }
     var body = {
       title: fd.get('title'), content: fd.get('content'),
       link_url: fd.get('link_url') || null, link_label: fd.get('link_label') || null,
       type: fd.get('type'), audience: fd.get('audience'),
       status: mode === 'now' ? 'published' : 'draft',
-      delivery_banner: fd.get('delivery_banner') ? 1 : 0,
-      delivery_popup: fd.get('delivery_popup') ? 1 : 0,
-      delivery_email: fd.get('delivery_email') ? 1 : 0,
+      delivery_banner: delivery.indexOf('banner') !== -1 ? 1 : 0,
+      delivery_popup: delivery.indexOf('popup') !== -1 ? 1 : 0,
+      delivery_email: delivery.indexOf('email') !== -1 ? 1 : 0,
       email_subject: fd.get('email_subject') || null,
       scheduled_at: mode === 'schedule' ? fd.get('scheduled_at').replace('T', ' ') + ':00' : null,
       expires_at: fd.get('expires_at') || null,
