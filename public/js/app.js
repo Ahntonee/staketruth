@@ -297,6 +297,38 @@
     wireHeaderInteractions();
     renderAuthUI();
     renderTicker();
+    ST.renderAnnouncementPopup();
+  };
+
+  // ---- Announcement popup: one centered modal per eligible announcement,
+  // dismissed permanently per-browser (localStorage) once closed. Audience
+  // eligibility is already filtered server-side (GET /announcements), so
+  // this only needs to pick delivery_popup=1 items and skip ones already seen.
+  ST.renderAnnouncementPopup = async function () {
+    if (document.getElementById('st-announcement-popup')) return; // one at a time, page-wide
+    var icons = { info: 'info', success: 'check_circle', warning: 'warning', danger: 'error' };
+    try {
+      var res = await api('/announcements');
+      var pick = (res.data || []).find(function (a) {
+        return a.delivery_popup && !localStorage.getItem('st_popup_seen_' + a.id);
+      });
+      if (!pick) return;
+      var overlay = document.createElement('div');
+      overlay.className = 'st-popup-overlay';
+      overlay.id = 'st-announcement-popup';
+      overlay.innerHTML =
+        '<div class="st-popup-card st-popup-card--' + pick.type + '">' +
+          '<button type="button" class="st-popup-close" aria-label="Close">&times;</button>' +
+          '<span class="material-icons-round st-popup-icon">' + (icons[pick.type] || 'info') + '</span>' +
+          '<h3>' + ST.escapeHtml(pick.title) + '</h3>' +
+          (pick.content ? '<p>' + ST.escapeHtml(pick.content) + '</p>' : '') +
+          (pick.link_url ? '<a href="' + pick.link_url + '" class="btn btn-primary btn-sm">' + ST.escapeHtml(pick.link_label || 'Learn more') + '</a>' : '') +
+        '</div>';
+      document.body.appendChild(overlay);
+      function dismiss() { localStorage.setItem('st_popup_seen_' + pick.id, '1'); overlay.remove(); }
+      overlay.querySelector('.st-popup-close').addEventListener('click', dismiss);
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) dismiss(); });
+    } catch (e) { /* skip -- a popup is never critical */ }
   };
 
   ST.injectFooter = function () {

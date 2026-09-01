@@ -674,3 +674,17 @@ textarea.form-control { min-height: 120px; resize: vertical; }
 .announcement-card--success .material-icons-round { color: var(--success-dim); }
 .announcement-card--warning .material-icons-round { color: var(--warning); }
 .announcement-card--danger .material-icons-round { color: var(--danger); }
+
+/* ---- Announcement popup: centered modal, dismissed permanently per-browser
+   once closed (see ST.renderAnnouncementPopup in app.js) --------------------- */
+.st-popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; animation: st-popup-fade 0.2s ease; }
+@keyframes st-popup-fade { from { opacity: 0; } to { opacity: 1; } }
+.st-popup-card { background: var(--card); border-radius: var(--radius-lg); padding: 26px 22px; max-width: 380px; width: 100%; text-align: center; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+.st-popup-close { position: absolute; top: 8px; right: 10px; background: none; border: none; font-size: 1.6rem; line-height: 1; color: var(--text-soft); cursor: pointer; padding: 6px; }
+.st-popup-icon { font-size: 2.4rem; margin-bottom: 8px; display: inline-block; }
+.st-popup-card--info .st-popup-icon { color: #2563eb; }
+.st-popup-card--success .st-popup-icon { color: var(--success-dim); }
+.st-popup-card--warning .st-popup-icon { color: var(--warning); }
+.st-popup-card--danger .st-popup-icon { color: var(--danger); }
+.st-popup-card h3 { margin: 4px 0 8px; font-size: 1.1rem; }
+.st-popup-card p { color: var(--text-soft); font-size: 0.9rem; line-height: 1.5; margin-bottom: 16px; white-space: pre-line; }

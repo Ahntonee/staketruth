@@ -648,6 +648,24 @@ async function migrate() {
   await ensureColumn('announcements', 'type', "ENUM('info','success','warning','danger') DEFAULT 'info'");
   await pool.query(`UPDATE announcements SET status = IF(is_active = 1, 'published', 'draft') WHERE status = 'draft' AND is_active = 1`);
 
+  // Announcements + newsletters: who sees it (audience), through which
+  // channel(s) (delivery_*), and when (scheduled_at mirrors blog_posts'
+  // scheduled_publish_at pattern -- stays a draft until the scheduler cron
+  // flips it live). email_sent_at guards against re-sending the same
+  // newsletter batch twice (e.g. on a later unrelated edit).
+  await ensureColumn('announcements', 'audience', "ENUM('all','registered','vip') DEFAULT 'all'");
+  await ensureColumn('announcements', 'delivery_banner', "TINYINT(1) DEFAULT 1");
+  await ensureColumn('announcements', 'delivery_popup', "TINYINT(1) DEFAULT 0");
+  await ensureColumn('announcements', 'delivery_email', "TINYINT(1) DEFAULT 0");
+  await ensureColumn('announcements', 'scheduled_at', "DATETIME NULL");
+  await ensureColumn('announcements', 'email_subject', "VARCHAR(255) NULL");
+  await ensureColumn('announcements', 'email_sent_at', "DATETIME NULL");
+
+  // Newsletter: every registered user is auto-subscribed by default (per
+  // spec) -- this column exists mainly so an unsubscribe option can be added
+  // later without a further migration.
+  await ensureColumn('users', 'newsletter_subscribed', "TINYINT(1) DEFAULT 1");
+
   // Seed admin
   const [existingAdmin] = await pool.query('SELECT id FROM users WHERE email = ?', ['admin@staketruth.com']);
   if (existingAdmin.length === 0) {

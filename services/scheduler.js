@@ -5,6 +5,7 @@ const oddsApi = require('./oddsApi');
 const intelligence = require('./intelligence');
 const accuracy = require('./accuracy');
 const statistics = require('./statistics');
+const newsletter = require('./newsletter');
 
 // PM2's `pm_id` is a GLOBAL counter across every app on the daemon (not per-app),
 // so on a shared box running other PM2 apps this app can easily land on pm_id=5
@@ -140,6 +141,19 @@ function startScheduler() {
        WHERE is_published = 0 AND scheduled_publish_at IS NOT NULL AND scheduled_publish_at <= NOW()`
     );
     return { published: result.affectedRows };
+  }));
+
+  cron.schedule('*/5 * * * *', safeRun('publish scheduled announcements', async () => {
+    const [due] = await pool.query(
+      `SELECT id FROM announcements WHERE status = 'draft' AND scheduled_at IS NOT NULL AND scheduled_at <= NOW()`
+    );
+    if (!due.length) return { published: 0 };
+    await pool.query(
+      `UPDATE announcements SET status = 'published', is_active = 1
+       WHERE status = 'draft' AND scheduled_at IS NOT NULL AND scheduled_at <= NOW()`
+    );
+    for (const row of due) await newsletter.maybeSendForAnnouncement(row.id);
+    return { published: due.length };
   }));
 
   console.log('[scheduler] all cron jobs registered on instance 0');
