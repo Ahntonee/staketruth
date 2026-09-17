@@ -695,3 +695,21 @@ textarea.form-control { min-height: 120px; resize: vertical; }
 #category-tabs .category-tab.active { color: #fff; }
 .admin-main, .admin-content, .EasyMDEContainer { min-width: 0; }
 .EasyMDEContainer .editor-toolbar button { min-width: 30px; min-height: 30px; }
+
+.announcement-outline { border: 2px solid transparent; border-radius: var(--radius-lg); background: linear-gradient(var(--card), var(--card)) padding-box, var(--gradient-green) border-box; padding: 12px; }
+.announcement-content { overflow-wrap: anywhere; line-height: 1.65; }
+.announcement-content p { margin: 6px 0; }
+.announcement-content ul, #ann-preview-content ul { padding-left: 20px; margin: 8px 0; }
+.announcement-content a { text-decoration: underline; }
+.announcement-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.announcement-toolbar button { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; color: var(--text); }
+.league-widget { margin-top: 16px; min-width: 0; }
+.league-widget .form-control { width: 100%; min-width: 0; }
+.league-table-meta { font-size: .68rem; color: var(--text-soft); margin: 10px 0; }
+.league-table-scroll { overflow: auto; max-height: 460px; }
+.league-table { width: 100%; border-collapse: collapse; font-size: .72rem; }
+.league-table th, .league-table td { padding: 8px 4px; border-bottom: 1px solid var(--border); text-align: right; }
+.league-table th:nth-child(2), .league-table th[scope="row"] { text-align: left; overflow-wrap: anywhere; }
+.league-table thead { position: sticky; top: 0; background: var(--card); }
+.league-table small { display: block; font-weight: 400; color: var(--text-soft); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }

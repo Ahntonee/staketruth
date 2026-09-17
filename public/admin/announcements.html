@@ -60,7 +60,7 @@
     <form id="announcement-form">
       <input type="hidden" name="id">
       <div class="form-group"><label class="form-label">Title <span style="color:var(--danger);">*</span></label><input required name="title" class="form-control" placeholder="e.g. Site maintenance this Saturday"></div>
-      <div class="form-group"><label class="form-label">Message <span style="color:var(--danger);">*</span></label><textarea required name="content" class="form-control" rows="3" placeholder="The announcement text — shown on-site and, if email delivery is on, in the newsletter body…"></textarea></div>
+      <div class="form-group"><label class="form-label">Message <span style="color:var(--danger);">*</span></label><div class="announcement-toolbar" role="toolbar" aria-label="Message formatting"><button type="button" data-format="bold"><strong>Bold</strong></button><button type="button" data-format="italic"><em>Italic</em></button><button type="button" data-format="list">Bullet list</button><button type="button" data-format="link">Link</button></div><textarea required name="content" class="form-control" rows="3" placeholder="The announcement text — shown on-site and, if email delivery is on, in the newsletter body…"></textarea></div>
       <div class="grid-2" style="grid-template-columns:1fr 1fr;">
         <div class="form-group"><label class="form-label">Type</label><select name="type" class="form-control">
           <option value="info">Info</option><option value="success">Success</option><option value="warning">Warning</option><option value="danger">Danger</option>
@@ -110,6 +110,7 @@
   </div>
 </div>
 
+<script src="/js/announcement-format.js"></script>
 <script src="/js/admin.js"></script>
 <script>
 (function () {
@@ -171,9 +172,21 @@
     preview.className = 'ann-preview ' + type;
     document.getElementById('ann-preview-icon').textContent = TYPE_ICONS[type] || 'info';
     document.getElementById('ann-preview-title').textContent = form.title.value || '—';
-    document.getElementById('ann-preview-content').textContent = form.content.value || '—';
+    document.getElementById('ann-preview-content').innerHTML = AnnouncementFormat.render(form.content.value);
   }
   document.getElementById('announcement-form').addEventListener('input', updatePreview);
+  document.querySelector('.announcement-toolbar').addEventListener('click', function (event) {
+    var button = event.target.closest('[data-format]');
+    if (!button) return;
+    var input = document.getElementById('announcement-form').elements.content;
+    var start = input.selectionStart, end = input.selectionEnd;
+    var selected = input.value.slice(start, end) || 'text';
+    var mode = button.dataset.format;
+    var replacement = mode === 'bold' ? '**' + selected + '**' : mode === 'italic' ? '*' + selected + '*' : mode === 'link' ? '[' + selected + '](https://example.com)' : (start && input.value[start - 1] !== '\n' ? '\n' : '') + '- ' + selected.replace(/\n/g, '\n- ');
+    input.setRangeText(replacement, start, end, 'select');
+    input.focus();
+    updatePreview();
+  });
 
   function getSelectedDelivery(form) {
     var values = Array.from(form.delivery.selectedOptions).map(function (o) { return o.value; });

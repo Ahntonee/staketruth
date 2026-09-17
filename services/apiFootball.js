@@ -442,7 +442,18 @@ async function syncStandingsForLeague(leagueId) {
   }
 }
 
+// Public tables use the same provider credentials and daily quota as fixtures.
+async function fetchPublicTable(endpoint, league, season) {
+  if (!isConfigured()) throw new Error('Football provider is not configured');
+  if (!(await reserveCall())) throw new Error('Daily football API limit reached');
+  const { data } = await client().get(endpoint, { params: { league, season } });
+  if (data.errors && Object.keys(data.errors).length) throw new Error('Football provider could not supply this table');
+  if (!Array.isArray(data.response)) throw new Error('Invalid football provider response');
+  return data.response;
+}
+
 module.exports = {
+  fetchPublicTable,
   isConfigured,
   getRemainingCount,
   syncFixturesForDate,

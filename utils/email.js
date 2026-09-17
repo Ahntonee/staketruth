@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const axios = require('axios');
+const announcementFormat = require('../public/js/announcement-format');
 
 let transporter = null;
 function getTransporter() {
@@ -143,13 +144,11 @@ function escapeHtml(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Newsletter/announcement email -- content is admin-authored plain text (the
-// same string shown in the on-site announcement card), so it's escaped then
-// has newlines turned into <br> rather than run through a markdown renderer.
+// Announcement formatting is shared with the site and admin preview.
 function sendAnnouncementEmail(to, name, subject, contentText, linkUrl, linkLabel) {
   const bodyHtml = `<p>Hi ${escapeHtml(name || 'there')},</p>` +
-    `<p>${escapeHtml(contentText).replace(/\n/g, '<br>')}</p>`;
-  const html = wrapTemplate(subject, bodyHtml, linkUrl ? (linkLabel || 'Learn more') : null, linkUrl || null);
+    announcementFormat.render(contentText);
+  const html = wrapTemplate(escapeHtml(subject), bodyHtml, linkUrl ? (linkLabel || 'Learn more') : null, linkUrl || null);
   return sendMail({ to, subject, html });
 }
 

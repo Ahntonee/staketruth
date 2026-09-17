@@ -321,7 +321,7 @@
           '<button type="button" class="st-popup-close" aria-label="Close">&times;</button>' +
           '<span class="material-icons-round st-popup-icon">' + (icons[pick.type] || 'info') + '</span>' +
           '<h3>' + ST.escapeHtml(pick.title) + '</h3>' +
-          (pick.content ? '<p>' + ST.escapeHtml(pick.content) + '</p>' : '') +
+          (pick.content ? '<div class="announcement-content">' + AnnouncementFormat.render(pick.content) + '</div>' : '') +
           (pick.link_url ? '<a href="' + pick.link_url + '" class="btn btn-primary btn-sm">' + ST.escapeHtml(pick.link_label || 'Learn more') + '</a>' : '') +
         '</div>';
       document.body.appendChild(overlay);
@@ -542,20 +542,21 @@
     var icons = { info: 'info', success: 'check_circle', warning: 'warning', danger: 'error' };
     try {
       var res = await api('/announcements');
+      res.data = res.data.filter(function (a) { return a.delivery_banner; });
       if (!res.data.length) { container.innerHTML = ''; if (opts.hideWhenEmpty !== false) container.style.display = 'none'; return; }
       container.style.display = '';
       var heading = opts.heading !== false ? '<h3 style="display:flex;align-items:center;gap:6px;"><span class="material-icons-round" style="color:var(--accent);">campaign</span>Announcements</h3>' : '';
-      container.innerHTML = heading + res.data.map(function (a) {
+      container.innerHTML = '<div class="announcement-outline">' + heading + res.data.map(function (a) {
         return '<div class="announcement-card announcement-card--' + a.type + '">' +
           '<div style="display:flex;align-items:flex-start;gap:8px;">' +
             '<span class="material-icons-round" style="font-size:1.05rem;margin-top:1px;">' + (icons[a.type] || 'info') + '</span>' +
             '<div><strong>' + ST.escapeHtml(a.title) + '</strong>' +
-            (a.content ? '<p style="margin:4px 0 0;">' + ST.escapeHtml(a.content) + '</p>' : '') +
+            (a.content ? '<div class="announcement-content">' + AnnouncementFormat.render(a.content) + '</div>' : '') +
             (a.link_url ? '<a href="' + a.link_url + '" style="font-size:0.8rem;">' + ST.escapeHtml(a.link_label || 'Learn more') + ' &rarr;</a>' : '') +
             '</div>' +
           '</div>' +
         '</div>';
-      }).join('');
+      }).join('') + '</div>';
     } catch (e) { container.innerHTML = ''; if (opts.hideWhenEmpty !== false) container.style.display = 'none'; }
   };
 
