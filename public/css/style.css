@@ -688,3 +688,10 @@ textarea.form-control { min-height: 120px; resize: vertical; }
 .st-popup-card--danger .st-popup-icon { color: var(--danger); }
 .st-popup-card h3 { margin: 4px 0 8px; font-size: 1.1rem; }
 .st-popup-card p { color: var(--text-soft); font-size: 0.9rem; line-height: 1.5; margin-bottom: 16px; white-space: pre-line; }
+
+/* Keep every prediction category visible at all viewport sizes. */
+#category-tabs { flex-wrap: wrap; overflow: visible; }
+#category-tabs .category-tab { text-decoration: none; color: var(--text); }
+#category-tabs .category-tab.active { color: #fff; }
+.admin-main, .admin-content, .EasyMDEContainer { min-width: 0; }
+.EasyMDEContainer .editor-toolbar button { min-width: 30px; min-height: 30px; }

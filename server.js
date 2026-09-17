@@ -265,8 +265,9 @@ app.get('/topic/:slug', (req, res) => {
         'SELECT * FROM seo_landing_pages WHERE slug = ? AND is_published = 1',
         [req.params.slug]
       );
-      if (rows.length) html = ssr.renderTopicPage(html, rows[0]);
-    } catch (e) { /* fall back to the static template defaults */ }
+      if (!rows.length) return res.status(404).send('Page not found');
+      html = ssr.renderTopicPage(html, rows[0]);
+    } catch (e) { return res.status(500).send('Unable to load page'); }
     const inject = extraHeadTags();
     if (inject) html = html.replace('</head>', `${inject}</head>`);
     res.type('html').send(html);

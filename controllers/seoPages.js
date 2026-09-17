@@ -56,10 +56,13 @@ const getPublic = asyncHandler(async (req, res) => {
   // league_text_filter is free text an admin typed (not necessarily a league
   // that exists in our leagues table), so it's matched with LIKE against the
   // joined league name rather than a strict league_id equality.
-  const where = ['p.is_published = 1'];
+  const where = ['p.is_published = 1', 'p.match_date >= CURDATE()'];
   const params = [];
   if (page.league_text_filter) { where.push('l.name LIKE ?'); params.push('%' + page.league_text_filter + '%'); }
-  if (page.category) { where.push('p.category = ?'); params.push(page.category); }
+  if (page.category === 'free') where.push('p.is_vip = 0 AND p.is_banker = 0');
+  else if (page.category === 'vip') where.push('p.is_vip = 1');
+  else if (page.category === 'banker') where.push('p.is_banker = 1');
+  else if (page.category) { where.push('p.category = ?'); params.push(page.category); }
   const [predictionRows] = await pool.query(
     `SELECT p.*, l.name AS league_name FROM predictions p LEFT JOIN leagues l ON l.id = p.league_id
      WHERE ${where.join(' AND ')} ORDER BY p.match_date ASC LIMIT 20`,

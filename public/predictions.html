@@ -40,20 +40,21 @@
         <div class="main-with-aside__content">
 
           <div class="tab-row" id="category-tabs">
-            <button class="category-tab active" data-category="all">All</button>
-            <button class="category-tab" data-category="free">Free</button>
-            <button class="category-tab" data-category="over_1_5">Over 1.5</button>
-            <button class="category-tab" data-category="over_2_5">Over 2.5</button>
-            <button class="category-tab" data-category="over_3_5">Over 3.5</button>
-            <button class="category-tab" data-category="under_1_5">Under 1.5</button>
-            <button class="category-tab" data-category="under_2_5">Under 2.5</button>
-            <button class="category-tab" data-category="under_3_5">Under 3.5</button>
-            <button class="category-tab" data-category="gg">BTTS</button>
-            <button class="category-tab" data-category="home_win">Home Win</button>
-            <button class="category-tab" data-category="away_win">Away Win</button>
-            <button class="category-tab" data-category="draw">Draw</button>
-            <button class="category-tab" data-category="vip">VIP</button>
-          </div>
+<a class="category-tab active" href="/predictions.html">All</a>
+<a class="category-tab" href="/topic/free-predictions">Free</a>
+<a class="category-tab" href="/topic/vip-predictions">VIP</a>
+<a class="category-tab" href="/topic/banker-predictions">Banker</a>
+<a class="category-tab" href="/topic/over-1-5-predictions">Over 1.5</a>
+<a class="category-tab" href="/topic/over-2-5-predictions">Over 2.5</a>
+<a class="category-tab" href="/topic/over-3-5-predictions">Over 3.5</a>
+<a class="category-tab" href="/topic/under-1-5-predictions">Under 1.5</a>
+<a class="category-tab" href="/topic/under-2-5-predictions">Under 2.5</a>
+<a class="category-tab" href="/topic/under-3-5-predictions">Under 3.5</a>
+<a class="category-tab" href="/topic/gg-predictions">BTTS</a>
+<a class="category-tab" href="/topic/home-win-predictions">Home Win</a>
+<a class="category-tab" href="/topic/away-win-predictions">Away Win</a>
+<a class="category-tab" href="/topic/draw-predictions">Draw</a>
+</div>
           <div class="tab-row" id="date-tabs" style="margin-top:8px;">
             <button class="category-tab" data-date="yesterday">Yesterday</button>
             <button class="category-tab active" data-date="today">Today</button>
@@ -172,13 +173,6 @@
   }, { rootMargin: '300px' });
   scrollObserver.observe(document.getElementById('scroll-sentinel'));
 
-  document.getElementById('category-tabs').addEventListener('click', function (e) {
-    var btn = e.target.closest('.category-tab');
-    if (!btn) return;
-    document.querySelectorAll('#category-tabs .category-tab').forEach(function (b) { b.classList.remove('active'); });
-    btn.classList.add('active');
-    state.category = btn.getAttribute('data-category'); state.page = 1; loadPredictions(false);
-  });
   document.getElementById('date-tabs').addEventListener('click', function (e) {
     var btn = e.target.closest('.category-tab');
     if (!btn) return;

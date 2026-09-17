@@ -61,7 +61,7 @@
 
       document.title = page.title;
       document.querySelector('meta[name="description"]').setAttribute('content', page.meta_description || '');
-      document.getElementById('canonical-link').setAttribute('href', window.location.href);
+      document.getElementById('canonical-link').setAttribute('href', window.location.origin + window.location.pathname);
       document.getElementById('breadcrumb-current').textContent = page.h1 || page.title;
 
       var rawHtml = window.marked ? marked.parse(page.intro_content || '') : (page.intro_content || '');

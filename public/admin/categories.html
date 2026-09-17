@@ -70,6 +70,7 @@
         var todayCount = todayRes.data.filter(function (p) { return p.category === c && p.match_date.slice(0, 10) === todayStr; }).length;
         return '<div class="stat-card">' +
           '<div class="stat-card__value" style="font-size:1.1rem;">' + c.replace(/_/g, ' ') + '</div>' +
+          '<a href="/topic/' + c.replace(/_/g, '-') + '-predictions">View category page</a> &middot; <a href="/admin/seo-pages.html">Edit on-page SEO</a>' +
           '<div class="stat-card__label">' + todayCount + ' today &middot; ' + (stat ? stat.win_rate + '% all-time' : 'no data yet') + '</div>' +
           '</div>';
       }).join('');

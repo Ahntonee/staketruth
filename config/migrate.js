@@ -660,6 +660,7 @@ async function migrate() {
   await ensureColumn('announcements', 'scheduled_at', "DATETIME NULL");
   await ensureColumn('announcements', 'email_subject', "VARCHAR(255) NULL");
   await ensureColumn('announcements', 'email_sent_at', "DATETIME NULL");
+  await ensureColumn('announcements', 'email_error', "VARCHAR(255) NULL");
 
   // Newsletter: every registered user is auto-subscribed by default (per
   // spec) -- this column exists mainly so an unsubscribe option can be added
@@ -714,6 +715,18 @@ async function migrate() {
     );
   }
   console.log(`[migrate] seeded ${SEO_PAGES.length} SEO pages`);
+
+  // Category landing pages are editable through the existing SEO Pages CMS.
+  for (const [category, label] of Object.entries(require('./categories'))) {
+    const heading = label + ' Football Predictions';
+    await pool.query(
+      `INSERT IGNORE INTO seo_landing_pages (slug, title, h1, meta_description, intro_content, category, is_published)
+       VALUES (?, ?, ?, ?, ?, ?, 1)`,
+      [category.replace(/_/g, '-') + '-predictions', heading + ' | StakeTruth', heading,
+        'Browse ' + label.toLowerCase() + ' football predictions, match analysis and picks on StakeTruth.',
+        'Explore our ' + label.toLowerCase() + ' football picks below. Open a match for its analysis and available prediction details.', category]
+    );
+  }
 
   // Seed static pages
   for (const [slug, title, content, extra] of STATIC_PAGES) {
