@@ -2,6 +2,20 @@
   'use strict';
   var container = document.getElementById('league-tables-widgets');
   if (!container) return;
+  // Move the existing widgets, preserving selections, listeners and fetched data.
+  var desktopSlot = document.getElementById('league-tables-desktop');
+  var mobileSlot = document.getElementById('league-tables-mobile');
+  var mobileSection = document.getElementById('league-tables-mobile-section');
+  if (desktopSlot && mobileSlot && mobileSection) {
+    var mobileLayout = window.matchMedia('(max-width: 1023px)');
+    function positionTables() {
+      var slot = mobileLayout.matches ? mobileSlot : desktopSlot;
+      if (container.parentNode !== slot) slot.appendChild(container);
+      mobileSection.hidden = !mobileLayout.matches;
+    }
+    positionTables();
+    mobileLayout.addEventListener('change', positionTables);
+  }
   var leagues = [[39, 'Premier League'], [140, 'La Liga'], [135, 'Serie A'], [78, 'Bundesliga'], [61, 'Ligue 1']];
   var types = [['standings', 'League Tables'], ['scorers', 'Top Goalscorers'], ['assists', 'Top Assists']];
   types.forEach(function (entry) {
