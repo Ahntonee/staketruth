@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const pageSeo = require('../services/pageSeo');
 const { successResponse, errorResponse, asyncHandler } = require('../utils/helpers');
 
 const getPage = asyncHandler(async (req, res) => {
@@ -49,7 +50,11 @@ const getAffiliateConfig = asyncHandler(async (req, res) => {
 
 const getAllSeo = asyncHandler(async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM seo_settings ORDER BY page_key');
-  return successResponse(res, rows);
+  return successResponse(res, rows.map(row => {
+    if (!pageSeo.pages[row.page_key]) return row;
+    const defaults = pageSeo.defaults(row.page_key);
+    return { ...row, h1: row.h1 ?? defaults.h1, intro: row.intro ?? defaults.intro, supports_heading: defaults.supports_heading, public_path: '/' + pageSeo.pages[row.page_key] };
+  }));
 });
 
 const getSeoForPage = asyncHandler(async (req, res) => {
@@ -58,12 +63,22 @@ const getSeoForPage = asyncHandler(async (req, res) => {
 });
 
 const updateSeo = asyncHandler(async (req, res) => {
-  const { title, description, keywords, og_image } = req.body;
+  if (!Object.hasOwn(pageSeo.pages, req.params.pageKey)) return errorResponse(res, 'Unknown page', 400);
+  const names = Object.keys(pageSeo.fields).filter(name => Object.hasOwn(req.body, name));
+  if (!names.length) return errorResponse(res, 'No SEO fields supplied', 400);
+  for (const name of names) {
+    if (typeof req.body[name] !== 'string' || req.body[name].length > pageSeo.fields[name]) return errorResponse(res, 'Invalid or too long: ' + name, 400);
+  }
+  for (const name of ['canonical_url', 'og_image']) {
+    if (req.body[name]) {
+      try { if (!['https:', 'http:'].includes(new URL(req.body[name]).protocol)) throw new Error(); }
+      catch (_) { return errorResponse(res, name + ' must be a full HTTP or HTTPS URL', 400); }
+    }
+  }
+  if (req.body.robots && !['index, follow', 'noindex, follow', 'noindex, nofollow'].includes(req.body.robots)) return errorResponse(res, 'Invalid robots setting', 400);
   await pool.query(
-    `INSERT INTO seo_settings (page_key, title, description, keywords, og_image) VALUES (?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE title = VALUES(title), description = VALUES(description),
-       keywords = VALUES(keywords), og_image = VALUES(og_image)`,
-    [req.params.pageKey, title, description, keywords, og_image || null]
+    'INSERT INTO seo_settings (page_key, ' + names.join(', ') + ') VALUES (' + ['?', ...names.map(() => '?')].join(', ') + ') ON DUPLICATE KEY UPDATE ' + names.map(name => name + ' = VALUES(' + name + ')').join(', '),
+    [req.params.pageKey, ...names.map(name => req.body[name])]
   );
   return successResponse(res, { message: 'SEO settings updated' });
 });

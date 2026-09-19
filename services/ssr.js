@@ -111,14 +111,21 @@ function renderBlogPage(html, post) {
 function renderTopicPage(html, page) {
   const title = page.title;
   const description = page.meta_description || '';
-  const canonical = `${process.env.SITE_URL}/topic/${page.slug}`;
+  const canonical = `${process.env.SITE_URL}/tips/${page.slug}`;
 
   let out = injectHead(html, { title, description, canonical });
   if (page.meta_keywords) {
     out = out.replace(/(<meta id="meta-keywords" name="keywords" content=")[^"]*(")/, `$1${escapeHtml(page.meta_keywords)}$2`);
   }
   out = out.replace('<span id="breadcrumb-current">Predictions</span>', `<span id="breadcrumb-current">${escapeHtml(page.h1 || page.title)}</span>`);
-  const body = `<h1>${escapeHtml(page.h1 || page.title)}</h1>`;
+  const article = String(page.intro_content || '').split(/\n\s*\n/).map((block) => {
+    const line = block.trim();
+    if (!line) return '';
+    const heading = /^(#{1,3})\s+([\s\S]*)$/.exec(line);
+    if (heading) return `<h${heading[1].length + 1}>${escapeHtml(heading[2])}</h${heading[1].length + 1}>`;
+    return `<p>${escapeHtml(line).replace(/\n/g, '<br>')}</p>`;
+  }).join('');
+  const body = `<h1>${escapeHtml(page.h1 || page.title)}</h1><div class="article-content">${article}</div>`;
   out = out.replace(
     '<div id="page-container"><div class="skeleton" style="height:200px;border-radius:14px;"></div></div>',
     `<div id="page-container">${body}</div>`

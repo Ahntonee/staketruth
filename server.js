@@ -118,7 +118,10 @@ function extraHeadTags() {
   return inject;
 }
 
+const pageSeo = require('./services/pageSeo');
 const SEO_PAGE_KEY_BY_PATH = {
+  '/index.html': 'home',
+  '/bet-builder.html': 'bet-builder',
   '/': 'home',
   '/predictions.html': 'predictions',
   '/pricing.html': 'pricing',
@@ -139,14 +142,9 @@ app.use((req, res, next) => {
     const pageKey = SEO_PAGE_KEY_BY_PATH[req.path];
     if (pageKey) {
       try {
-        const [rows] = await pool.query('SELECT title, description, keywords, og_image FROM seo_settings WHERE page_key = ?', [pageKey]);
+        const [rows] = await pool.query('SELECT * FROM seo_settings WHERE page_key = ?', [pageKey]);
         const seo = rows[0];
-        if (seo) {
-          if (seo.title) html = html.replace(/<title>.*?<\/title>/s, `<title>${seo.title}</title>`);
-          if (seo.description) html = html.replace(/(<meta name="description" content=")[^"]*(")/, `$1${seo.description.replace(/"/g, '&quot;')}$2`);
-          if (seo.keywords) html = html.replace(/(<meta name="keywords" content=")[^"]*(")/, `$1${seo.keywords.replace(/"/g, '&quot;')}$2`);
-          if (seo.og_image) html = html.replace(/(<meta property="og:image" content=")[^"]*(")/, `$1${seo.og_image}$2`);
-        }
+        if (seo) html = pageSeo.render(html, seo);
       } catch (e) { /* DB might not be seeded yet — fall back to the static defaults in the file */ }
     }
 
@@ -258,7 +256,8 @@ app.get('/blog/:slug', (req, res) => {
   });
 });
 
-app.get('/topic/:slug', (req, res) => {
+app.get('/topic/:slug', (req, res) => res.redirect(301, `/tips/${encodeURIComponent(req.params.slug)}`));
+app.get('/tips/:slug', (req, res) => {
   fs.readFile(path.join(PUBLIC_DIR, 'seo-landing.html'), 'utf8', async (err, html) => {
     if (err) return res.status(500).send('Server error');
     try {
@@ -311,7 +310,7 @@ app.get('/sitemap.xml', async (req, res) => {
     ...lowPriorityUrls.map((u) => urlXml(u, null, '0.3')),
     ...preds.map((p) => urlXml(`/prediction/${p.slug}`, p.updated_at, '0.6')),
     ...posts.map((p) => urlXml(`/blog/${p.slug}`, p.updated_at, '0.5')),
-    ...topics.map((t) => urlXml(`/topic/${t.slug}`, t.updated_at, '0.7')),
+    ...topics.map((t) => urlXml(`/tips/${t.slug}`, t.updated_at, '0.7')),
   ].join('');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${body}</urlset>`;

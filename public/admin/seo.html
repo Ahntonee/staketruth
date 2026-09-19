@@ -20,7 +20,7 @@
       <div id="admin-user-slot"></div>
     </div>
     <div class="admin-content">
-      <p class="text-soft">These values drive the &lt;title&gt;, meta description, and keywords served for each page — changes here go live immediately, no deploy needed.</p>
+      <p class="text-soft">Edit each page?s heading, introduction, title, description, keywords, social sharing tags and search visibility. Saved changes appear on the next page load. Blank headings and titles retain their defaults; a blank introduction removes it. Edit full articles under Static Pages, Blog CMS or SEO Pages.</p>
       <div id="seo-list"></div>
     </div>
   </div>
@@ -28,29 +28,41 @@
 <script src="/js/admin.js"></script>
 <script>
 (function () {
+  var fields = [
+    ['title', 'SEO title (browser and search results)', false],
+    ['h1', 'Visible H1 heading', false],
+    ['intro', 'Visible introduction / subtitle', true],
+    ['description', 'Meta description', true],
+    ['keywords', 'Meta keywords (comma separated)', false],
+    ['og_title', 'Social sharing title (blank uses SEO title)', false],
+    ['og_description', 'Social sharing description (blank uses meta description)', true],
+    ['og_image', 'Social sharing image URL', false],
+    ['canonical_url', 'Canonical URL (blank keeps the page URL)', false]
+  ];
   async function load() {
     var res = await AD.api('/pages/seo');
     document.getElementById('seo-list').innerHTML = res.data.map(function (s) {
-      return '<div class="card card-pad" style="margin-bottom:12px;">' +
-        '<strong style="text-transform:capitalize;">' + s.page_key + '</strong>' +
-        '<div class="form-group" style="margin-top:8px;"><label class="form-label">Title</label><input class="form-control" data-title="' + s.page_key + '" value="' + AD.escapeHtml(s.title || '') + '"></div>' +
-        '<div class="form-group"><label class="form-label">Description</label><textarea class="form-control" data-description="' + s.page_key + '">' + AD.escapeHtml(s.description || '') + '</textarea></div>' +
-        '<div class="form-group"><label class="form-label">Keywords</label><input class="form-control" data-keywords="' + s.page_key + '" value="' + AD.escapeHtml(s.keywords || '') + '"></div>' +
-        '<div class="form-group"><label class="form-label">OG Image URL</label><input class="form-control" data-og="' + s.page_key + '" value="' + AD.escapeHtml(s.og_image || '') + '"></div>' +
-        '<button class="btn btn-primary btn-sm" data-save="' + s.page_key + '">Save</button>' +
-      '</div>';
+      var key = AD.escapeHtml(s.page_key);
+      return '<div class="card card-pad" data-page="' + key + '" style="margin-bottom:12px;">' +
+        '<h2 style="font-size:1.1rem;text-transform:capitalize;">' + key + '</h2>' +
+        (s.public_path ? '<a href="' + AD.escapeHtml(s.public_path) + '" target="_blank" rel="noopener">View page</a>' : '') +
+        fields.filter(function (field) { return s.supports_heading || ['h1', 'intro'].indexOf(field[0]) === -1; }).map(function (field) {
+          var id = 'seo-' + key + '-' + field[0];
+          var value = AD.escapeHtml(s[field[0]] || '');
+          return '<div class="form-group"><label class="form-label" for="' + id + '">' + field[1] + '</label>' +
+            (field[2] ? '<textarea id="' + id + '" class="form-control" data-field="' + field[0] + '" rows="3">' + value + '</textarea>' : '<input id="' + id + '" class="form-control" data-field="' + field[0] + '" value="' + value + '">') + '</div>';
+        }).join('') +
+        '<div class="form-group"><label class="form-label" for="robots-' + key + '">Search visibility</label><select id="robots-' + key + '" class="form-control" data-field="robots">' +
+        ['index, follow', 'noindex, follow', 'noindex, nofollow'].map(function (value) { return '<option' + ((s.robots || 'index, follow') === value ? ' selected' : '') + '>' + value + '</option>'; }).join('') + '</select></div>' +
+        '<button class="btn btn-primary btn-sm" data-save="' + key + '">Save</button></div>';
     }).join('');
   }
 
   document.getElementById('seo-list').addEventListener('click', async function (e) {
     var key = e.target.getAttribute('data-save');
     if (!key) return;
-    var body = {
-      title: document.querySelector('[data-title="' + key + '"]').value,
-      description: document.querySelector('[data-description="' + key + '"]').value,
-      keywords: document.querySelector('[data-keywords="' + key + '"]').value,
-      og_image: document.querySelector('[data-og="' + key + '"]').value,
-    };
+    var body = {};
+    e.target.closest('[data-page]').querySelectorAll('[data-field]').forEach(function (input) { body[input.dataset.field] = input.value; });
     try { await AD.api('/pages/seo/' + key, { method: 'PUT', body: body }); AD.showToast('SEO saved for ' + key, 'success'); }
     catch (err) { AD.showToast(err.message, 'error'); }
   });

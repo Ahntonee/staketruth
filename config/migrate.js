@@ -580,6 +580,7 @@ const SITE_SETTINGS = [
 ];
 
 const SEO_PAGES = [
+  ['bet-builder', 'Bet Builder | StakeTruth', 'Build your football accumulator from today?s predictions with StakeTruth Bet Builder.', 'football bet builder, accumulator builder, football predictions'],
   ['home', 'StakeTruth — Football Predictions Today | VIP Tips & Banker of the Day', 'Free and VIP football predictions today, backed by a statistical Intelligence Engine. Correct score tips, Over 2.5 goals predictions, BTTS tips, and the daily Banker of the Day pick.', 'football predictions today, football tips today, banker of the day, VIP football tips, correct score predictions, over 2.5 goals predictions, BTTS predictions today, sure football tips'],
   ['predictions', 'Today’s Football Predictions & Betting Tips | StakeTruth', 'Browse today’s free and VIP football predictions by league, market, and confidence score. Updated daily from our Intelligence Engine.', 'football predictions today, best football tips today, VIP predictions, over/under 2.5 tips, BTTS tips today'],
   ['pricing', 'VIP Subscription — Unlock Premium Football Tips | StakeTruth', 'Subscribe to StakeTruth VIP for premium football predictions, banker of the day exclusives, and early access to high-confidence picks.', 'VIP football tips, football prediction subscription, premium betting tips, sure odds today'],
@@ -705,6 +706,10 @@ async function migrate() {
   // Seed site settings
   for (const [key, value] of SITE_SETTINGS) {
     await pool.query(`INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES (?, ?)`, [key, value]);
+  }
+
+  for (const [column, definition] of Object.entries({ h1: 'VARCHAR(255) NULL', intro: 'TEXT NULL', og_title: 'VARCHAR(255) NULL', og_description: 'TEXT NULL', canonical_url: 'VARCHAR(500) NULL', robots: 'VARCHAR(100) NULL' })) {
+    await ensureColumn('seo_settings', column, definition);
   }
 
   // Seed SEO settings

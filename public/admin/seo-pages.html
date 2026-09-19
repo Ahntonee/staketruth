@@ -10,6 +10,12 @@
 <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6/css/all.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/easymde@2.20.0/dist/easymde.min.css" rel="stylesheet">
 <link href="/css/style.css" rel="stylesheet">
+<style>
+.seo-info{padding:24px 28px;margin-bottom:24px;background:#f0f9f2;border:1px solid #bce8c7;border-radius:20px;color:#30465b;display:flex;gap:18px;line-height:1.65;box-shadow:0 8px 20px rgba(0,0,0,.05)}
+.seo-info .material-icons-round{color:#12844c;font-size:26px;flex:none}.seo-info strong{color:#10261b}.seo-info code{background:transparent;color:#34435b}
+.seo-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.seo-toolbar .btn{background:#128044;border-color:#128044;border-radius:12px;padding:10px 20px;font-weight:700}
+.seo-table-wrap{background:#fff;border:1px solid #dce5ee;border-radius:20px;overflow:auto}.seo-table{width:100%;border-collapse:collapse;min-width:850px}.seo-table th{text-align:left;text-transform:uppercase;letter-spacing:.08em;color:#627084;font-size:13px;padding:16px 20px;background:#fdfdfb}.seo-table td{padding:18px 20px;border-top:1px solid #dce5ee;vertical-align:middle;color:#112b22}.seo-table td:first-child{font-weight:700}.seo-table .seo-url{color:#e43c32;text-decoration:none;overflow-wrap:anywhere;font-weight:400}.seo-table .seo-date{color:#64758a;font-weight:400}.seo-table .seo-status{display:inline-block;background:#e0f1e7;color:#087641;border-radius:5px;padding:5px 9px;font-size:12px;font-weight:800;text-transform:uppercase}.seo-table .seo-status.draft{background:#fff1d9;color:#946000}.seo-actions{display:flex;gap:8px}.seo-actions button{border:1.5px solid #008542;border-radius:12px;background:#fff;color:#008542;min-width:48px;height:44px;cursor:pointer}.seo-actions button[data-delete]{color:#dd3b33}.seo-actions button:hover{background:#edf7f0}
+</style>
 </head>
 <body>
 <div class="admin-shell">
@@ -22,21 +28,15 @@
       <div id="admin-user-slot"></div>
     </div>
     <div class="admin-content">
-      <div class="card card-pad" style="margin-bottom:16px;">
-        <p class="text-soft" style="font-size:0.85rem;margin:0;">
-          Real, publicly-visible landing pages at <code>/topic/your-slug</code> -- shown identically to users and search engines
-          (no cloaking). Each page shows your own intro copy plus a live predictions feed filtered by league and/or market,
-          gated by the same role rules as the main site.
-        </p>
-      </div>
-      <div class="flex justify-between items-center" style="margin-bottom:14px;">
+      <div class="seo-info"><span class="material-icons-round">info</span><div><strong>How SEO Pages work:</strong> Each page lives at <code>/tips/[slug]</code> and is crawlable by search engines. When someone opens it, they see your article content plus live predictions. Published pages are added to the sitemap.</div></div>
+      <div class="seo-toolbar">
         <div></div>
-        <button class="btn btn-primary btn-sm" id="add-btn"><span class="material-icons-round" style="font-size:1rem;">add</span> Add SEO Page</button>
+        <button class="btn btn-primary" id="add-btn"><span class="material-icons-round" style="font-size:1rem;">add</span> New SEO Page</button>
       </div>
-      <div class="table-scroll">
-        <table class="data-table" id="pages-table">
-          <thead><tr><th>Title</th><th>Slug</th><th>League</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="pages-tbody"><tr><td colspan="6">Loading…</td></tr></tbody>
+      <div class="seo-table-wrap">
+        <table class="seo-table" id="pages-table">
+          <thead><tr><th style="width:43%">Title</th><th style="width:28%">Slug / URL</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead>
+          <tbody id="pages-tbody"><tr><td colspan="5">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -50,7 +50,7 @@
       <input type="hidden" name="id">
       <div class="form-group"><label class="form-label">Title (page &lt;title&gt; tag) <span style="color:var(--danger);">*</span></label><input required name="title" class="form-control" placeholder="e.g. Premier League Predictions Today | StakeTruth"></div>
       <div class="form-group"><label class="form-label">URL Slug <span class="text-soft" style="font-weight:400;">(leave blank to auto-generate from title)</span></label>
-        <div class="flex items-center gap-8"><span class="text-soft">/topic/</span><input name="slug" class="form-control" placeholder="auto-generated-from-title"></div>
+        <div class="flex items-center gap-8"><span class="text-soft">/tips/</span><input name="slug" class="form-control" placeholder="auto-generated-from-title"></div>
       </div>
       <div class="grid-2" style="grid-template-columns:1fr 1fr;">
         <div class="form-group"><label class="form-label">Status</label><select name="is_published" class="form-control"><option value="0">Draft</option><option value="1" selected>Published</option></select></div>
@@ -99,16 +99,16 @@
   function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
   function rowHtml(p) {
+    var updated = p.updated_at ? new Date(p.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
     return '<tr>' +
       '<td data-label="Title">' + AD.escapeHtml(p.title) + '</td>' +
-      '<td data-label="Slug"><a href="/topic/' + p.slug + '" target="_blank">/topic/' + AD.escapeHtml(p.slug) + '</a></td>' +
-      '<td data-label="League">' + AD.escapeHtml(p.league_text_filter || 'Any') + '</td>' +
-      '<td data-label="Category">' + (p.category || 'Any') + '</td>' +
-      '<td data-label="Status">' + (p.is_published ? '<span class="badge badge-won">Published</span>' : '<span class="badge badge-pending">Draft</span>') + '</td>' +
-      '<td data-label="Actions">' +
-        '<button class="btn btn-outline btn-sm" data-toggle="' + p.id + '" data-published="' + (p.is_published ? '1' : '0') + '">' + (p.is_published ? 'Unpublish' : 'Publish') + '</button> ' +
-        '<button class="btn btn-outline btn-sm" data-edit="' + p.id + '">Edit</button> ' +
-        '<button class="btn btn-danger btn-sm" data-delete="' + p.id + '">Delete</button>' +
+      '<td data-label="Slug / URL"><a class="seo-url" href="/tips/' + encodeURIComponent(p.slug) + '" target="_blank">/tips/' + AD.escapeHtml(p.slug) + '</a></td>' +
+      '<td data-label="Status"><span class="seo-status' + (p.is_published ? '' : ' draft') + '">' + (p.is_published ? 'Published' : 'Draft') + '</span></td>' +
+      '<td data-label="Updated" class="seo-date">' + updated + '</td>' +
+      '<td data-label="Actions"><div class="seo-actions">' +
+        '<button title="Edit" aria-label="Edit" data-edit="' + p.id + '"><span class="material-icons-round" data-edit="' + p.id + '">edit</span></button>' +
+        '<button title="Delete" aria-label="Delete" data-delete="' + p.id + '"><span class="material-icons-round" data-delete="' + p.id + '">delete</span></button>' +
+      '</div>' +
       '</td>' +
     '</tr>';
   }
