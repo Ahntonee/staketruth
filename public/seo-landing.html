@@ -75,7 +75,11 @@
         ? predictions.map(function (p) { return ST.buildPredictionCard(p); }).join('')
         : '<div class="empty-state">No live predictions for this yet — check back soon.</div>';
     } catch (e) {
-      pageContainer.innerHTML = '<div class="empty-state">This page could not be found.</div>';
+      // The server has already rendered the article. A blocked or temporary
+      // API failure must not replace valid content with a false 404 message.
+      if (!pageContainer.querySelector('h1')) {
+        pageContainer.innerHTML = '<div class="empty-state">This page is temporarily unavailable.</div>';
+      }
       listContainer.innerHTML = '';
     }
   }
