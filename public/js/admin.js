@@ -95,13 +95,53 @@
     { key: 'settings', href: 'settings.html', icon: 'settings', label: 'Settings' },
   ];
 
+  // Inline SVGs keep the admin navigation usable when Google Fonts is blocked.
+  var ICON_PATHS = {
+    dashboard: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+    psychology: '<circle cx="12" cy="8" r="4"/><path d="M5 21v-3a7 7 0 0 1 14 0v3M9 8h6M12 5v6"/>',
+    sports_soccer: '<circle cx="12" cy="12" r="9"/><path d="m9 10 3-2 3 2-1 4h-4zM5 9l4 1M15 10l4-1M10 14l-2 5M14 14l2 5"/>',
+    stacked_line_chart: '<path d="M3 20h18M4 16l5-5 4 3 7-8M4 11l5-5 4 3 7-6"/>',
+    category: '<rect x="3" y="3" width="8" height="8"/><circle cx="17" cy="7" r="4"/><path d="m7 15 5 6H2zM15 15h6v6h-6z"/>',
+    leaderboard: '<path d="M3 21h18M4 21v-7h5v7M10 21V7h5v14M16 21v-10h5v10M12 3v2"/>',
+    article: '<path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h6"/>',
+    campaign: '<path d="M3 10h4l11-5v14L7 14H3zM7 14l2 6h3M20 9a4 4 0 0 1 0 6"/>',
+    workspace_premium: '<circle cx="12" cy="9" r="6"/><path d="m8 14-2 8 6-3 6 3-2-8M12 6l1 2h2l-2 2 1 2-2-1-2 1 1-2-2-2h2z"/>',
+    group: '<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3 20v-2a6 6 0 0 1 12 0v2zM16 15a4 4 0 0 1 5 4v1h-4"/>',
+    emoji_events: '<path d="M7 3h10v7a5 5 0 0 1-10 0zM7 5H3v3a4 4 0 0 0 4 4M17 5h4v3a4 4 0 0 1-4 4M12 15v4M8 21h8"/>',
+    shield: '<path d="m12 2 8 4v6c0 5-3 8-8 10-5-2-8-5-8-10V6zM9 12l2 2 4-4"/>',
+    sync: '<path d="M20 7V3l-3 3a8 8 0 0 0-13 5M4 17v4l3-3a8 8 0 0 0 13-5M16 7h4M4 17h4"/>',
+    insights: '<path d="M3 20h18M5 16l5-5 4 3 5-8M16 6h3v3"/>',
+    query_stats: '<circle cx="10" cy="10" r="7"/><path d="m15 15 6 6M6 11l3-3 2 2 3-4"/>',
+    payments: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
+    search: '<circle cx="10" cy="10" r="7"/><path d="m15 15 6 6"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2"/>',
+    description: '<path d="M5 2h9l5 5v15H5zM14 2v5h5M8 12h8M8 16h8"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M10 2h4l1 3 3 1 3-1 2 4-2 2v3l2 2-2 4-3-1-3 1-1 3h-4l-1-3-3-1-3 1-2-4 2-2v-3L1 9l2-4 3 1 3-1z"/>',
+    open_in_new: '<path d="M13 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-8M13 3h8v8M21 3l-10 10"/>',
+    logout: '<path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5M14 7l5 5-5 5M19 12H8"/>',
+    menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 11v6M12 7h.01"/>',
+    add: '<path d="M12 5v14M5 12h14"/>',
+    edit: '<path d="M4 20h4l12-12-4-4L4 16zM14 6l4 4"/>',
+    delete: '<path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v7M14 11v7"/>'
+  };
+  AD.icon = function (name) {
+    return '<svg class="admin-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICON_PATHS[name] || ICON_PATHS.description) + '</svg>';
+  };
+  AD.replaceIcons = function (root) {
+    (root || document).querySelectorAll('.material-icons-round').forEach(function (el) {
+      var name = el.textContent.trim();
+      if (ICON_PATHS[name]) el.innerHTML = AD.icon(name);
+    });
+  };
+
   function sidebarHtml(activeKey) {
     return '<div style="font-family:var(--font-head);font-weight:800;font-size:1.1rem;padding:8px 12px 20px;">STAKETRUTH<div style="font-size:0.7rem;font-weight:600;color:var(--text-soft);">Admin</div></div>' +
       NAV_ITEMS.map(function (item) {
-        return '<a href="' + item.href + '" class="' + (item.key === activeKey ? 'active' : '') + '"><span class="material-icons-round" style="font-size:1.1rem;">' + item.icon + '</span>' + item.label + '</a>';
+        return '<a href="' + item.href + '" class="' + (item.key === activeKey ? 'active' : '') + '">' + AD.icon(item.icon) + item.label + '</a>';
       }).join('') +
-      '<a href="/" target="_blank" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px;"><span class="material-icons-round" style="font-size:1.1rem;">open_in_new</span>View Site</a>' +
-      '<button id="ad-logout-btn" style="width:100%;"><span class="material-icons-round" style="font-size:1.1rem;">logout</span>Logout</button>';
+      '<a href="/" target="_blank" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">' + AD.icon('open_in_new') + 'View Site</a>' +
+      '<button id="ad-logout-btn" style="width:100%;">' + AD.icon('logout') + 'Logout</button>';
   }
 
   AD.requireAdmin = async function () {
@@ -120,6 +160,7 @@
   AD.renderShell = function (activeKey, user, pageTitle) {
     var sidebar = document.getElementById('admin-sidebar');
     if (sidebar) sidebar.innerHTML = sidebarHtml(activeKey);
+    AD.replaceIcons(document);
     var heading = document.getElementById('page-heading');
     if (heading) heading.textContent = pageTitle || '';
     var userSlot = document.getElementById('admin-user-slot');

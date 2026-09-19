@@ -620,6 +620,7 @@ textarea.form-control { min-height: 120px; resize: vertical; }
 .admin-sidebar.open { transform: translateX(0); }
 @media (min-width: 960px) { .admin-sidebar { transform: translateX(0); } }
 .admin-sidebar a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius); font-weight: 600; font-size: 0.9rem; margin-bottom: 2px; min-height: 44px; }
+.admin-sidebar .admin-icon { flex: none; }
 .admin-sidebar a.active, .admin-sidebar a:hover { background: var(--card-2); color: var(--primary); }
 .admin-main { flex: 1; min-width: 0; }
 @media (min-width: 960px) { .admin-main { margin-left: 240px; } }

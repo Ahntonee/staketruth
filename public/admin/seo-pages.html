@@ -12,6 +12,7 @@
 <link href="/css/style.css" rel="stylesheet">
 <style>
 .seo-info{padding:24px 28px;margin-bottom:24px;background:#f0f9f2;border:1px solid #bce8c7;border-radius:20px;color:#30465b;display:flex;gap:18px;line-height:1.65;box-shadow:0 8px 20px rgba(0,0,0,.05)}
+.admin-icon{display:inline-block;vertical-align:middle;flex:none}.seo-info .admin-icon{width:26px;height:26px}.seo-actions .admin-icon{width:20px;height:20px}.seo-toolbar .admin-icon{width:18px;height:18px}
 .seo-info .material-icons-round{color:#12844c;font-size:26px;flex:none}.seo-info strong{color:#10261b}.seo-info code{background:transparent;color:#34435b}
 .seo-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.seo-toolbar .btn{background:#128044;border-color:#128044;border-radius:12px;padding:10px 20px;font-weight:700}
 .seo-table-wrap{background:#fff;border:1px solid #dce5ee;border-radius:20px;overflow:auto}.seo-table{width:100%;border-collapse:collapse;min-width:850px}.seo-table th{text-align:left;text-transform:uppercase;letter-spacing:.08em;color:#627084;font-size:13px;padding:16px 20px;background:#fdfdfb}.seo-table td{padding:18px 20px;border-top:1px solid #dce5ee;vertical-align:middle;color:#112b22}.seo-table td:first-child{font-weight:700}.seo-table .seo-url{color:#e43c32;text-decoration:none;overflow-wrap:anywhere;font-weight:400}.seo-table .seo-date{color:#64758a;font-weight:400}.seo-table .seo-status{display:inline-block;background:#e0f1e7;color:#087641;border-radius:5px;padding:5px 9px;font-size:12px;font-weight:800;text-transform:uppercase}.seo-table .seo-status.draft{background:#fff1d9;color:#946000}.seo-actions{display:flex;gap:8px}.seo-actions button{border:1.5px solid #008542;border-radius:12px;background:#fff;color:#008542;min-width:48px;height:44px;cursor:pointer}.seo-actions button[data-delete]{color:#dd3b33}.seo-actions button:hover{background:#edf7f0}
@@ -106,8 +107,8 @@
       '<td data-label="Status"><span class="seo-status' + (p.is_published ? '' : ' draft') + '">' + (p.is_published ? 'Published' : 'Draft') + '</span></td>' +
       '<td data-label="Updated" class="seo-date">' + updated + '</td>' +
       '<td data-label="Actions"><div class="seo-actions">' +
-        '<button title="Edit" aria-label="Edit" data-edit="' + p.id + '"><span class="material-icons-round" data-edit="' + p.id + '">edit</span></button>' +
-        '<button title="Delete" aria-label="Delete" data-delete="' + p.id + '"><span class="material-icons-round" data-delete="' + p.id + '">delete</span></button>' +
+        '<button title="Edit" aria-label="Edit" data-edit="' + p.id + '">' + AD.icon('edit') + '</button>' +
+        '<button title="Delete" aria-label="Delete" data-delete="' + p.id + '">' + AD.icon('delete') + '</button>' +
       '</div>' +
       '</td>' +
     '</tr>';
@@ -191,9 +192,11 @@
   });
 
   document.getElementById('pages-tbody').addEventListener('click', async function (e) {
-    var editId = e.target.getAttribute('data-edit');
-    var deleteId = e.target.getAttribute('data-delete');
-    var toggleId = e.target.getAttribute('data-toggle');
+    var button = e.target.closest('button');
+    if (!button) return;
+    var editId = button.getAttribute('data-edit');
+    var deleteId = button.getAttribute('data-delete');
+    var toggleId = button.getAttribute('data-toggle');
     if (editId) {
       try {
         var res = await AD.api('/seo-pages/admin/' + editId);
@@ -218,7 +221,7 @@
       load();
     }
     if (toggleId) {
-      var isPublished = e.target.getAttribute('data-published') === '1';
+      var isPublished = button.getAttribute('data-published') === '1';
       await AD.api('/seo-pages/' + toggleId, { method: 'PUT', body: { is_published: !isPublished } });
       load();
     }
