@@ -680,7 +680,10 @@
     overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.id = 'st-auth-modal';
-    overlay.innerHTML = '<div class="modal watermark"><div class="modal-header"><h3 id="st-auth-title">Log In</h3><button class="modal-close" id="st-auth-close">&times;</button></div><div id="st-auth-body"></div></div>';
+    overlay.innerHTML = '<div class="modal st-auth-card">' +
+      '<div class="st-auth-badge" aria-hidden="true"><span class="material-icons-round">person</span></div>' +
+      '<div class="modal-header"><h3 id="st-auth-title">Log In</h3><button class="modal-close" id="st-auth-close" aria-label="Close authentication form">&times;</button></div>' +
+      '<div class="st-auth-panel" id="st-auth-body"></div></div>';
     document.body.appendChild(overlay);
     overlay.addEventListener('click', function (e) { if (e.target === overlay) closeAuthModal(); });
     document.getElementById('st-auth-close').addEventListener('click', closeAuthModal);
@@ -694,23 +697,23 @@
   function loginFormHtml() {
     return '' +
       '<form id="st-login-form">' +
-        '<div class="form-group"><label class="form-label">Email</label><input required type="email" name="email" class="form-control"></div>' +
-        '<div class="form-group"><label class="form-label">Password</label><input required type="password" name="password" class="form-control"></div>' +
-        '<button type="button" id="st-forgot-link" style="background:none;border:none;color:var(--primary);font-size:0.85rem;padding:0;margin-bottom:16px;">Forgot password?</button>' +
+        '<div class="form-group"><label class="sr-only" for="st-login-email">Email address</label><div class="st-auth-field"><span class="material-icons-round" aria-hidden="true">mail</span><input id="st-login-email" required type="email" name="email" class="form-control" placeholder="Email address" autocomplete="email"></div></div>' +
+        '<div class="form-group"><label class="sr-only" for="st-login-password">Password</label><div class="st-auth-field"><span class="material-icons-round" aria-hidden="true">lock</span><input id="st-login-password" required type="password" name="password" class="form-control" placeholder="Password" autocomplete="current-password"></div></div>' +
+        '<div class="st-auth-actions"><span></span><button type="button" id="st-forgot-link">Forgot password?</button></div>' +
         '<button type="submit" class="btn btn-primary btn-block">Log In</button>' +
       '</form>' +
-      '<p class="text-soft text-center" style="margin-top:14px;">No account? <button type="button" data-auth-open="register" style="background:none;border:none;color:var(--primary);font-weight:700;">Sign up free</button></p>';
+      '<p class="st-auth-switch">No account? <button type="button" data-auth-open="register">Sign up free</button></p>';
   }
 
   function registerFormHtml() {
     return '' +
       '<form id="st-register-form">' +
-        '<div class="form-group"><label class="form-label">Name</label><input required type="text" name="name" class="form-control"></div>' +
-        '<div class="form-group"><label class="form-label">Email</label><input required type="email" name="email" class="form-control"></div>' +
-        '<div class="form-group"><label class="form-label">Password</label><input required type="password" name="password" class="form-control" minlength="8"><small class="text-soft">8+ characters, 1 uppercase, 1 number, 1 special character.</small></div>' +
+        '<div class="form-group"><label class="sr-only" for="st-register-name">Name</label><div class="st-auth-field"><span class="material-icons-round" aria-hidden="true">person</span><input id="st-register-name" required type="text" name="name" class="form-control" placeholder="Full name" autocomplete="name"></div></div>' +
+        '<div class="form-group"><label class="sr-only" for="st-register-email">Email address</label><div class="st-auth-field"><span class="material-icons-round" aria-hidden="true">mail</span><input id="st-register-email" required type="email" name="email" class="form-control" placeholder="Email address" autocomplete="email"></div></div>' +
+        '<div class="form-group"><label class="sr-only" for="st-register-password">Password</label><div class="st-auth-field"><span class="material-icons-round" aria-hidden="true">lock</span><input id="st-register-password" required type="password" name="password" class="form-control" minlength="8" placeholder="Password" autocomplete="new-password"></div><small class="st-auth-help">8+ characters, 1 uppercase, 1 number, 1 special character.</small></div>' +
         '<button type="submit" class="btn btn-primary btn-block">Create Free Account</button>' +
       '</form>' +
-      '<p class="text-soft text-center" style="margin-top:14px;">Already have an account? <button type="button" data-auth-open="login" style="background:none;border:none;color:var(--primary);font-weight:700;">Log in</button></p>';
+      '<p class="st-auth-switch">Already have an account? <button type="button" data-auth-open="login">Log in</button></p>';
   }
 
   function otpFormHtml(email) {
@@ -725,7 +728,7 @@
   function forgotFormHtml() {
     return '' +
       '<form id="st-forgot-form">' +
-        '<div class="form-group"><label class="form-label">Email</label><input required type="email" name="email" class="form-control"></div>' +
+        '<div class="form-group"><label class="sr-only" for="st-forgot-email">Email address</label><div class="st-auth-field"><span class="material-icons-round" aria-hidden="true">mail</span><input id="st-forgot-email" required type="email" name="email" class="form-control" placeholder="Email address" autocomplete="email"></div></div>' +
         '<button type="submit" class="btn btn-primary btn-block">Send Reset Link</button>' +
       '</form>';
   }

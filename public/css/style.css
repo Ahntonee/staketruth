@@ -567,6 +567,74 @@ textarea.form-control { min-height: 120px; resize: vertical; }
    content (which needs no z-index changes of its own) while still painting
    on top of the element's own solid background. Uses `contain` sizing so the
    full logo shows, faded, without cropping or distorting its aspect ratio. */
+/* ---- StakeTruth authentication card ------------------------------------- */
+#st-auth-modal { padding: 18px; background: rgba(20, 14, 10, .72); backdrop-filter: blur(5px); }
+#st-auth-modal .st-auth-card {
+  width: min(100%, 430px); max-height: calc(100vh - 36px); overflow-y: auto;
+  padding: 74px 28px 30px; border: 1px solid rgba(255, 107, 53, .28);
+  border-radius: 24px; color: #fff8f3;
+  background:
+    radial-gradient(circle at 85% 8%, rgba(255, 107, 53, .28), transparent 34%),
+    linear-gradient(155deg, #352117 0%, #1d1713 56%, #120f0d 100%);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, .42);
+}
+#st-auth-modal .st-auth-card::before { display: none; }
+.st-auth-badge {
+  position: absolute; top: 24px; left: 50%; z-index: 2; transform: translateX(-50%);
+  display: grid; place-items: center; width: 68px; height: 68px; border-radius: 50%;
+  color: var(--primary); background: #17120f; border: 2px solid rgba(255, 107, 53, .48);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+.st-auth-badge .material-icons-round { font-size: 38px; font-weight: 300; }
+#st-auth-modal .modal-header { justify-content: center; margin: 16px 0 18px; }
+#st-auth-modal .modal-header h3 { margin: 0; color: #fff8f3; font-size: 1.35rem; text-align: center; }
+#st-auth-modal .modal-close {
+  position: absolute; top: 12px; right: 12px; color: rgba(255,255,255,.72);
+  cursor: pointer; border-radius: 50%;
+}
+#st-auth-modal .modal-close:hover { color: #fff; background: rgba(255,255,255,.08); }
+.st-auth-panel {
+  padding: 24px 22px 20px; border: 1px solid rgba(255,255,255,.20); border-radius: 15px;
+  background: rgba(255,255,255,.055); box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+.st-auth-panel .form-group { margin-bottom: 13px; }
+.st-auth-field { position: relative; }
+.st-auth-field > .material-icons-round {
+  position: absolute; left: 13px; top: 50%; z-index: 1; transform: translateY(-50%);
+  color: rgba(255,255,255,.58); font-size: 19px; pointer-events: none;
+}
+#st-auth-modal .st-auth-field .form-control {
+  min-height: 48px; padding: 11px 14px 11px 43px; border-color: rgba(255,255,255,.16);
+  border-radius: 7px; color: #fff; background: rgba(255,255,255,.11);
+}
+#st-auth-modal .st-auth-field .form-control::placeholder { color: rgba(255,255,255,.52); }
+#st-auth-modal .st-auth-field .form-control:focus {
+  border-color: var(--primary); outline: 2px solid rgba(255,107,53,.24); background: rgba(255,255,255,.15);
+}
+.st-auth-actions { display: flex; justify-content: space-between; margin: -1px 0 15px; }
+.st-auth-actions button, .st-auth-switch button {
+  padding: 0; border: 0; color: #ff8a5f; background: none; font: inherit; font-weight: 700; cursor: pointer;
+}
+.st-auth-actions button { font-size: .78rem; }
+.st-auth-help { display: block; margin-top: 6px; color: rgba(255,255,255,.62); font-size: .72rem; line-height: 1.4; }
+.st-auth-panel > .text-soft { color: rgba(255,255,255,.68); }
+#st-auth-modal #st-otp-form .form-control {
+  border-color: rgba(255,255,255,.16); color: #fff; background: rgba(255,255,255,.11);
+}
+#st-auth-modal .btn-primary {
+  min-height: 48px; margin-top: 5px; border-radius: 7px; text-transform: uppercase;
+  letter-spacing: .06em; box-shadow: 0 8px 20px rgba(224,80,31,.24);
+}
+.st-auth-switch { margin: 17px 0 0; color: rgba(255,255,255,.66); font-size: .88rem; text-align: center; }
+
+@media (max-width: 420px) {
+  #st-auth-modal { padding: 10px; align-items: center; }
+  #st-auth-modal .st-auth-card { padding: 68px 16px 20px; border-radius: 20px; }
+  .st-auth-badge { top: 18px; width: 62px; height: 62px; }
+  .st-auth-panel { padding: 20px 15px 17px; }
+  #st-auth-modal .modal-header { margin-top: 12px; }
+}
+
 .watermark { position: relative; }
 .watermark::after {
   content: '';
