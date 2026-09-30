@@ -832,6 +832,84 @@
     } catch (e) { /* no ad slots configured yet */ }
   };
 
+  // Keep category filters to one line and place anything that would wrap in
+  // an accessible dropdown. Recalculate when the content column is resized.
+  ST.initCategoryOverflow = function () {
+    document.querySelectorAll('#category-tabs').forEach(function (row) {
+      if (row.querySelector('.category-overflow')) return;
+
+      var tabs = Array.from(row.children).filter(function (el) { return el.classList.contains('category-tab'); });
+      if (!tabs.length) return;
+
+      var overflow = document.createElement('div');
+      overflow.className = 'category-overflow';
+      overflow.hidden = true;
+      overflow.innerHTML =
+        '<button type="button" class="category-tab category-overflow__toggle" aria-expanded="false" aria-haspopup="true">' +
+          'More <span class="material-icons-round" aria-hidden="true">expand_more</span>' +
+        '</button><div class="category-overflow__menu" role="menu"></div>';
+      row.appendChild(overflow);
+
+      var toggle = overflow.querySelector('.category-overflow__toggle');
+      var menu = overflow.querySelector('.category-overflow__menu');
+
+      function closeMenu() {
+        overflow.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+
+      function layout() {
+        closeMenu();
+        tabs.forEach(function (tab) { tab.hidden = false; });
+        overflow.hidden = true;
+
+        var firstTop = tabs[0].offsetTop;
+        var hiddenTabs = tabs.filter(function (tab) { return tab.offsetTop > firstTop + 2; });
+        if (!hiddenTabs.length) { menu.innerHTML = ''; return; }
+
+        hiddenTabs.forEach(function (tab) { tab.hidden = true; });
+        overflow.hidden = false;
+
+        // Make room for the More button if it was pushed onto a second line.
+        while (overflow.offsetTop > firstTop + 2) {
+          var visible = tabs.filter(function (tab) { return !tab.hidden; });
+          if (visible.length <= 1) break;
+          visible[visible.length - 1].hidden = true;
+        }
+
+        hiddenTabs = tabs.filter(function (tab) { return tab.hidden; });
+        menu.innerHTML = '';
+        hiddenTabs.forEach(function (tab) {
+          var item = tab.cloneNode(true);
+          item.removeAttribute('hidden');
+          item.classList.remove('category-tab');
+          item.setAttribute('role', 'menuitem');
+          menu.appendChild(item);
+        });
+        toggle.classList.toggle('active', hiddenTabs.some(function (tab) { return tab.classList.contains('active'); }));
+      }
+
+      toggle.addEventListener('click', function () {
+        var opening = !overflow.classList.contains('open');
+        document.querySelectorAll('.category-overflow.open').forEach(function (item) { item.classList.remove('open'); });
+        overflow.classList.toggle('open', opening);
+        toggle.setAttribute('aria-expanded', String(opening));
+      });
+      document.addEventListener('click', function (event) { if (!overflow.contains(event.target)) closeMenu(); });
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && overflow.classList.contains('open')) { closeMenu(); toggle.focus(); }
+      });
+
+      var resizeTimer;
+      window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(layout, 100);
+      });
+      layout();
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+    });
+  };
+
   // ---- Boot -------------------------------------------------------------------
   document.addEventListener('DOMContentLoaded', function () {
     ST.injectHeader();
@@ -839,6 +917,7 @@
     ST.refreshAuth();
     ST.injectAdSlots();
     ST.injectBackToTop();
+    ST.initCategoryOverflow();
     fetchAffiliateConfig();
 
     var pending = sessionStorage.getItem('st_pending_toast');

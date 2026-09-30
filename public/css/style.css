@@ -690,10 +690,29 @@ textarea.form-control { min-height: 120px; resize: vertical; }
 .st-popup-card h3 { margin: 4px 0 8px; font-size: 1.1rem; }
 .st-popup-card p { color: var(--text-soft); font-size: 0.9rem; line-height: 1.5; margin-bottom: 16px; white-space: pre-line; }
 
-/* Keep every prediction category visible at all viewport sizes. */
-#category-tabs { flex-wrap: wrap; overflow: visible; }
+/* Keep the primary prediction categories on one row; wrapped items are moved
+   into the responsive More menu by ST.initCategoryOverflow. */
+#category-tabs { flex-wrap: wrap; overflow: visible; position: relative; }
 #category-tabs .category-tab { text-decoration: none; color: var(--text); }
 #category-tabs .category-tab.active { color: #fff; }
+.category-overflow { flex: 0 0 auto; position: relative; }
+.category-overflow[hidden], #category-tabs .category-tab[hidden] { display: none; }
+.category-overflow__toggle { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.category-overflow__toggle .material-icons-round { font-size: 1.1rem; transition: transform .18s ease; }
+.category-overflow.open .category-overflow__toggle .material-icons-round { transform: rotate(180deg); }
+.category-overflow__menu {
+  display: none; position: absolute; z-index: 80; top: calc(100% + 8px); right: 0;
+  min-width: 190px; padding: 7px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--card); box-shadow: 0 12px 30px rgba(0,0,0,.16);
+}
+.category-overflow.open .category-overflow__menu { display: grid; }
+#category-tabs .category-overflow__menu a {
+  display: block; padding: 10px 12px; border-radius: 8px; color: var(--text);
+  font-size: .85rem; font-weight: 700; text-decoration: none;
+}
+#category-tabs .category-overflow__menu a:hover,
+#category-tabs .category-overflow__menu a:focus-visible { background: var(--card-2); outline: none; }
+#category-tabs .category-overflow__menu a.active { background: var(--primary); color: #fff; }
 .admin-main, .admin-content, .EasyMDEContainer { min-width: 0; }
 .EasyMDEContainer .editor-toolbar button { min-width: 30px; min-height: 30px; }
 
