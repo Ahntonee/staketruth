@@ -70,7 +70,7 @@
       var subCard = document.getElementById('subscription-card');
       if (sub && sub.status === 'active') {
         subCard.innerHTML = '<h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">workspace_premium</span>Subscription</h3>' +
-          '<p>Plan: <strong>' + sub.plan + '</strong></p><p>Expires: ' + new Date(sub.expires_at).toDateString() + '</p>' +
+          '<p>Plan: <strong>' + ST.escapeHtml(ST.formatSubscriptionPlan(sub.plan)) + '</strong></p><p>Expires: ' + new Date(sub.expires_at).toDateString() + '</p>' +
           '<button class="btn btn-outline btn-sm" id="cancel-sub-btn">Cancel Subscription</button>';
         document.getElementById('cancel-sub-btn').addEventListener('click', async function () {
           if (!confirm('Cancel your VIP subscription? You will keep access until it expires.')) return;

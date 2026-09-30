@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const categories = require('../config/categories');
+const { PLANS } = require('../services/plans');
 
 function newsletter(result) {
   const queries = [];
@@ -46,6 +47,25 @@ test('every category has a crawlable link on both prediction lists', () => {
     const html = fs.readFileSync(file, 'utf8');
     for (const key of Object.keys(categories)) assert.ok(html.includes('href="/topic/' + key.replace(/_/g, '-') + '-predictions"'), key);
   }
+});
+test('Gold and Diamond pricing buttons match configured prices and durations', () => {
+  const html = fs.readFileSync('public/pricing.html', 'utf8');
+  const buttons = [...html.matchAll(/data-plan="([^"]+)" data-amount="(\d+)"/g)];
+  const expected = [
+    ['gold_biweekly', 9000, 14],
+    ['gold_monthly', 15000, 30],
+    ['diamond_biweekly', 10000, 14],
+    ['diamond_monthly', 18500, 30],
+  ];
+  assert.equal(buttons.length, 5);
+  expected.forEach(([plan, amount, days], index) => {
+    assert.equal(buttons[index][1], plan);
+    assert.equal(Number(buttons[index][2]), amount);
+    assert.equal(PLANS[plan].amount, amount);
+    assert.equal(PLANS[plan].days, days);
+  });
+  assert.equal(buttons[4][1], 'diamond_monthly');
+  assert.match(html, /Accuracy figures are targets, not guarantees/);
 });
 test('editor pages load matching pinned editor styles and script plus icons', () => {
   for (const name of ['seo-pages', 'blog', 'pages']) {

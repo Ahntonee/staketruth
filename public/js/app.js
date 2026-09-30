@@ -46,6 +46,20 @@
     return Number(value).toFixed(2);
   };
 
+  ST.formatSubscriptionPlan = function (plan) {
+    var labels = {
+      daypass: 'Day Pass',
+      monthly: 'Monthly',
+      quarterly: 'Quarterly',
+      annual: 'Annual',
+      gold_biweekly: 'Gold Plan · Bi-Weekly',
+      gold_monthly: 'Gold Plan · Monthly',
+      diamond_biweekly: 'Diamond Plan · Bi-Weekly',
+      diamond_monthly: 'Diamond Plan · Monthly',
+    };
+    return labels[plan] || String(plan || '').replace(/_/g, ' ');
+  };
+
   ST.showToast = function (message, type) {
     var wrap = document.querySelector('.toast-wrap');
     if (!wrap) {
