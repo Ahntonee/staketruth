@@ -71,7 +71,7 @@ const getPublic = asyncHandler(async (req, res) => {
   const role = req.user ? req.user.role : 'guest';
   return successResponse(res, {
     page,
-    predictions: predictionRows.map((r) => serializePrediction(r, role)),
+    predictions: predictionRows.map((r) => serializePrediction(r, role, req.user?.plan)),
   });
 });
 

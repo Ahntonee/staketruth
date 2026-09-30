@@ -17,6 +17,13 @@ async function attachUser(req, res, next) {
     );
     if (rows.length && !rows[0].is_banned) {
       req.user = rows[0];
+      if (req.user.role === 'vip') {
+        const [[subscription]] = await pool.query(
+          "SELECT plan FROM subscriptions WHERE user_id = ? AND status = 'active' AND expires_at > NOW() ORDER BY expires_at DESC LIMIT 1",
+          [req.user.id]
+        );
+        req.user.plan = subscription?.plan || null;
+      }
     }
   } catch (err) {
     // invalid/expired token — treat as logged out

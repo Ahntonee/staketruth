@@ -99,6 +99,7 @@ const TABLES = [
     intelligence_score INT,
     analysis TEXT,
     is_vip TINYINT(1) DEFAULT 0,
+    vip_tier ENUM('gold','diamond') DEFAULT 'gold',
     is_banker TINYINT(1) DEFAULT 0,
     is_featured TINYINT(1) DEFAULT 0,
     is_vip_pick_of_day TINYINT(1) DEFAULT 0,
@@ -185,7 +186,7 @@ const TABLES = [
   `CREATE TABLE IF NOT EXISTS subscriptions (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
-    plan ENUM('monthly','quarterly','annual') NOT NULL,
+    plan ENUM('monthly','quarterly','annual','daypass','gold_biweekly','gold_monthly','diamond_biweekly','diamond_monthly') NOT NULL,
     status ENUM('active','cancelled','expired','trialing') DEFAULT 'active',
     provider ENUM('paystack','manual') DEFAULT 'paystack',
     provider_subscription_id VARCHAR(255),
@@ -623,6 +624,12 @@ async function migrate() {
 
   // Idempotent column additions for tables that may already exist from an earlier run
   await ensureColumn('predictions', 'is_published', "TINYINT(1) DEFAULT 1");
+  await ensureColumn('predictions', 'vip_tier', "ENUM('gold','diamond') DEFAULT 'gold'");
+  const [[planColumn]] = await pool.query("SHOW COLUMNS FROM subscriptions LIKE 'plan'");
+  if (!planColumn.Type.includes('diamond_monthly')) {
+    await pool.query("ALTER TABLE subscriptions MODIFY COLUMN plan ENUM('monthly','quarterly','annual','daypass','gold_biweekly','gold_monthly','diamond_biweekly','diamond_monthly') NOT NULL");
+    console.log('[migrate] expanded subscription plans');
+  }
   await ensureColumn('users', 'is_comment_banned', "TINYINT(1) DEFAULT 0");
   await ensureColumn('ad_slots', 'ad_type', "ENUM('adsense','banner_image','text_link','custom_code') DEFAULT 'adsense'");
   await ensureColumn('ad_slots', 'image_url', "VARCHAR(500)");

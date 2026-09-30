@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
 const { pool } = require('../config/db');
+const { PLANS } = require('../services/plans');
 
 // Mounted in server.js with express.raw({ type: 'application/json' }) BEFORE
 // express.json(), so req.body here is the raw Buffer needed for HMAC verification.
@@ -17,17 +18,19 @@ router.post('/paystack', async (req, res) => {
     const event = JSON.parse(req.body.toString('utf8'));
 
     if (event.event === 'charge.success') {
-      const { reference, customer, plan: planCode } = event.data;
+      const { reference, customer } = event.data;
+      const plan = event.data.metadata?.plan;
+      const selectedPlan = PLANS[plan];
+      if (!selectedPlan || event.data.amount !== selectedPlan.amount * 100 || event.data.currency !== 'NGN') return res.status(200).end();
       const [existing] = await pool.query('SELECT id FROM subscriptions WHERE paystack_reference = ?', [reference]);
       if (!existing.length) {
         const [userRows] = await pool.query('SELECT id FROM users WHERE email = ?', [customer.email]);
-        if (userRows.length) {
-          const days = event.data.metadata?.plan === 'annual' ? 365 : event.data.metadata?.plan === 'quarterly' ? 90 : 30;
-          const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+        if (userRows.length && Number(event.data.metadata?.user_id) === userRows[0].id) {
+          const expiresAt = new Date(Date.now() + selectedPlan.days * 24 * 60 * 60 * 1000);
           await pool.query(
             `INSERT INTO subscriptions (user_id, plan, status, provider, paystack_reference, amount, currency, expires_at)
              VALUES (?, ?, 'active', 'paystack', ?, ?, ?, ?)`,
-            [userRows[0].id, event.data.metadata?.plan || 'monthly', reference, event.data.amount / 100, event.data.currency, expiresAt]
+            [userRows[0].id, plan, reference, event.data.amount / 100, event.data.currency, expiresAt]
           );
           await pool.query("UPDATE users SET role = 'vip' WHERE id = ?", [userRows[0].id]);
         }

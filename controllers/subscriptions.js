@@ -2,8 +2,9 @@ const axios = require('axios');
 const { pool } = require('../config/db');
 const { successResponse, errorResponse, asyncHandler, parsePagination, paginate } = require('../utils/helpers');
 const email = require('../utils/email');
+const { PLANS } = require('../services/plans');
 
-const DURATIONS = { daypass: 1, monthly: 30, quarterly: 90, annual: 365 };
+const LEGACY_DURATIONS = { daypass: 1, monthly: 30, quarterly: 90, annual: 365 };
 
 const getStatus = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(
@@ -15,7 +16,8 @@ const getStatus = asyncHandler(async (req, res) => {
 
 const paystackVerify = asyncHandler(async (req, res) => {
   const { reference, plan } = req.body;
-  if (!DURATIONS[plan]) return errorResponse(res, 'Invalid plan', 400);
+  const selectedPlan = PLANS[plan];
+  if (!selectedPlan || !reference) return errorResponse(res, 'Invalid plan or payment reference', 400);
 
   if (!process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET_KEY.includes('YOUR_PAYSTACK')) {
     return errorResponse(res, 'Payments are not configured yet on this deployment. Add PAYSTACK_SECRET_KEY to .env.', 503);
@@ -26,8 +28,19 @@ const paystackVerify = asyncHandler(async (req, res) => {
   });
   const txn = response.data.data;
   if (txn.status !== 'success') return errorResponse(res, 'Payment not successful', 400);
+  if (txn.amount !== selectedPlan.amount * 100 || txn.currency !== 'NGN' ||
+      txn.metadata?.plan !== plan || Number(txn.metadata?.user_id) !== req.user.id ||
+      txn.customer?.email?.toLowerCase() !== req.user.email.toLowerCase()) {
+    return errorResponse(res, 'Payment does not match the selected plan', 400);
+  }
 
-  const expiresAt = new Date(Date.now() + DURATIONS[plan] * 24 * 60 * 60 * 1000);
+  const [existing] = await pool.query('SELECT user_id, plan, expires_at FROM subscriptions WHERE paystack_reference = ?', [reference]);
+  if (existing.length) {
+    if (existing[0].user_id !== req.user.id || existing[0].plan !== plan) return errorResponse(res, 'Payment already used', 409);
+    return successResponse(res, { message: 'VIP already activated', expiresAt: existing[0].expires_at });
+  }
+
+  const expiresAt = new Date(Date.now() + selectedPlan.days * 24 * 60 * 60 * 1000);
 
   await pool.query(
     `INSERT INTO subscriptions (user_id, plan, status, provider, paystack_reference, amount, currency, expires_at)
@@ -50,7 +63,7 @@ const cancel = asyncHandler(async (req, res) => {
 
 const adminGrant = asyncHandler(async (req, res) => {
   const { user_id, plan, days } = req.body;
-  const duration = days || DURATIONS[plan] || 30;
+  const duration = days || PLANS[plan]?.days || LEGACY_DURATIONS[plan] || 30;
   const expiresAt = new Date(Date.now() + duration * 24 * 60 * 60 * 1000);
   await pool.query(
     `INSERT INTO subscriptions (user_id, plan, status, provider, amount, expires_at) VALUES (?, ?, 'active', 'manual', 0, ?)`,

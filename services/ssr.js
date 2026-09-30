@@ -39,8 +39,8 @@ function injectHead(html, { title, description, canonical, jsonLd, ogImage }) {
   return out;
 }
 
-function renderPredictionPage(html, p, role) {
-  const lockReason = getLockReason(p, role);
+function renderPredictionPage(html, p, role, plan) {
+  const lockReason = getLockReason(p, role, plan);
   const title = `${p.home_team} vs ${p.away_team} Prediction — ${lockReason ? 'VIP Pick' : p.tip} | StakeTruth`;
   const description = `StakeTruth prediction for ${p.home_team} vs ${p.away_team}: ${lockReason ? 'full analysis available to VIP members.' : (p.analysis || p.tip)}`;
   const canonical = `${process.env.SITE_URL}/prediction/${p.slug}`;

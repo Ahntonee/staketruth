@@ -235,7 +235,7 @@ app.get('/prediction/:slug', (req, res) => {
         'SELECT p.*, l.name AS league_name FROM predictions p LEFT JOIN leagues l ON l.id = p.league_id WHERE p.slug = ?',
         [req.params.slug]
       );
-      if (rows.length) html = ssr.renderPredictionPage(html, rows[0], req.user ? req.user.role : 'guest');
+      if (rows.length) html = ssr.renderPredictionPage(html, rows[0], req.user ? req.user.role : 'guest', req.user?.plan);
     } catch (e) { /* fall back to the static template defaults */ }
     const inject = extraHeadTags();
     if (inject) html = html.replace('</head>', `${inject}</head>`);

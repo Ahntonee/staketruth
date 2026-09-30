@@ -16,18 +16,25 @@ function getRole(req) {
 }
 
 // The definitive role-based gating rule (Part 10 of the spec).
-function getLockReason(row, role) {
-  if (role === 'admin' || role === 'vip') return null;
-  if (row.is_banker) return role === 'user' ? null : 'guest';
+function getLockReason(row, role, plan) {
+  if (role === 'admin') return null;
+  if (row.is_banker) return role === 'guest' ? 'guest' : null;
   if (row.is_vip) {
     if (role === 'guest') return 'guest';
-    if (role === 'user') return row.pushed_to_registered ? null : 'subscription_required';
+    if (role === 'vip') {
+      const isDiamond = plan === 'diamond_biweekly' || plan === 'diamond_monthly';
+      const isGold = isDiamond || plan === 'gold_biweekly' || plan === 'gold_monthly' ||
+        plan === 'monthly' || plan === 'quarterly' || plan === 'annual' || plan === 'daypass';
+      if (row.vip_tier === 'diamond' && !isDiamond) return 'diamond_required';
+      return isGold ? null : 'subscription_required';
+    }
+    if (role === 'user') return row.vip_tier === 'diamond' ? 'diamond_required' : (row.pushed_to_registered ? null : 'subscription_required');
   }
   return null; // free content
 }
 
-function serializePrediction(row, role) {
-  const lockReason = getLockReason(row, role);
+function serializePrediction(row, role, plan) {
+  const lockReason = getLockReason(row, role, plan);
   const base = {
     id: row.id,
     slug: row.slug,
@@ -39,6 +46,7 @@ function serializePrediction(row, role) {
     market: row.market,
     category: row.category,
     is_vip: !!row.is_vip,
+    vip_tier: row.is_vip ? (row.vip_tier || 'gold') : null,
     is_banker: !!row.is_banker,
     is_featured: !!row.is_featured,
     is_vip_pick_of_day: !!row.is_vip_pick_of_day,
@@ -110,7 +118,7 @@ const listPredictions = asyncHandler(async (req, res) => {
      LIMIT ? OFFSET ?`,
     [...params, limit, offset]
   );
-  return successResponse(res, rows.map((r) => serializePrediction(r, role)), paginate(countRows[0].cnt, page, limit));
+  return successResponse(res, rows.map((r) => serializePrediction(r, role, req.user?.plan)), paginate(countRows[0].cnt, page, limit));
 });
 
 const getStats = asyncHandler(async (req, res) => {
@@ -136,7 +144,7 @@ const getBankers = asyncHandler(async (req, res) => {
      WHERE p.is_banker = 1 AND p.is_published = 1 AND DATE(p.match_date) = CURDATE()
      ORDER BY p.intelligence_score DESC LIMIT 2`
   );
-  return successResponse(res, rows.map((r) => serializePrediction(r, role)));
+  return successResponse(res, rows.map((r) => serializePrediction(r, role, req.user?.plan)));
 });
 
 const getVipPicksOfDay = asyncHandler(async (req, res) => {
@@ -146,7 +154,7 @@ const getVipPicksOfDay = asyncHandler(async (req, res) => {
      WHERE p.is_vip_pick_of_day = 1 AND p.is_published = 1 AND DATE(p.match_date) = CURDATE()
      ORDER BY p.intelligence_score DESC LIMIT 5`
   );
-  return successResponse(res, rows.map((r) => serializePrediction(r, role)));
+  return successResponse(res, rows.map((r) => serializePrediction(r, role, req.user?.plan)));
 });
 
 const getRecentWins = asyncHandler(async (req, res) => {
@@ -165,7 +173,7 @@ const getFeatured = asyncHandler(async (req, res) => {
     `SELECT p.*, l.name AS league_name FROM predictions p LEFT JOIN leagues l ON l.id = p.league_id
      WHERE p.is_featured = 1 AND p.is_published = 1 ORDER BY p.match_date DESC LIMIT 10`
   );
-  return successResponse(res, rows.map((r) => serializePrediction(r, role)));
+  return successResponse(res, rows.map((r) => serializePrediction(r, role, req.user?.plan)));
 });
 
 const getBySlug = asyncHandler(async (req, res) => {
@@ -175,7 +183,7 @@ const getBySlug = asyncHandler(async (req, res) => {
     [req.params.slug]
   );
   if (!rows.length) return errorResponse(res, 'Prediction not found', 404);
-  return successResponse(res, serializePrediction(rows[0], role));
+  return successResponse(res, serializePrediction(rows[0], role, req.user?.plan));
 });
 
 // ---- Votes ---------------------------------------------------------------
@@ -224,7 +232,7 @@ const castVote = asyncHandler(async (req, res) => {
 const ALLOWED_FIELDS = [
   'league_id', 'home_team', 'away_team', 'home_team_logo', 'away_team_logo', 'match_date', 'tip',
   'market', 'category', 'odds', 'confidence_score', 'intelligence_score', 'analysis',
-  'is_vip', 'is_banker', 'is_featured', 'is_vip_pick_of_day',
+  'is_vip', 'vip_tier', 'is_banker', 'is_featured', 'is_vip_pick_of_day',
 ];
 
 const createPrediction = asyncHandler(async (req, res) => {
@@ -240,11 +248,11 @@ const createPrediction = asyncHandler(async (req, res) => {
   const [result] = await pool.query(
     `INSERT INTO predictions
      (slug, league_id, home_team, away_team, match_date, tip, market, category, odds, confidence_score,
-      analysis, is_vip, is_banker, is_featured, is_vip_pick_of_day, bookies_available, source, is_published, published_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', 1, NOW())`,
+      analysis, is_vip, vip_tier, is_banker, is_featured, is_vip_pick_of_day, bookies_available, source, is_published, published_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', 1, NOW())`,
     [slug, b.league_id || null, b.home_team, b.away_team, b.match_date, b.tip, b.market || '1X2',
       b.category || 'free', b.odds || null, b.confidence_score || null, b.analysis || null,
-      b.is_vip ? 1 : 0, b.is_banker ? 1 : 0, b.is_featured ? 1 : 0, b.is_vip_pick_of_day ? 1 : 0,
+      b.is_vip ? 1 : 0, b.vip_tier === 'diamond' ? 'diamond' : 'gold', b.is_banker ? 1 : 0, b.is_featured ? 1 : 0, b.is_vip_pick_of_day ? 1 : 0,
       b.bookies_available ? JSON.stringify(b.bookies_available) : null]
   );
   return successResponse(res, { id: result.insertId, slug }, undefined, 201);
@@ -253,6 +261,7 @@ const createPrediction = asyncHandler(async (req, res) => {
 const updatePrediction = asyncHandler(async (req, res) => {
   const fields = Object.keys(req.body).filter((k) => ALLOWED_FIELDS.includes(k));
   if (!fields.length) return errorResponse(res, 'No valid fields to update', 400);
+  if (req.body.vip_tier && !['gold', 'diamond'].includes(req.body.vip_tier)) return errorResponse(res, 'Invalid VIP tier', 400);
   const setSql = fields.map((f) => `${f} = ?`).join(', ');
   const values = fields.map((f) => (typeof req.body[f] === 'boolean' ? (req.body[f] ? 1 : 0) : req.body[f]));
   await pool.query(`UPDATE predictions SET ${setSql} WHERE id = ?`, [...values, req.params.id]);

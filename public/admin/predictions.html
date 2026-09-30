@@ -103,6 +103,7 @@
       <div class="form-group"><label class="form-label">Bookies Available (comma-separated)</label><input name="bookies_available" class="form-control" placeholder="Bet365, 1xBet"></div>
       <div class="flex gap-12" style="margin-bottom:16px;flex-wrap:wrap;">
         <label class="flex items-center gap-8"><input type="checkbox" name="is_vip"> VIP</label>
+        <label class="flex items-center gap-8">VIP tier <select name="vip_tier" class="form-control"><option value="gold">Gold</option><option value="diamond">Diamond</option></select></label>
         <label class="flex items-center gap-8"><input type="checkbox" name="is_banker"> Banker</label>
         <label class="flex items-center gap-8"><input type="checkbox" name="is_featured"> Featured</label>
         <label class="flex items-center gap-8"><input type="checkbox" name="is_vip_pick_of_day"> Truthpick of Day</label>
@@ -272,7 +273,7 @@
       form.category.value = p.category; form.odds.value = p.odds || ''; form.confidence_score.value = p.confidence_score || '';
       form.analysis.value = p.analysis || '';
       form.bookies_available.value = (typeof p.bookies_available === 'string' ? JSON.parse(p.bookies_available || '[]') : (p.bookies_available || [])).join(', ');
-      form.is_vip.checked = !!p.is_vip; form.is_banker.checked = !!p.is_banker; form.is_featured.checked = !!p.is_featured; form.is_vip_pick_of_day.checked = !!p.is_vip_pick_of_day;
+      form.is_vip.checked = !!p.is_vip; form.vip_tier.value = p.vip_tier || 'gold'; form.is_banker.checked = !!p.is_banker; form.is_featured.checked = !!p.is_featured; form.is_vip_pick_of_day.checked = !!p.is_vip_pick_of_day;
       document.getElementById('modal-title').textContent = 'Edit Prediction';
       openModal('edit-modal');
     }
@@ -295,7 +296,7 @@
       home_team: fd.get('home_team'), away_team: fd.get('away_team'), match_date: fd.get('match_date'),
       league_id: fd.get('league_id') || null, tip: fd.get('tip'), market: fd.get('market'), category: fd.get('category'),
       odds: fd.get('odds') || null, confidence_score: fd.get('confidence_score') || null, analysis: fd.get('analysis'),
-      is_vip: fd.get('is_vip') === 'on', is_banker: fd.get('is_banker') === 'on', is_featured: fd.get('is_featured') === 'on',
+      is_vip: fd.get('is_vip') === 'on', vip_tier: fd.get('vip_tier'), is_banker: fd.get('is_banker') === 'on', is_featured: fd.get('is_featured') === 'on',
       is_vip_pick_of_day: fd.get('is_vip_pick_of_day') === 'on',
       bookies_available: fd.get('bookies_available') ? fd.get('bookies_available').split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [],
     };

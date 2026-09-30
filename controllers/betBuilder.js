@@ -33,7 +33,7 @@ const listMySlips = asyncHandler(async (req, res) => {
       created_at: slip.created_at,
       combined_odds: combinedOdds(legRows),
       result: combinedResult(legRows),
-      legs: legRows.map((r) => serializePrediction(r, req.user.role)),
+      legs: legRows.map((r) => serializePrediction(r, req.user.role, req.user.plan)),
     });
   }
   return successResponse(res, data);
@@ -51,7 +51,7 @@ const createSlip = asyncHandler(async (req, res) => {
     `SELECT id, is_vip, is_banker, pushed_to_registered FROM predictions WHERE id IN (?) AND is_published = 1`,
     [prediction_ids]
   );
-  const viewable = rows.filter((r) => !getLockReason(r, req.user.role)).map((r) => r.id);
+  const viewable = rows.filter((r) => !getLockReason(r, req.user.role, req.user.plan)).map((r) => r.id);
   if (viewable.length < 2) return errorResponse(res, 'Not enough viewable predictions among your selection', 400);
 
   const [result] = await pool.query(

@@ -23,7 +23,7 @@ async function legsForAccumulator(accumulatorId) {
 // free users get a locked teaser, VIP/admin see the full leg-by-leg breakdown.
 const listPublicAccumulators = asyncHandler(async (req, res) => {
   const role = getRole(req);
-  const lockReason = getLockReason({ is_vip: 1, is_banker: 0, pushed_to_registered: 0 }, role);
+  const lockReason = getLockReason({ is_vip: 1, is_banker: 0, pushed_to_registered: 0 }, role, req.user?.plan);
   const [accas] = await pool.query(
     `SELECT * FROM accumulators WHERE is_published = 1 ORDER BY published_at DESC LIMIT 20`
   );
@@ -37,7 +37,7 @@ const listPublicAccumulators = asyncHandler(async (req, res) => {
       legCount: lockReason ? null : legRows.length,
       combined_odds: lockReason ? null : combinedOdds(legRows),
       result: lockReason ? null : combinedResult(legRows),
-      legs: lockReason ? [] : legRows.map((r) => serializePrediction(r, role)),
+      legs: lockReason ? [] : legRows.map((r) => serializePrediction(r, role, req.user?.plan)),
       published_at: acca.published_at,
     });
   }
