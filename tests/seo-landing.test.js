@@ -23,12 +23,13 @@ test('a failed SEO page API request preserves the server-rendered article', asyn
   assert.equal(predictions.innerHTML, '');
 });
 
-test('search-only SEO articles are public, sitemap-visible, and distinct from drafts', () => {
+test('only published SEO articles are public and sitemap-visible', () => {
   const controller = fs.readFileSync('controllers/seoPages.js', 'utf8');
   const server = fs.readFileSync('server.js', 'utf8');
   const admin = fs.readFileSync('public/admin/seo-pages.html', 'utf8');
-  assert.match(controller, /sp\.is_published = 1 OR sp\.is_search_only = 1/);
-  assert.match(server, /is_published = 1 OR is_search_only = 1/);
-  assert.match(admin, /Search only — crawlable/);
+  assert.match(controller, /sp\.slug = \? AND sp\.is_published = 1/);
+  assert.match(server, /seo_landing_pages WHERE is_published = 1/);
+  assert.doesNotMatch(controller + server + admin, /is_search_only|Search only/);
+  assert.match(admin, /Published — crawlable/);
   assert.match(admin, /Draft — private/);
 });

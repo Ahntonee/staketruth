@@ -445,7 +445,6 @@ const TABLES = [
     league_id INT,
     category VARCHAR(50),
     is_published TINYINT(1) DEFAULT 1,
-    is_search_only TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE SET NULL
@@ -646,7 +645,6 @@ async function migrate() {
   // Search-only pages are public landing articles discoverable through their
   // URL and sitemap, but do not need to be promoted in normal site navigation.
   // Drafts remain private; this avoids exposing unfinished content to crawlers.
-  await ensureColumn('seo_landing_pages', 'is_search_only', "TINYINT(1) DEFAULT 0");
 
   // Blog post scheduling: when set, the post stays a draft until this
   // moment, at which point the scheduler cron flips is_published to 1.

@@ -296,7 +296,7 @@ app.get('/tips/:slug', (req, res) => {
     if (err) return res.status(500).send('Server error');
     try {
       const [rows] = await pool.query(
-        'SELECT * FROM seo_landing_pages WHERE slug = ? AND (is_published = 1 OR is_search_only = 1)',
+        'SELECT * FROM seo_landing_pages WHERE slug = ? AND is_published = 1',
         [req.params.slug]
       );
       if (!rows.length) return res.status(404).send('Page not found');
@@ -370,7 +370,7 @@ app.get('/sitemaps/blog.xml', async (req, res) => {
 app.get('/sitemaps/tips.xml', async (req, res) => {
   const xml = await cachedSitemap('tips', async () => {
     const [rows] = await pool.query(
-      "SELECT slug, updated_at FROM seo_landing_pages WHERE (is_published = 1 OR is_search_only = 1) AND slug IS NOT NULL AND slug != '' ORDER BY updated_at DESC"
+      "SELECT slug, updated_at FROM seo_landing_pages WHERE is_published = 1 AND slug IS NOT NULL AND slug != '' ORDER BY updated_at DESC"
     );
     return urlSet(process.env.SITE_URL, rows.map((row) => ({
       path: `/tips/${encodePathSegment(row.slug)}`, lastmod: row.updated_at, priority: '0.8',
