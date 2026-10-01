@@ -18,6 +18,22 @@ const app = express();
 app.set('trust proxy', 1);
 app.set('etag', false);
 
+// Consolidate the bare and www hostnames before analytics, static files, or
+// dynamic routes run. Canonical tags alone still leave both hosts crawlable;
+// a permanent redirect gives search engines and users one definitive origin.
+let canonicalOrigin = null;
+try { canonicalOrigin = new URL(process.env.SITE_URL); } catch (e) { /* local development may omit SITE_URL */ }
+app.use((req, res, next) => {
+  if (!canonicalOrigin) return next();
+  const canonicalHost = canonicalOrigin.hostname.toLowerCase();
+  const bareHost = canonicalHost.replace(/^www\./, '');
+  const requestHost = req.hostname.toLowerCase();
+  const isSiteHost = requestHost === canonicalHost || requestHost === bareHost;
+  const wrongOrigin = requestHost !== canonicalHost || req.protocol !== canonicalOrigin.protocol.replace(':', '');
+  if (isSiteHost && wrongOrigin) return res.redirect(301, `${canonicalOrigin.origin}${req.originalUrl}`);
+  return next();
+});
+
 // ---- Webhooks need the raw body for signature verification — must be
 // registered BEFORE express.json() ------------------------------------------
 app.use('/api/webhooks', express.raw({ type: 'application/json' }));
@@ -110,8 +126,10 @@ function extraHeadTags() {
   if (process.env.ADSENSE_PUBLISHER_ID) {
     inject += `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.ADSENSE_PUBLISHER_ID}" crossorigin="anonymous"></script>`;
   }
-  if (process.env.GA_MEASUREMENT_ID) {
-    const gaId = process.env.GA_MEASUREMENT_ID;
+  // This is the site's existing production stream ID (previously hardcoded
+  // only in index.html). The env value remains the preferred override.
+  const gaId = process.env.GA_MEASUREMENT_ID || 'G-8LXBZ2JH7K';
+  if (/^G-[A-Z0-9]+$/i.test(gaId)) {
     inject += `<script async src="https://www.googletagmanager.com/gtag/js?id=${gaId}"></script>` +
       `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}');</script>`;
   }
@@ -226,30 +244,46 @@ app.get('/api/status', async (req, res) => {
 // homepage until client JS corrected it, which told search engines to treat
 // the whole prediction/blog/topic library as homepage duplicates.
 const ssr = require('./services/ssr');
+const {
+  INDEXABLE_PREDICTION_WHERE, encodePathSegment, sitemapIndex, urlSet,
+} = require('./services/seoIndexing');
 
-app.get('/prediction/:slug', (req, res) => {
+function sendPublicNotFound(res, resource = 'Page') {
+  res.set('X-Robots-Tag', 'noindex');
+  return res.status(404).type('html').send(
+    '<!doctype html><html lang="en"><head><meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<meta name="robots" content="noindex"><title>Not Found | StakeTruth</title></head>' +
+    `<body><main><h1>${resource} not found</h1><p>The requested content is no longer available.</p>` +
+    '<p><a href="/">Return to StakeTruth</a></p></main></body></html>'
+  );
+}
+
+app.get('/prediction/:slug', (req, res, next) => {
   fs.readFile(path.join(PUBLIC_DIR, 'prediction-detail.html'), 'utf8', async (err, html) => {
-    if (err) return res.status(500).send('Server error');
+    if (err) return next(err);
     try {
       const [rows] = await pool.query(
-        'SELECT p.*, l.name AS league_name FROM predictions p LEFT JOIN leagues l ON l.id = p.league_id WHERE p.slug = ?',
+        'SELECT p.*, l.name AS league_name FROM predictions p LEFT JOIN leagues l ON l.id = p.league_id WHERE p.slug = ? AND p.is_published = 1',
         [req.params.slug]
       );
-      if (rows.length) html = ssr.renderPredictionPage(html, rows[0], req.user ? req.user.role : 'guest', req.user?.plan);
-    } catch (e) { /* fall back to the static template defaults */ }
+      if (!rows.length) return sendPublicNotFound(res, 'Prediction');
+      html = ssr.renderPredictionPage(html, rows[0], req.user ? req.user.role : 'guest', req.user?.plan);
+    } catch (e) { return next(e); }
     const inject = extraHeadTags();
     if (inject) html = html.replace('</head>', `${inject}</head>`);
     res.type('html').send(html);
   });
 });
 
-app.get('/blog/:slug', (req, res) => {
+app.get('/blog/:slug', (req, res, next) => {
   fs.readFile(path.join(PUBLIC_DIR, 'blog-post.html'), 'utf8', async (err, html) => {
-    if (err) return res.status(500).send('Server error');
+    if (err) return next(err);
     try {
       const [rows] = await pool.query('SELECT * FROM blog_posts WHERE slug = ? AND is_published = 1', [req.params.slug]);
-      if (rows.length) html = ssr.renderBlogPage(html, rows[0]);
-    } catch (e) { /* fall back to the static template defaults */ }
+      if (!rows.length) return sendPublicNotFound(res, 'Article');
+      html = ssr.renderBlogPage(html, rows[0]);
+    } catch (e) { return next(e); }
     const inject = extraHeadTags();
     if (inject) html = html.replace('</head>', `${inject}</head>`);
     res.type('html').send(html);
@@ -262,7 +296,7 @@ app.get('/tips/:slug', (req, res) => {
     if (err) return res.status(500).send('Server error');
     try {
       const [rows] = await pool.query(
-        'SELECT * FROM seo_landing_pages WHERE slug = ? AND is_published = 1',
+        'SELECT * FROM seo_landing_pages WHERE slug = ? AND (is_published = 1 OR is_search_only = 1)',
         [req.params.slug]
       );
       if (!rows.length) return res.status(404).send('Page not found');
@@ -288,33 +322,72 @@ app.get('/ads.txt', async (req, res) => {
   res.type('text/plain').send(`google.com, ${publisherId}, DIRECT, f08c47fec0942fa0\n`);
 });
 
-let sitemapCache = { xml: null, at: 0 };
+const sitemapCache = new Map();
+const SITEMAP_TTL_MS = 60 * 60 * 1000;
+const sitemapPaths = ['/sitemaps/pages.xml', '/sitemaps/blog.xml', '/sitemaps/tips.xml', '/sitemaps/predictions.xml'];
+
+async function cachedSitemap(key, build) {
+  const cached = sitemapCache.get(key);
+  if (cached && Date.now() - cached.at < SITEMAP_TTL_MS) return cached.xml;
+  const xml = await build();
+  sitemapCache.set(key, { xml, at: Date.now() });
+  return xml;
+}
+
 app.get('/sitemap.xml', async (req, res) => {
-  if (sitemapCache.xml && Date.now() - sitemapCache.at < 60 * 60 * 1000) {
-    return res.type('application/xml').send(sitemapCache.xml);
-  }
-  const site = process.env.SITE_URL;
-  const staticUrls = ['/', '/predictions.html', '/pricing.html', '/blog.html', '/about.html', '/statistics.html'];
-  const lowPriorityUrls = ['/contact.html', '/terms.html', '/privacy.html'];
-  const [preds] = await pool.query(
-    "SELECT slug, updated_at FROM predictions WHERE is_published = 1 AND slug IS NOT NULL ORDER BY updated_at DESC LIMIT 5000"
-  );
-  const [posts] = await pool.query("SELECT slug, updated_at FROM blog_posts WHERE is_published = 1 ORDER BY updated_at DESC");
-  const [topics] = await pool.query("SELECT slug, updated_at FROM seo_landing_pages WHERE is_published = 1 ORDER BY updated_at DESC");
+  const xml = await cachedSitemap('index', async () => sitemapIndex(process.env.SITE_URL, sitemapPaths));
+  res.type('application/xml').send(xml);
+});
 
-  const urlXml = (loc, lastmod, priority) =>
-    `<url><loc>${site}${loc}</loc>${lastmod ? `<lastmod>${new Date(lastmod).toISOString()}</lastmod>` : ''}<priority>${priority}</priority></url>`;
+app.get('/sitemaps/pages.xml', async (req, res) => {
+  const xml = await cachedSitemap('pages', async () => urlSet(process.env.SITE_URL, [
+    { path: '/', priority: '1.0' },
+    { path: '/predictions.html', priority: '0.8' },
+    { path: '/blog.html', priority: '0.8' },
+    { path: '/bet-builder.html', priority: '0.7' },
+    { path: '/statistics.html', priority: '0.7' },
+    { path: '/pricing.html', priority: '0.6' },
+    { path: '/about.html', priority: '0.6' },
+    { path: '/contact.html', priority: '0.3' },
+    { path: '/terms.html', priority: '0.3' },
+    { path: '/privacy.html', priority: '0.3' },
+  ]));
+  res.type('application/xml').send(xml);
+});
 
-  const body = [
-    ...staticUrls.map((u) => urlXml(u, null, u === '/' ? '1.0' : '0.7')),
-    ...lowPriorityUrls.map((u) => urlXml(u, null, '0.3')),
-    ...preds.map((p) => urlXml(`/prediction/${p.slug}`, p.updated_at, '0.6')),
-    ...posts.map((p) => urlXml(`/blog/${p.slug}`, p.updated_at, '0.5')),
-    ...topics.map((t) => urlXml(`/tips/${t.slug}`, t.updated_at, '0.7')),
-  ].join('');
+app.get('/sitemaps/blog.xml', async (req, res) => {
+  const xml = await cachedSitemap('blog', async () => {
+    const [rows] = await pool.query(
+      "SELECT slug, updated_at FROM blog_posts WHERE is_published = 1 AND slug IS NOT NULL AND slug != '' ORDER BY COALESCE(published_at, created_at) DESC"
+    );
+    return urlSet(process.env.SITE_URL, rows.map((row) => ({
+      path: `/blog/${encodePathSegment(row.slug)}`, lastmod: row.updated_at, priority: '0.7',
+    })));
+  });
+  res.type('application/xml').send(xml);
+});
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${body}</urlset>`;
-  sitemapCache = { xml, at: Date.now() };
+app.get('/sitemaps/tips.xml', async (req, res) => {
+  const xml = await cachedSitemap('tips', async () => {
+    const [rows] = await pool.query(
+      "SELECT slug, updated_at FROM seo_landing_pages WHERE (is_published = 1 OR is_search_only = 1) AND slug IS NOT NULL AND slug != '' ORDER BY updated_at DESC"
+    );
+    return urlSet(process.env.SITE_URL, rows.map((row) => ({
+      path: `/tips/${encodePathSegment(row.slug)}`, lastmod: row.updated_at, priority: '0.8',
+    })));
+  });
+  res.type('application/xml').send(xml);
+});
+
+app.get('/sitemaps/predictions.xml', async (req, res) => {
+  const xml = await cachedSitemap('predictions', async () => {
+    const [rows] = await pool.query(
+      `SELECT p.slug, p.updated_at FROM predictions p WHERE ${INDEXABLE_PREDICTION_WHERE} ORDER BY p.match_date ASC`
+    );
+    return urlSet(process.env.SITE_URL, rows.map((row) => ({
+      path: `/prediction/${encodePathSegment(row.slug)}`, lastmod: row.updated_at, priority: '0.6',
+    })));
+  });
   res.type('application/xml').send(xml);
 });
 

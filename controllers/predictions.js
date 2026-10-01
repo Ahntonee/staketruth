@@ -179,7 +179,8 @@ const getFeatured = asyncHandler(async (req, res) => {
 const getBySlug = asyncHandler(async (req, res) => {
   const role = getRole(req);
   const [rows] = await pool.query(
-    `SELECT p.*, l.name AS league_name FROM predictions p LEFT JOIN leagues l ON l.id = p.league_id WHERE p.slug = ?`,
+    `SELECT p.*, l.name AS league_name FROM predictions p LEFT JOIN leagues l ON l.id = p.league_id
+     WHERE p.slug = ? AND p.is_published = 1`,
     [req.params.slug]
   );
   if (!rows.length) return errorResponse(res, 'Prediction not found', 404);

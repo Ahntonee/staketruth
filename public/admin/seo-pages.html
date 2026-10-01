@@ -29,7 +29,7 @@
       <div id="admin-user-slot"></div>
     </div>
     <div class="admin-content">
-      <div class="seo-info"><span class="material-icons-round">info</span><div><strong>How SEO Pages work:</strong> Each page lives at <code>/tips/[slug]</code> and is crawlable by search engines. When someone opens it, they see your article content plus live predictions. Published pages are added to the sitemap.</div></div>
+      <div class="seo-info"><span class="material-icons-round">info</span><div><strong>How SEO Pages work:</strong> Each page lives at <code>/tips/[slug]</code>. “Search only” pages are publicly crawlable, server-rendered and added to the sitemap without needing placement in normal site navigation. Visitors and search engines always receive the same content. Drafts stay private.</div></div>
       <div class="seo-toolbar">
         <div></div>
         <button class="btn btn-primary" id="add-btn"><span class="material-icons-round" style="font-size:1rem;">add</span> New SEO Page</button>
@@ -54,7 +54,7 @@
         <div class="flex items-center gap-8"><span class="text-soft">/tips/</span><input name="slug" class="form-control" placeholder="auto-generated-from-title"></div>
       </div>
       <div class="grid-2" style="grid-template-columns:1fr 1fr;">
-        <div class="form-group"><label class="form-label">Status</label><select name="is_published" class="form-control"><option value="0">Draft</option><option value="1" selected>Published</option></select></div>
+        <div class="form-group"><label class="form-label">Visibility</label><select name="visibility" class="form-control"><option value="draft">Draft — private</option><option value="search" selected>Search only — crawlable</option><option value="published">Published — crawlable</option></select></div>
         <div class="form-group"><label class="form-label">Import from Blog Post</label><select id="import-post-select" class="form-control"><option value="">— start from scratch —</option></select></div>
       </div>
       <div class="form-group"><label class="form-label">H1 Heading</label><input name="h1" class="form-control" placeholder="Premier League Predictions Today"></div>
@@ -101,10 +101,11 @@
 
   function rowHtml(p) {
     var updated = p.updated_at ? new Date(p.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    var status = p.is_published ? 'Published' : (p.is_search_only ? 'Search only' : 'Draft');
     return '<tr>' +
       '<td data-label="Title">' + AD.escapeHtml(p.title) + '</td>' +
       '<td data-label="Slug / URL"><a class="seo-url" href="/tips/' + encodeURIComponent(p.slug) + '" target="_blank">/tips/' + AD.escapeHtml(p.slug) + '</a></td>' +
-      '<td data-label="Status"><span class="seo-status' + (p.is_published ? '' : ' draft') + '">' + (p.is_published ? 'Published' : 'Draft') + '</span></td>' +
+      '<td data-label="Status"><span class="seo-status' + ((p.is_published || p.is_search_only) ? '' : ' draft') + '">' + status + '</span></td>' +
       '<td data-label="Updated" class="seo-date">' + updated + '</td>' +
       '<td data-label="Actions"><div class="seo-actions">' +
         '<button title="Edit" aria-label="Edit" data-edit="' + p.id + '">' + AD.icon('edit') + '</button>' +
@@ -208,7 +209,7 @@
         form.meta_keywords.value = p.meta_keywords || '';
         if (mde) mde.value(p.intro_content || '');
         form.league_text_filter.value = p.league_text_filter || ''; form.category.value = p.category || '';
-        form.is_published.value = p.is_published ? '1' : '0';
+        form.visibility.value = p.is_published ? 'published' : (p.is_search_only ? 'search' : 'draft');
         document.getElementById('import-post-select').value = '';
         slugManuallyEdited = true;
         document.getElementById('modal-title').textContent = 'Edit SEO Page';
@@ -236,12 +237,13 @@
     // typed a title either) -- fall back to slugifying the title so the
     // request never goes out with an empty slug the backend would reject.
     var slug = fd.get('slug') || slugify(fd.get('title') || '');
+    var visibility = fd.get('visibility');
     var body = {
       title: fd.get('title'), slug: slug, h1: fd.get('h1'),
       meta_description: fd.get('meta_description'), meta_keywords: fd.get('meta_keywords') || null,
       intro_content: mde.value(),
       league_text_filter: fd.get('league_text_filter') || null, category: fd.get('category') || null,
-      is_published: fd.get('is_published') === '1',
+      is_published: visibility === 'published', is_search_only: visibility === 'search',
     };
     try {
       if (id) await AD.api('/seo-pages/' + id, { method: 'PUT', body: body });

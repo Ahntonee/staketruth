@@ -13,8 +13,12 @@ const STATIC_ASSET_RE = /\.(css|js|mjs|png|jpe?g|gif|svg|ico|webp|avif|woff2?|tt
 function isPageNavigation(path) {
   if (STATIC_ASSET_RE.test(path)) return false;
   if (path === '/' || path.endsWith('.html')) return true;
-  if (/^\/prediction\/[^/]+$/.test(path) || /^\/blog\/[^/]+$/.test(path)) return true;
+  if (/^\/(prediction|blog|tips)\/[^/]+$/.test(path)) return true;
   return false;
+}
+
+function isBot(userAgent = '') {
+  return /bot|crawler|spider|slurp|bingpreview|facebookexternalhit|inspectiontool|headless|lighthouse/i.test(userAgent);
 }
 
 // Lightweight, fire-and-forget page view logger. Never blocks the response and
@@ -24,16 +28,23 @@ function isPageNavigation(path) {
 function trackPageView(req, res, next) {
   if (req.method !== 'GET' || req.path.startsWith('/api/') || req.path.startsWith('/admin/')) return next();
   if (!isPageNavigation(req.path)) return next();
+  const userAgent = req.get('user-agent') || '';
+  if (isBot(userAgent)) return next();
   const path = req.path;
   const referrer = req.get('referrer') || req.get('referer') || null;
-  const deviceType = detectDeviceType(req.get('user-agent') || '');
-  const sessionId = req.cookies?.st_guest || null;
+  const deviceType = detectDeviceType(userAgent);
+  const sessionId = req.guestToken || req.cookies?.st_guest || null;
   const country = req.headers['cf-ipcountry'] || req.headers['x-country'] || null; // populated by a CDN/geo layer in production
 
-  pool.query(
-    'INSERT INTO page_views (path, country, device_type, referrer, session_id) VALUES (?, ?, ?, ?, ?)',
-    [path, country, deviceType, referrer, sessionId]
-  ).catch((err) => console.error('[analytics] page view log failed:', err.message));
+  // Record only successful page responses. Previously a nonexistent dynamic
+  // URL was counted before its route had a chance to return 404.
+  res.once('finish', () => {
+    if (res.statusCode < 200 || res.statusCode >= 300) return;
+    pool.query(
+      'INSERT INTO page_views (path, country, device_type, referrer, session_id) VALUES (?, ?, ?, ?, ?)',
+      [path, country, deviceType, referrer, sessionId]
+    ).catch((err) => console.error('[analytics] page view log failed:', err.message));
+  });
 
   next();
 }
@@ -117,7 +128,7 @@ const revenueChurn = asyncHandler(async (req, res) => {
 // blog detail pages -- and ties views back to the specific match/post via the
 // same slug the pretty URL is built from (see server.js's /prediction/:slug
 // and /blog/:slug routes).
-const CONTENT_PATH_FILTER = `(path LIKE '/prediction/%' OR path LIKE '/blog/%')`;
+const CONTENT_PATH_FILTER = `(path LIKE '/prediction/%' OR path LIKE '/blog/%' OR path LIKE '/tips/%')`;
 
 const performanceOverview = asyncHandler(async (req, res) => {
   const days = Number(req.query.days) || 30;
@@ -125,6 +136,7 @@ const performanceOverview = asyncHandler(async (req, res) => {
     `SELECT COUNT(*) AS total,
        SUM(CASE WHEN path LIKE '/prediction/%' THEN 1 ELSE 0 END) AS predictionViews,
        SUM(CASE WHEN path LIKE '/blog/%' THEN 1 ELSE 0 END) AS blogViews,
+       SUM(CASE WHEN path LIKE '/tips/%' THEN 1 ELSE 0 END) AS topicViews,
        COUNT(DISTINCT DATE(viewed_at)) AS activeDays
      FROM page_views WHERE ${CONTENT_PATH_FILTER} AND viewed_at >= DATE_SUB(NOW(), INTERVAL ? DAY)`,
     [days]
@@ -141,6 +153,7 @@ const performanceOverview = asyncHandler(async (req, res) => {
     last7Views: Number(last7.cnt) || 0,
     predictionViews: Number(period.predictionViews) || 0,
     blogViews: Number(period.blogViews) || 0,
+    topicViews: Number(period.topicViews) || 0,
     activeDays: Number(period.activeDays) || 0,
   });
 });
@@ -150,7 +163,8 @@ const performanceDaily = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(
     `SELECT DATE(viewed_at) AS day,
        SUM(CASE WHEN path LIKE '/prediction/%' THEN 1 ELSE 0 END) AS predictions,
-       SUM(CASE WHEN path LIKE '/blog/%' THEN 1 ELSE 0 END) AS blog
+       SUM(CASE WHEN path LIKE '/blog/%' THEN 1 ELSE 0 END) AS blog,
+       SUM(CASE WHEN path LIKE '/tips/%' THEN 1 ELSE 0 END) AS topics
      FROM page_views WHERE ${CONTENT_PATH_FILTER} AND viewed_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
      GROUP BY DATE(viewed_at) ORDER BY day ASC`,
     [days]

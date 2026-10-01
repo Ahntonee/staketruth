@@ -2,7 +2,7 @@ const { pool } = require('../config/db');
 const { successResponse, errorResponse, asyncHandler } = require('../utils/helpers');
 const { serializePrediction } = require('./predictions');
 
-const ALLOWED_FIELDS = ['slug', 'title', 'meta_description', 'meta_keywords', 'h1', 'intro_content', 'league_id', 'league_text_filter', 'category', 'is_published'];
+const ALLOWED_FIELDS = ['slug', 'title', 'meta_description', 'meta_keywords', 'h1', 'intro_content', 'league_id', 'league_text_filter', 'category', 'is_published', 'is_search_only'];
 
 const adminList = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(`SELECT * FROM seo_landing_pages ORDER BY created_at DESC`);
@@ -18,20 +18,25 @@ const adminGetById = asyncHandler(async (req, res) => {
 const create = asyncHandler(async (req, res) => {
   const b = req.body;
   if (!b.slug || !b.title) return errorResponse(res, 'slug and title are required', 400);
+  const isSearchOnly = b.is_search_only === true;
+  const isPublished = isSearchOnly ? 0 : (b.is_published === false ? 0 : 1);
   const [result] = await pool.query(
-    `INSERT INTO seo_landing_pages (slug, title, meta_description, meta_keywords, h1, intro_content, league_text_filter, category, is_published)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO seo_landing_pages (slug, title, meta_description, meta_keywords, h1, intro_content, league_text_filter, category, is_published, is_search_only)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [b.slug, b.title, b.meta_description || null, b.meta_keywords || null, b.h1 || b.title, b.intro_content || null,
-      b.league_text_filter || null, b.category || null, b.is_published === false ? 0 : 1]
+      b.league_text_filter || null, b.category || null, isPublished, isSearchOnly ? 1 : 0]
   );
   return successResponse(res, { id: result.insertId }, undefined, 201);
 });
 
 const update = asyncHandler(async (req, res) => {
-  const fields = Object.keys(req.body).filter((k) => ALLOWED_FIELDS.includes(k));
+  const input = { ...req.body };
+  if (input.is_search_only === true) input.is_published = false;
+  else if (input.is_published === true) input.is_search_only = false;
+  const fields = Object.keys(input).filter((k) => ALLOWED_FIELDS.includes(k));
   if (!fields.length) return errorResponse(res, 'No valid fields to update', 400);
   const setSql = fields.map((f) => `${f} = ?`).join(', ');
-  const values = fields.map((f) => (typeof req.body[f] === 'boolean' ? (req.body[f] ? 1 : 0) : req.body[f]));
+  const values = fields.map((f) => (typeof input[f] === 'boolean' ? (input[f] ? 1 : 0) : input[f]));
   await pool.query(`UPDATE seo_landing_pages SET ${setSql} WHERE id = ?`, [...values, req.params.id]);
   return successResponse(res, { message: 'Page updated' });
 });
@@ -47,7 +52,8 @@ const remove = asyncHandler(async (req, res) => {
 // lock rules as the main predictions page.
 const getPublic = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(
-    `SELECT sp.* FROM seo_landing_pages sp WHERE sp.slug = ? AND sp.is_published = 1`,
+    `SELECT sp.* FROM seo_landing_pages sp
+     WHERE sp.slug = ? AND (sp.is_published = 1 OR sp.is_search_only = 1)`,
     [req.params.slug]
   );
   if (!rows.length) return errorResponse(res, 'Page not found', 404);

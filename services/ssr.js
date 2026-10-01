@@ -15,6 +15,7 @@
 // not a replacement for it.
 
 const { getLockReason } = require('../controllers/predictions');
+const { absoluteUrl, encodePathSegment, isIndexablePrediction } = require('./seoIndexing');
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -29,12 +30,16 @@ function confidenceLabel(score) {
   return 'Very low confidence';
 }
 
-function injectHead(html, { title, description, canonical, jsonLd, ogImage }) {
+function injectHead(html, { title, description, canonical, robots = 'index, follow', jsonLd, ogImage }) {
   let out = html
     .replace(/<title id="page-title">[^<]*<\/title>/, `<title id="page-title">${escapeHtml(title)}</title>`)
     .replace(/(<meta id="meta-description" name="description" content=")[^"]*(")/, `$1${escapeHtml(description)}$2`)
-    .replace(/(<link rel="canonical" id="canonical-link" href=")[^"]*(")/, `$1${canonical}$2`)
+    .replace(/(<link rel="canonical" id="canonical-link" href=")[^"]*(")/, `$1${escapeHtml(canonical)}$2`)
     .replace(/(<meta id="og-title" property="og:title" content=")[^"]*(")/, `$1${escapeHtml(title)}$2`);
+  const robotsTag = `<meta name="robots" content="${escapeHtml(robots)}">`;
+  out = /<meta\b[^>]*name=["']robots["'][^>]*>/i.test(out)
+    ? out.replace(/<meta\b[^>]*name=["']robots["'][^>]*>/i, robotsTag)
+    : out.replace('</head>', `${robotsTag}</head>`);
   if (jsonLd) out = out.replace('</head>', `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script></head>`);
   return out;
 }
@@ -43,10 +48,11 @@ function renderPredictionPage(html, p, role, plan) {
   const lockReason = getLockReason(p, role, plan);
   const title = `${p.home_team} vs ${p.away_team} Prediction — ${lockReason ? 'VIP Pick' : p.tip} | StakeTruth`;
   const description = `StakeTruth prediction for ${p.home_team} vs ${p.away_team}: ${lockReason ? 'full analysis available to VIP members.' : (p.analysis || p.tip)}`;
-  const canonical = `${process.env.SITE_URL}/prediction/${p.slug}`;
+  const canonical = absoluteUrl(process.env.SITE_URL, `/prediction/${encodePathSegment(p.slug)}`);
+  const indexable = isIndexablePrediction(p);
 
   let out = injectHead(html, {
-    title, description, canonical,
+    title, description, canonical, robots: indexable ? 'index, follow' : 'noindex, follow',
     jsonLd: {
       '@context': 'https://schema.org', '@type': 'SportsEvent',
       name: `${p.home_team} vs ${p.away_team}`, startDate: new Date(p.match_date).toISOString(),
@@ -85,7 +91,7 @@ function renderPredictionPage(html, p, role, plan) {
 function renderBlogPage(html, post) {
   const title = `${post.meta_title || post.title} | StakeTruth Blog`;
   const description = post.meta_description || (post.excerpt || '').slice(0, 160);
-  const canonical = `${process.env.SITE_URL}/blog/${post.slug}`;
+  const canonical = absoluteUrl(process.env.SITE_URL, `/blog/${encodePathSegment(post.slug)}`);
 
   let out = injectHead(html, {
     title, description, canonical,
@@ -95,10 +101,17 @@ function renderBlogPage(html, post) {
     },
   });
 
+  const articleHtml = String(post.content || '').split(/\n\s*\n/).map((block) => {
+    const line = block.trim();
+    if (!line) return '';
+    const heading = /^(#{1,3})\s+([\s\S]*)$/.exec(line);
+    if (heading) return `<h${heading[1].length + 1}>${escapeHtml(heading[2])}</h${heading[1].length + 1}>`;
+    return `<p>${escapeHtml(line).replace(/\n/g, '<br>')}</p>`;
+  }).join('');
   const body = `<article>
     <h1>${escapeHtml(post.title)}</h1>
     <p class="text-soft">By ${escapeHtml(post.author_name || 'StakeTruth Team')}</p>
-    ${post.excerpt ? `<p>${escapeHtml(post.excerpt)}</p>` : ''}
+    <div class="article-content">${articleHtml || (post.excerpt ? `<p>${escapeHtml(post.excerpt)}</p>` : '')}</div>
   </article>`;
 
   out = out.replace(
@@ -111,7 +124,7 @@ function renderBlogPage(html, post) {
 function renderTopicPage(html, page) {
   const title = page.title;
   const description = page.meta_description || '';
-  const canonical = `${process.env.SITE_URL}/tips/${page.slug}`;
+  const canonical = absoluteUrl(process.env.SITE_URL, `/tips/${encodePathSegment(page.slug)}`);
 
   let out = injectHead(html, { title, description, canonical });
   if (page.meta_keywords) {

@@ -87,7 +87,7 @@
       document.getElementById('page-title').textContent = document.title;
       document.getElementById('meta-description').setAttribute('content', 'StakeTruth prediction for ' + p.home_team + ' vs ' + p.away_team + ': ' + (p.lockReason ? 'full analysis available to members.' : p.analysis || p.tip));
       document.getElementById('og-title').setAttribute('content', document.title);
-      document.getElementById('canonical-link').setAttribute('href', window.location.href);
+      document.getElementById('canonical-link').setAttribute('href', window.location.origin + window.location.pathname);
       document.getElementById('breadcrumb-current').textContent = p.home_team + ' vs ' + p.away_team;
 
       var ldJson = document.createElement('script');
