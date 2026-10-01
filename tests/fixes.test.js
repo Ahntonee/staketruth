@@ -85,6 +85,7 @@ test('checkout and ad providers are allowed and per-slot AdSense can load itself
   const server = fs.readFileSync('server.js', 'utf8');
   const app = fs.readFileSync('public/js/app.js', 'utf8');
   assert.match(server, /https:\/\/\*\.paystack\.co/);
+  assert.match(server, /https:\/\/\*\.paystack\.com/);
   assert.match(server, /https:\/\/\*\.googlesyndication\.com/);
   assert.match(server, /https:\/\/\*\.ftd\.agency/);
   assert.match(app, /function ensureAdSenseScript/);

@@ -70,6 +70,7 @@ app.use(
         // -- without this, the tag can be installed and firing correctly and
         // Tag Assistant will still show "Not Connected" / "Could not connect".
         frameSrc: ["'self'", 'https://js.paystack.co', 'https://*.paystack.co',
+          'https://paystack.com', 'https://*.paystack.com',
           'https://googleads.g.doubleclick.net', 'https://*.doubleclick.net', 'https://*.googlesyndication.com',
           'https://ftd.agency', 'https://*.ftd.agency', 'https://tagassistant.google.com'],
         objectSrc: ["'none'"],
