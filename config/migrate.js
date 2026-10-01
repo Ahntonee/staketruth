@@ -588,6 +588,9 @@ const SEO_PAGES = [
   ['blog', 'Football Betting Insights & Strategy Blog | StakeTruth', 'Expert analysis, betting strategy, and football prediction insights from the StakeTruth team.', 'football betting tips, betting strategy blog, football prediction analysis'],
   ['about', 'About StakeTruth — Data-Driven Football Predictions', 'Learn how StakeTruth’s Intelligence Engine combines statistical modelling and historical data to produce accurate football predictions.', 'about staketruth, football prediction platform, data-driven betting tips'],
   ['statistics', 'Football Statistics & Prediction Track Record | StakeTruth', 'Team and league scoring statistics, market reliability, and StakeTruth’s own prediction track record.', 'football statistics, most reliable betting markets, team goals average, football prediction accuracy'],
+  ['terms', 'Terms of Service | StakeTruth', 'Read the terms that govern use of StakeTruth predictions, subscriptions and website services.', 'StakeTruth terms of service, football predictions terms'],
+  ['privacy', 'Privacy Policy | StakeTruth', 'Learn how StakeTruth collects, uses and protects account, analytics and payment-related information.', 'StakeTruth privacy policy, data protection'],
+  ['contact', 'Contact StakeTruth', 'Contact the StakeTruth team about accounts, subscriptions, predictions or general enquiries.', 'contact StakeTruth, StakeTruth support'],
 ];
 
 const STATIC_PAGES = [
@@ -596,6 +599,7 @@ const STATIC_PAGES = [
   ['terms', 'Terms of Service', '# Terms of Service\n\nBy using StakeTruth you agree that all predictions are provided for informational and entertainment purposes only. We do not guarantee outcomes. You are solely responsible for any wagering decisions you make. You must be of legal gambling age in your jurisdiction to use betting-related content on this site.', null],
   ['privacy', 'Privacy Policy', '# Privacy Policy\n\nStakeTruth collects the minimum data necessary to operate your account: name, email, and usage analytics. We never sell your personal data. Payment is processed by Paystack; we do not store card details.', null],
   ['contact', 'Contact Us', '# Contact Us\n\nEmail us at support@staketruth.com for account, subscription, or general enquiries.', null],
+  ['pricing', 'Subscription', '', null],
 ];
 
 async function columnExists(table, column) {

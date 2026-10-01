@@ -519,7 +519,7 @@ section { padding: 28px 0; }
 .tab-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
 .tab-row::-webkit-scrollbar { display: none; }
 .category-tab {
-  scroll-snap-align: start; flex: 0 0 auto; min-height: 40px; padding: 8px 16px; border-radius: 20px;
+  scroll-snap-align: start; flex: 0 0 auto; min-height: 40px; padding: 8px 16px; border-radius: 10px;
   background: var(--card-2); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; white-space: nowrap;
 }
 .category-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }

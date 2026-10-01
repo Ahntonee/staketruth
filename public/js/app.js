@@ -825,6 +825,17 @@
     return '';
   }
 
+  function ensureAdSenseScript(clientId) {
+    if (!/^ca-pub-\d+$/.test(clientId || '')) return false;
+    if (document.querySelector('script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]')) return true;
+    var script = document.createElement('script');
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(clientId);
+    document.head.appendChild(script);
+    return true;
+  }
+
   ST.injectAdSlots = async function () {
     try {
       var res = await api('/ads/active');
@@ -842,7 +853,8 @@
               old.replaceWith(s);
             });
           } else if (!slot.ad_type || slot.ad_type === 'adsense') {
-            try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { /* AdSense script not loaded in dev */ }
+            if (!ensureAdSenseScript(slot.ad_client_id)) return;
+            try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { /* blocked or unavailable */ }
           }
         });
       });

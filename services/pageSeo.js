@@ -1,7 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const pages = { home: 'index.html', predictions: 'predictions.html', 'bet-builder': 'bet-builder.html', pricing: 'pricing.html', blog: 'blog.html', about: 'about.html', statistics: 'statistics.html' };
+const pages = {
+  home: 'index.html', predictions: 'predictions.html', 'bet-builder': 'bet-builder.html',
+  pricing: 'pricing.html', blog: 'blog.html', about: 'about.html', statistics: 'statistics.html',
+  terms: 'terms.html', privacy: 'privacy.html', contact: 'contact.html',
+};
 const fields = { title: 255, description: 5000, keywords: 5000, og_image: 500, h1: 255, intro: 5000, og_title: 255, og_description: 5000, canonical_url: 500, robots: 100 };
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const decode = value => value.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");

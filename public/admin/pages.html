@@ -3,13 +3,62 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Static Pages | StakeTruth Admin</title>
+<title>Site Pages | StakeTruth Admin</title>
 <meta name="robots" content="noindex">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6/css/all.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/easymde@2.20.0/dist/easymde.min.css" rel="stylesheet">
 <link href="/css/style.css" rel="stylesheet">
+<style>
+  .site-pages-shell { display:grid; grid-template-columns:260px minmax(0,1fr); gap:24px; align-items:start; }
+  .site-pages-nav, .site-page-card { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow-sm); }
+  .site-pages-nav { padding:16px; position:sticky; top:82px; max-height:calc(100vh - 106px); overflow:auto; }
+  .site-pages-nav__title { color:var(--text-soft); font-size:.75rem; font-weight:800; letter-spacing:.08em; margin:2px 10px 12px; text-transform:uppercase; }
+  .site-page-link { width:100%; display:flex; align-items:center; gap:10px; min-height:46px; padding:10px 12px; border:0; border-radius:10px; background:transparent; color:var(--text-soft); text-align:left; font-weight:600; }
+  .site-page-link .material-icons-round { color:var(--muted); font-size:1.15rem; }
+  .site-page-link:hover { background:var(--card-2); color:var(--text); }
+  .site-page-link.active { background:color-mix(in srgb,var(--primary) 12%,var(--card)); color:var(--primary); }
+  .site-page-link.active .material-icons-round { color:var(--primary); }
+  .site-page-link__state { margin-left:auto; width:7px; height:7px; border-radius:50%; background:var(--success); }
+  .site-page-link__state.draft { background:var(--warning); }
+  .site-pages-new { width:100%; margin-top:12px; }
+  .site-page-editor { min-width:0; }
+  .site-page-card { padding:28px 30px; margin-bottom:22px; }
+  .site-page-card__head { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:22px; }
+  .site-page-card__head h2 { font-size:1.1rem; margin:0; }
+  .site-page-updated { margin-left:10px; color:var(--text-soft); font-size:.78rem; font-weight:600; }
+  .site-page-save { background:var(--primary); color:#fff; border-radius:12px; }
+  .site-page-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .site-page-grid .span-2 { grid-column:1/-1; }
+  .site-page-count { color:var(--text-soft); font-size:.75rem; margin-top:4px; }
+  .site-page-count.over { color:var(--danger); font-weight:800; }
+  .site-page-card .form-control { background:var(--bg); }
+  .site-page-content-head { display:flex; align-items:center; gap:10px; }
+  .site-page-content-head span { color:var(--text-soft); font-size:.8rem; }
+  .site-page-preview { color:var(--primary); border-color:var(--primary); }
+  .site-page-advanced summary { cursor:pointer; font-weight:800; list-style:none; }
+  .site-page-advanced summary::-webkit-details-marker { display:none; }
+  .site-page-advanced summary::after { content:'expand_more'; font-family:'Material Icons Round'; float:right; font-size:1.25rem; }
+  .site-page-advanced[open] summary::after { content:'expand_less'; }
+  .site-page-danger { display:flex; justify-content:flex-end; margin-top:16px; }
+  .editor-toolbar { border-color:var(--border)!important; background:var(--card)!important; }
+  .CodeMirror { border-color:var(--border)!important; background:var(--bg)!important; color:var(--text)!important; min-height:330px; }
+  .CodeMirror-scroll { min-height:330px; }
+  @media (max-width:900px) {
+    .site-pages-shell { grid-template-columns:1fr; }
+    .site-pages-nav { position:static; max-height:none; display:flex; gap:8px; overflow-x:auto; }
+    .site-pages-nav__title, .site-pages-new { display:none; }
+    .site-page-link { width:auto; flex:0 0 auto; }
+  }
+  @media (max-width:640px) {
+    .site-page-card { padding:20px 16px; border-radius:14px; }
+    .site-page-card__head { align-items:flex-start; }
+    .site-page-grid { grid-template-columns:1fr; }
+    .site-page-grid .span-2 { grid-column:auto; }
+    .site-page-save .save-label { display:none; }
+  }
+</style>
 </head>
 <body>
 <div class="admin-shell">
@@ -18,68 +67,206 @@
   <div class="admin-main">
     <div class="admin-topbar">
       <button class="admin-sidebar-toggle" id="sidebar-toggle"><span class="material-icons-round">menu</span></button>
-      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Static Pages</h1>
+      <h1 id="page-heading" style="font-size:1.1rem;margin:0;">Site Pages</h1>
       <div id="admin-user-slot"></div>
     </div>
     <div class="admin-content">
-      <div class="tab-row" id="page-tabs" style="margin-bottom:14px;">
-        <button class="category-tab active" data-page="home">Home</button>
-        <button class="category-tab" data-page="about">About</button>
-        <button class="category-tab" data-page="terms">Terms</button>
-        <button class="category-tab" data-page="privacy">Privacy</button>
-        <button class="category-tab" data-page="contact">Contact</button>
+      <div class="site-pages-shell">
+        <nav class="site-pages-nav" id="site-pages-nav" aria-label="Site pages"><div>Loading pages...</div></nav>
+        <div class="site-page-editor">
+          <section class="site-page-card">
+            <div class="site-page-card__head">
+              <div><h2>Page Info <span class="site-page-updated" id="page-updated"></span></h2></div>
+              <button class="btn site-page-save" id="save-page"><span class="material-icons-round">save</span><span class="save-label">Save Changes</span></button>
+            </div>
+            <div class="site-page-grid">
+              <div class="form-group span-2"><label class="form-label" for="seo-title">Page Title (browser tab &amp; SEO)</label><input id="seo-title" class="form-control" maxlength="255"></div>
+              <div class="form-group span-2"><label class="form-label" for="seo-description">Meta Description (SEO — keep under 160 chars)</label><textarea id="seo-description" class="form-control" rows="2" maxlength="160"></textarea><div class="site-page-count"><span id="description-count">0</span>/160</div></div>
+              <div class="form-group"><label class="form-label" for="page-h1">Hero / Page Title (displayed on page)</label><input id="page-h1" class="form-control" maxlength="255"></div>
+              <div class="form-group" id="publish-field" hidden><label class="form-label" for="page-status">Publishing Status</label><select id="page-status" class="form-control"><option value="1">Published — crawlable</option><option value="0">Draft — private</option></select></div>
+            </div>
+          </section>
+
+          <section class="site-page-card">
+            <div class="site-page-card__head">
+              <div class="site-page-content-head"><h2>Page Content</h2><span>Visual text editor</span></div>
+              <button class="btn btn-outline btn-sm site-page-preview" id="preview-page"><span class="material-icons-round">preview</span>Preview</button>
+            </div>
+            <textarea id="content-editor"></textarea>
+          </section>
+
+          <details class="site-page-card site-page-advanced">
+            <summary>Advanced SEO and page settings</summary>
+            <div class="site-page-grid" style="margin-top:22px;">
+              <div class="form-group span-2"><label class="form-label" for="seo-keywords">Meta Keywords</label><input id="seo-keywords" class="form-control"></div>
+              <div class="form-group core-only"><label class="form-label" for="seo-og-title">Social Sharing Title</label><input id="seo-og-title" class="form-control" maxlength="255"></div>
+              <div class="form-group core-only"><label class="form-label" for="seo-og-image">Social Sharing Image URL</label><input id="seo-og-image" class="form-control"></div>
+              <div class="form-group span-2 core-only"><label class="form-label" for="seo-og-description">Social Sharing Description</label><textarea id="seo-og-description" class="form-control" rows="2"></textarea></div>
+              <div class="form-group core-only"><label class="form-label" for="seo-canonical">Canonical URL</label><input id="seo-canonical" class="form-control"></div>
+              <div class="form-group core-only"><label class="form-label" for="seo-robots">Search Visibility</label><select id="seo-robots" class="form-control"><option>index, follow</option><option>noindex, follow</option><option>noindex, nofollow</option></select></div>
+              <div class="form-group landing-only" hidden><label class="form-label" for="page-category">Prediction Category Filter</label><input id="page-category" class="form-control" placeholder="e.g. over_2_5"></div>
+              <div class="form-group landing-only" hidden><label class="form-label" for="page-league">League Filter</label><input id="page-league" class="form-control" placeholder="Any league"></div>
+            </div>
+            <div class="site-page-danger landing-only" hidden><button class="btn btn-danger btn-sm" id="delete-page"><span class="material-icons-round">delete</span>Delete SEO Page</button></div>
+          </details>
+        </div>
       </div>
-      <div class="form-group"><label class="form-label">Page Title</label><input id="page-title-input" class="form-control"></div>
-      <textarea id="content-editor"></textarea>
-      <div class="form-group" style="margin-top:16px;"><label class="form-label">Extra (JSON, e.g. home hero stat overrides)</label><textarea id="extra-json" class="form-control" rows="4"></textarea></div>
-      <button class="btn btn-primary" id="save-btn" style="margin-top:12px;">Save Page</button>
     </div>
   </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/easymde@2.20.0/dist/easymde.min.js"></script>
 <script src="/js/admin.js"></script>
 <script>
 (function () {
-  var mde;
-  var currentSlug = 'home';
+  var corePages = [
+    { id:'core:home', key:'home', label:'Home (SEO)', icon:'home', path:'/', contentSlug:'home' },
+    { id:'core:about', key:'about', label:'About Us', icon:'info', path:'/about.html', contentSlug:'about' },
+    { id:'core:terms', key:'terms', label:'Terms of Service', icon:'gavel', path:'/terms.html', contentSlug:'terms' },
+    { id:'core:privacy', key:'privacy', label:'Privacy Policy', icon:'lock', path:'/privacy.html', contentSlug:'privacy' },
+    { id:'core:contact', key:'contact', label:'Contact Us', icon:'mail', path:'/contact.html', contentSlug:'contact' },
+    { id:'core:pricing', key:'pricing', label:'Subscription', icon:'star', path:'/pricing.html', contentSlug:'pricing' },
+  ];
+  var seoRows = [];
+  var landingRows = [];
+  var current = null;
+  var currentContent = null;
+  var editor;
 
-  async function loadPage(slug) {
-    currentSlug = slug;
-    try {
-      var res = await AD.api('/pages/' + slug);
-      document.getElementById('page-title-input').value = res.data.title || '';
-      mde.value(res.data.content || '');
-      document.getElementById('extra-json').value = res.data.extra ? JSON.stringify(res.data.extra, null, 2) : '';
-    } catch (e) {
-      document.getElementById('page-title-input').value = '';
-      mde.value('');
-    }
+  function escape(value) { return AD.escapeHtml(value == null ? '' : String(value)); }
+  function dateValue(value) {
+    if (!value) return '';
+    return '<span class="material-icons-round" style="font-size:.9rem;vertical-align:-2px;">update</span> ' + new Date(value).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
   }
-
-  document.getElementById('page-tabs').addEventListener('click', function (e) {
-    var btn = e.target.closest('.category-tab');
-    if (!btn) return;
-    document.querySelectorAll('#page-tabs .category-tab').forEach(function (b) { b.classList.remove('active'); });
-    btn.classList.add('active');
-    loadPage(btn.getAttribute('data-page'));
-  });
-
-  document.getElementById('save-btn').addEventListener('click', async function () {
-    var extra = null;
-    var extraRaw = document.getElementById('extra-json').value.trim();
-    if (extraRaw) { try { extra = JSON.parse(extraRaw); } catch (e) { AD.showToast('Extra field must be valid JSON', 'error'); return; } }
+  function linkHtml(page) {
+    var state = page.kind === 'landing' ? '<span class="site-page-link__state' + (page.data.is_published ? '' : ' draft') + '"></span>' : '';
+    return '<button class="site-page-link' + (current && current.id === page.id ? ' active' : '') + '" data-page-id="' + escape(page.id) + '"><span class="material-icons-round">' + escape(page.icon) + '</span><span>' + escape(page.label) + '</span>' + state + '</button>';
+  }
+  function directory() {
+    var pages = corePages.map(function (page) { return Object.assign({ kind:'core' }, page); });
+    landingRows.forEach(function (row) { pages.push({ id:'landing:' + row.id, kind:'landing', label:row.h1 || row.title, icon:'article', path:'/tips/' + encodeURIComponent(row.slug), data:row }); });
+    return pages;
+  }
+  function renderNav() {
+    document.getElementById('site-pages-nav').innerHTML = '<div class="site-pages-nav__title">Pages</div>' + directory().map(linkHtml).join('') + '<button class="btn btn-outline btn-sm site-pages-new" id="new-seo-page"><span class="material-icons-round">add</span>New SEO Article</button>';
+  }
+  function field(id, value) { document.getElementById(id).value = value || ''; }
+  function showLandingControls(show) {
+    document.getElementById('publish-field').hidden = !show;
+    document.querySelectorAll('.landing-only').forEach(function (el) { el.hidden = !show; });
+    document.querySelectorAll('.core-only').forEach(function (el) { el.hidden = show; });
+  }
+  function updateCount() {
+    var count = document.getElementById('seo-description').value.length;
+    document.getElementById('description-count').textContent = count;
+    document.getElementById('description-count').parentElement.classList.toggle('over', count > 160);
+  }
+  async function selectPage(page) {
+    current = page;
+    renderNav();
+    showLandingControls(page.kind === 'landing' || page.kind === 'landing-new');
+    document.querySelector('.site-page-danger').hidden = page.kind !== 'landing';
+    currentContent = null;
+    if (page.kind === 'core') {
+      var seo = seoRows.find(function (row) { return row.page_key === page.key; }) || {};
+      try { currentContent = (await AD.api('/pages/' + page.contentSlug)).data; } catch (e) { currentContent = { title:page.label, content:'', extra:null }; }
+      field('seo-title', seo.title || currentContent.title || page.label);
+      field('seo-description', seo.description);
+      field('page-h1', seo.h1 || currentContent.title || page.label);
+      field('seo-keywords', seo.keywords);
+      field('seo-og-title', seo.og_title);
+      field('seo-og-description', seo.og_description);
+      field('seo-og-image', seo.og_image);
+      field('seo-canonical', seo.canonical_url);
+      field('seo-robots', seo.robots || 'index, follow');
+      editor.value(currentContent.content || '');
+      document.getElementById('page-updated').innerHTML = dateValue(seo.updated_at || currentContent.updated_at);
+    } else {
+      var data = page.data || {};
+      field('seo-title', data.title);
+      field('seo-description', data.meta_description);
+      field('page-h1', data.h1 || data.title);
+      field('seo-keywords', data.meta_keywords);
+      field('seo-og-title', ''); field('seo-og-description', ''); field('seo-og-image', ''); field('seo-canonical', ''); field('seo-robots', data.is_published === 0 ? 'noindex, follow' : 'index, follow');
+      field('page-category', data.category); field('page-league', data.league_text_filter);
+      document.getElementById('page-status').value = data.is_published === 0 ? '0' : '1';
+      editor.value(data.intro_content || '');
+      document.getElementById('page-updated').innerHTML = dateValue(data.updated_at);
+    }
+    updateCount();
+    setTimeout(function () { editor.codemirror.refresh(); }, 0);
+  }
+  function slugify(value) { return String(value || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 200); }
+  async function saveCurrent() {
+    if (!current) return;
+    var button = document.getElementById('save-page');
+    button.disabled = true;
     try {
-      await AD.api('/pages/' + currentSlug, { method: 'PUT', body: { title: document.getElementById('page-title-input').value, content: mde.value(), extra: extra } });
+      if (current.kind === 'core') {
+        await AD.api('/pages/' + current.contentSlug, { method:'PUT', body:{ title:document.getElementById('page-h1').value || current.label, content:editor.value(), extra:currentContent && currentContent.extra || null } });
+        await AD.api('/pages/seo/' + current.key, { method:'PUT', body:{
+          title:document.getElementById('seo-title').value, h1:document.getElementById('page-h1').value,
+          description:document.getElementById('seo-description').value, keywords:document.getElementById('seo-keywords').value,
+          og_title:document.getElementById('seo-og-title').value, og_description:document.getElementById('seo-og-description').value,
+          og_image:document.getElementById('seo-og-image').value, canonical_url:document.getElementById('seo-canonical').value,
+          robots:document.getElementById('seo-robots').value,
+        }});
+      } else {
+        var body = {
+          title:document.getElementById('seo-title').value, h1:document.getElementById('page-h1').value,
+          meta_description:document.getElementById('seo-description').value, meta_keywords:document.getElementById('seo-keywords').value || null,
+          intro_content:editor.value(), category:document.getElementById('page-category').value || null,
+          league_text_filter:document.getElementById('page-league').value || null,
+          is_published:document.getElementById('page-status').value === '1',
+        };
+        if (current.kind === 'landing-new') {
+          body.slug = slugify(body.h1 || body.title);
+          var created = await AD.api('/seo-pages', { method:'POST', body:body });
+          current = { id:'landing:' + created.data.id, kind:'landing', data:{ id:created.data.id } };
+        } else {
+          await AD.api('/seo-pages/' + current.data.id, { method:'PUT', body:body });
+        }
+      }
       AD.showToast('Page saved', 'success');
+      await loadDirectory(current.id);
     } catch (err) { AD.showToast(err.message, 'error'); }
+    button.disabled = false;
+  }
+  async function loadDirectory(selectedId) {
+    var results = await Promise.all([AD.api('/pages/seo'), AD.api('/seo-pages/admin/list')]);
+    seoRows = results[0].data || [];
+    landingRows = results[1].data || [];
+    var pages = directory();
+    var target = pages.find(function (page) { return page.id === selectedId; }) || pages[0];
+    await selectPage(target);
+  }
+  document.getElementById('site-pages-nav').addEventListener('click', function (event) {
+    var link = event.target.closest('[data-page-id]');
+    if (link) {
+      var page = directory().find(function (item) { return item.id === link.getAttribute('data-page-id'); });
+      if (page) selectPage(page);
+      return;
+    }
+    if (event.target.closest('#new-seo-page')) selectPage({ id:'landing:new', kind:'landing-new', label:'New SEO Article', icon:'add', path:'#', data:{ is_published:0 } });
   });
-
+  document.getElementById('seo-description').addEventListener('input', updateCount);
+  document.getElementById('save-page').addEventListener('click', saveCurrent);
+  document.getElementById('preview-page').addEventListener('click', function () {
+    if (!current || !current.path || current.path === '#') { AD.showToast('Save this page before previewing it.', 'info'); return; }
+    window.open(current.path, '_blank', 'noopener');
+  });
+  document.getElementById('delete-page').addEventListener('click', async function () {
+    if (!current || current.kind !== 'landing' || !AD.confirmAction('Delete this SEO page permanently?')) return;
+    await AD.api('/seo-pages/' + current.data.id, { method:'DELETE' });
+    AD.showToast('Page deleted', 'success');
+    loadDirectory('core:home');
+  });
   async function init() {
     var user = await AD.requireAdmin();
     if (!user) return;
-    AD.renderShell('pages', user, 'Static Pages');
-    mde = new EasyMDE({ element: document.getElementById('content-editor'), spellChecker: false, minHeight: '260px', autoDownloadFontAwesome: false });
-    loadPage('home');
+    AD.renderShell('pages', user, 'Site Pages');
+    editor = new EasyMDE({ element:document.getElementById('content-editor'), spellChecker:false, minHeight:'330px', autoDownloadFontAwesome:false, status:false });
+    try { await loadDirectory('core:home'); } catch (err) { AD.showToast(err.message, 'error'); }
   }
   init();
 })();

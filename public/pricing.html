@@ -45,7 +45,6 @@
         <article class="pricing-card pricing-card--gold">
           <div class="pricing-card__tier"><span class="material-icons-round">workspace_premium</span>Gold Plan</div>
           <h2 class="pricing-card__term">Bi-Weekly</h2>
-          <p class="pricing-card__description">Exclusive 1.5–3 odds picks, researched and analyzed to help you make more informed betting decisions.</p>
           <div class="pricing-card__price">&#8358;9,000<span>/14 days</span></div>
           <ul>
             <li><span class="material-icons-round">check_circle</span>Daily 2–3 odds bankers</li>
@@ -58,7 +57,6 @@
         <article class="pricing-card pricing-card--gold">
           <div class="pricing-card__tier"><span class="material-icons-round">workspace_premium</span>Gold Plan</div>
           <h2 class="pricing-card__term">Monthly</h2>
-          <p class="pricing-card__description">Exclusive 1.5–3 odds picks, researched and analyzed to help you make more informed betting decisions.</p>
           <div class="pricing-card__price">&#8358;15,000<span>/30 days</span></div>
           <ul>
             <li><span class="material-icons-round">check_circle</span>Daily 2–3 odds bankers</li>
@@ -116,6 +114,12 @@
       </div>
     </div>
   </section>
+
+  <section id="pricing-managed-section" hidden>
+    <div class="container" style="max-width:820px;">
+      <article class="article-content" id="pricing-managed-content"></article>
+    </div>
+  </section>
 </main>
 
 <div class="sticky-cta-bar hidden" id="sticky-cta">
@@ -126,6 +130,8 @@
 <footer class="site-footer" id="site-footer"></footer>
 
 <script src="/js/announcement-format.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@4/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 <script src="/js/app.js"></script>
 <script src="/js/content-protection.js"></script>
 <script>
@@ -146,6 +152,13 @@
   }
   loadAccuracyBadge();
 
+  ST.api('/pages/pricing').then(function (res) {
+    if (!res.data.content) return;
+    var raw = window.marked ? marked.parse(res.data.content) : res.data.content;
+    document.getElementById('pricing-managed-content').innerHTML = window.DOMPurify ? DOMPurify.sanitize(raw) : raw;
+    document.getElementById('pricing-managed-section').hidden = false;
+  }).catch(function () { /* optional managed article */ });
+
   async function checkStatus() {
     var user = ST.getUser();
     var slot = document.getElementById('vip-banner-section');
@@ -164,21 +177,27 @@
     var user = ST.getUser();
     if (!user) { ST.openAuthModal('register'); return; }
     if (typeof PaystackPop === 'undefined') { ST.showToast('Payments are not configured on this deployment yet.', 'error'); return; }
-    var handler = PaystackPop.setup({
+    var publicKey = '{{PAYSTACK_PUBLIC_KEY}}';
+    if (!/^pk_(test|live)_/.test(publicKey)) {
+      ST.showToast('Payments are not configured on this deployment yet.', 'error');
+      return;
+    }
+    var handler = new PaystackPop();
+    handler.newTransaction({
       key: '{{PAYSTACK_PUBLIC_KEY}}',
       email: user.email,
       amount: amount * 100,
       currency: 'NGN',
-      ref: 'ST_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      reference: 'ST_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       metadata: { plan: plan, user_id: user.id },
-      callback: function (response) {
+      onSuccess: function (response) {
         ST.api('/subscriptions/paystack/verify', { method: 'POST', body: { reference: response.reference, plan: plan } })
           .then(function () { ST.showToast('VIP activated!', 'success'); location.reload(); })
           .catch(function (err) { ST.showToast(err.message, 'error'); });
       },
-      onClose: function () { ST.showToast('Payment cancelled.', 'info'); },
+      onCancel: function () { ST.showToast('Payment cancelled.', 'info'); },
+      onError: function (error) { ST.showToast(error.message || 'Unable to start payment.', 'error'); },
     });
-    handler.openIframe();
   }
 
   document.querySelectorAll('[data-plan]').forEach(function (btn) {

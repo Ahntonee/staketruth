@@ -46,8 +46,10 @@ app.use(
       useDefaults: true,
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", 'https://js.paystack.co', 'https://cdn.jsdelivr.net',
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://js.paystack.co', 'https://*.paystack.co', 'https://cdn.jsdelivr.net',
           'https://pagead2.googlesyndication.com', 'https://googleads.g.doubleclick.net',
+          'https://*.googlesyndication.com', 'https://*.doubleclick.net',
+          'https://ftd.agency', 'https://*.ftd.agency',
           'https://www.googletagmanager.com', 'https://www.google-analytics.com', 'https://tagassistant.google.com'],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net', 'data:'],
@@ -57,7 +59,9 @@ app.use(
         // collection endpoints, which is gated by connectSrc, not scriptSrc. GA4
         // uses region-sharded subdomains (region1.google-analytics.com etc.),
         // hence the wildcard rather than listing the exact one in use today.
-        connectSrc: ["'self'", 'https://api.paystack.co', 'https://pagead2.googlesyndication.com',
+        connectSrc: ["'self'", 'https://api.paystack.co', 'https://*.paystack.co',
+          'https://pagead2.googlesyndication.com', 'https://*.googlesyndication.com', 'https://*.doubleclick.net',
+          'https://ftd.agency', 'https://*.ftd.agency',
           'https://www.google-analytics.com', 'https://*.google-analytics.com',
           'https://www.googletagmanager.com', 'https://analytics.google.com', 'https://tagassistant.google.com'],
         // Tag Assistant's live "Test your website" mode drops a floating debug
@@ -65,7 +69,9 @@ app.use(
         // that phones home to tagassistant.google.com to report connection status
         // -- without this, the tag can be installed and firing correctly and
         // Tag Assistant will still show "Not Connected" / "Could not connect".
-        frameSrc: ["'self'", 'https://js.paystack.co', 'https://googleads.g.doubleclick.net', 'https://tagassistant.google.com'],
+        frameSrc: ["'self'", 'https://js.paystack.co', 'https://*.paystack.co',
+          'https://googleads.g.doubleclick.net', 'https://*.doubleclick.net', 'https://*.googlesyndication.com',
+          'https://ftd.agency', 'https://*.ftd.agency', 'https://tagassistant.google.com'],
         objectSrc: ["'none'"],
       },
     },
@@ -146,6 +152,9 @@ const SEO_PAGE_KEY_BY_PATH = {
   '/blog.html': 'blog',
   '/about.html': 'about',
   '/statistics.html': 'statistics',
+  '/terms.html': 'terms',
+  '/privacy.html': 'privacy',
+  '/contact.html': 'contact',
 };
 
 app.use((req, res, next) => {

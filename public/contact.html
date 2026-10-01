@@ -16,6 +16,7 @@
 <body>
 <header class="site-header" id="site-header"></header>
 <main><section><div class="container" style="max-width:600px;">
+  <h1><span data-seo-heading>Contact Us</span></h1>
   <div class="article-content" id="page-content"><div class="skeleton" style="height:200px;border-radius:14px;"></div></div>
 </div></section></main>
 <footer class="site-footer" id="site-footer"></footer>
@@ -28,6 +29,8 @@
 ST.api('/pages/contact').then(function (res) {
   var raw = window.marked ? marked.parse(res.data.content || '') : res.data.content;
   document.getElementById('page-content').innerHTML = window.DOMPurify ? DOMPurify.sanitize(raw) : raw;
+  var duplicateHeading = document.querySelector('#page-content > h1:first-child');
+  if (duplicateHeading) duplicateHeading.remove();
 }).catch(function () { document.getElementById('page-content').innerHTML = '<p>Email us at support@staketruth.com</p>'; });
 </script>
 </body>
