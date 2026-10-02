@@ -821,7 +821,9 @@ textarea.form-control { min-height: 120px; resize: vertical; }
 .admin-main, .admin-content, .EasyMDEContainer { min-width: 0; }
 .EasyMDEContainer .editor-toolbar button { min-width: 30px; min-height: 30px; }
 
-.announcement-outline { border: 2px solid transparent; border-radius: var(--radius-lg); background: linear-gradient(var(--card), var(--card)) padding-box, var(--gradient-green) border-box; padding: 12px; }
+.announcement-outline { border: 2px solid transparent; border-radius: var(--radius-lg); background: linear-gradient(var(--card), var(--card)) padding-box, var(--gradient-green) border-box; padding: 0; overflow: hidden; }
+.announcement-outline__heading { margin: 0; padding: 10px 14px; background: rgba(120,120,120,0.14); text-align: center; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.announcement-outline__body { padding: 12px; }
 .announcement-content { overflow-wrap: anywhere; line-height: 1.65; }
 .announcement-content p { margin: 6px 0; }
 .announcement-content ul, #ann-preview-content ul { padding-left: 20px; margin: 8px 0; }

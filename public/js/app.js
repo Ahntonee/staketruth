@@ -559,8 +559,8 @@
       res.data = res.data.filter(function (a) { return a.delivery_banner; });
       if (!res.data.length) { container.innerHTML = ''; if (opts.hideWhenEmpty !== false) container.style.display = 'none'; return; }
       container.style.display = '';
-      var heading = opts.heading !== false ? '<h3 style="display:flex;align-items:center;gap:6px;"><span class="material-icons-round" style="color:var(--accent);">campaign</span>Announcements</h3>' : '';
-      container.innerHTML = '<div class="announcement-outline">' + heading + res.data.map(function (a) {
+      var heading = opts.heading !== false ? '<h3 class="announcement-outline__heading"><span class="material-icons-round" style="color:var(--accent);">campaign</span>Announcements</h3>' : '';
+      container.innerHTML = '<div class="announcement-outline">' + heading + '<div class="announcement-outline__body">' + res.data.map(function (a) {
         return '<div class="announcement-card announcement-card--' + a.type + '">' +
           '<div style="display:flex;align-items:flex-start;gap:8px;">' +
             '<span class="material-icons-round" style="font-size:1.05rem;margin-top:1px;">' + (icons[a.type] || 'info') + '</span>' +
@@ -570,7 +570,7 @@
             '</div>' +
           '</div>' +
         '</div>';
-      }).join('') + '</div>';
+      }).join('') + '</div></div>';
     } catch (e) { container.innerHTML = ''; if (opts.hideWhenEmpty !== false) container.style.display = 'none'; }
   };
 
