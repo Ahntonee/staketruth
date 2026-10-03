@@ -85,7 +85,7 @@ function renderPredictionPage(html, p, role, plan) {
       awayTeam: { '@type': 'SportsTeam', name: p.away_team },
     },
   });
-  out = out.replace('<h1 id="prediction-h1"></h1>', `<h1 id="prediction-h1">${escapeHtml(p.home_team)} vs ${escapeHtml(p.away_team)} Prediction</h1>`);
+  out = out.replace(/(<h1 id="prediction-h1"[^>]*>)[^<]*(<\/h1>)/, `$1${escapeHtml(p.home_team)} vs ${escapeHtml(p.away_team)} Prediction$2`);
 
   const label = confidenceLabel(p.intelligence_score);
   const body = lockReason
