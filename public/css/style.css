@@ -490,6 +490,7 @@ section { padding: 28px 0; }
 .badge-won { background: var(--result-won); color: var(--result-won-text); }
 .badge-lost { background: var(--result-lost); color: #fff; }
 .badge-pending { background: var(--result-pending); color: var(--result-pending-text); }
+.badge-void { background: rgba(120,120,120,0.22); color: var(--text-soft); }
 
 .result-badge-btn { display: inline-flex; align-items: center; gap: 4px; padding: 3px 12px; border: none; border-radius: 20px; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; cursor: pointer; }
 .result-badge-btn.won { background: var(--result-won); color: var(--result-won-text); }

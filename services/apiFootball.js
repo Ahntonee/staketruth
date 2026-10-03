@@ -188,6 +188,16 @@ async function syncTodayAndTomorrow() {
 // through the whole daily API budget, not routine day-to-day usage.
 const FIXTURE_BATCH_SIZE = 20;
 
+// API-Football fixture status codes that mean the match reached a real final
+// score -- regulation, extra time, or penalties all count as a gradeable 'FT'
+// result as far as a tip (1X2/O-U/BTTS) is concerned.
+const FINISHED_STATUSES = new Set(['FT', 'AET', 'PEN']);
+// Statuses that mean the match concluded WITHOUT a normal result -- these
+// used to just fall through the old `!== 'FT'` check and sit as 'pending'
+// forever (that's how fixtures ended up permanently stuck). Graded as 'void'
+// instead: excluded from accuracy stats, but no longer stuck.
+const VOID_STATUSES = new Set(['PST', 'CANC', 'ABD', 'AWD', 'WO', 'SUSP', 'INT']);
+
 async function syncResults() {
   if (!isConfigured()) return { skipped: true, reason: 'API_FOOTBALL_KEY not configured' };
   const [pending] = await pool.query(
@@ -198,6 +208,7 @@ async function syncResults() {
 
   const byFixtureId = new Map(pending.map((p) => [String(p.api_fixture_id), p]));
   let graded = 0;
+  let voided = 0;
   let apiCalls = 0;
 
   for (let i = 0; i < pending.length; i += FIXTURE_BATCH_SIZE) {
@@ -211,7 +222,15 @@ async function syncResults() {
       const { data } = await client().get('/fixtures', { params: { ids: batch.map((p) => p.api_fixture_id).join('-') } });
       for (const fx of data.response || []) {
         const pred = byFixtureId.get(String(fx.fixture.id));
-        if (!pred || fx.fixture.status.short !== 'FT') continue;
+        if (!pred) continue;
+        const status = fx.fixture.status.short;
+
+        if (VOID_STATUSES.has(status)) {
+          await pool.query(`UPDATE predictions SET result = 'void' WHERE id = ?`, [pred.id]);
+          voided++;
+          continue;
+        }
+        if (!FINISHED_STATUSES.has(status)) continue; // still in progress or not yet started
 
         const homeScore = fx.goals.home;
         const awayScore = fx.goals.away;
@@ -242,7 +261,19 @@ async function syncResults() {
       if (err.response?.status === 429) break;
     }
   }
-  return { skipped: false, graded, apiCalls };
+
+  // Safety net: a fixture ID the API no longer recognizes at all (deleted,
+  // merged, or simply never existed as reported) never appears in `data.response`
+  // above, so it would otherwise stay 'pending' forever even after this function
+  // runs correctly. Once a match is long enough past kickoff that no real
+  // status update is plausible, void it rather than let it accumulate forever.
+  const [staleResult] = await pool.query(
+    `UPDATE predictions SET result = 'void'
+     WHERE result = 'pending' AND api_fixture_id IS NOT NULL AND match_date <= DATE_SUB(NOW(), INTERVAL 5 DAY)`
+  );
+  if (staleResult.affectedRows) voided += staleResult.affectedRows;
+
+  return { skipped: false, graded, voided, apiCalls };
 }
 
 function evaluateTipOutcome(tip, market, homeScore, awayScore) {

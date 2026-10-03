@@ -455,6 +455,7 @@
     if (p.result === 'won') badges += '<span class="badge badge-won">Won</span>';
     if (p.result === 'lost') badges += '<span class="badge badge-lost">Lost</span>';
     if (p.result === 'pending') badges += '<span class="badge badge-pending">Pending</span>';
+    if (p.result === 'void' || p.result === 'cancelled') badges += '<span class="badge badge-void">Postponed / Void</span>';
 
     var bookieTags = (p.bookies_available || []).slice(0, 3).map(function (b) {
       return '<span class="bookie-tag"><span class="odds-live-dot"></span>' + ST.escapeHtml(b) + '</span>';
@@ -593,7 +594,7 @@
           return '<div style="padding:10px 0;border-bottom:1px dashed var(--border);font-size:0.85rem;">' +
             '<strong>' + ST.escapeHtml(a.title) + '</strong>' +
             '<div style="margin:4px 0;">' + a.legs.map(function (l) { return ST.escapeHtml(l.home_team) + ' vs ' + ST.escapeHtml(l.away_team) + ' — ' + ST.escapeHtml(l.tip); }).join('<br>') + '</div>' +
-            '<div>Combined Odds: <strong>' + (a.combined_odds ?? '—') + '</strong> &middot; <span class="badge ' + (a.result === 'won' ? 'badge-won' : a.result === 'lost' ? 'badge-lost' : 'badge-pending') + '">' + a.result.toUpperCase() + '</span></div>' +
+            '<div>Combined Odds: <strong>' + (a.combined_odds ?? '—') + '</strong> &middot; <span class="badge ' + (a.result === 'won' ? 'badge-won' : a.result === 'lost' ? 'badge-lost' : (a.result === 'void' || a.result === 'cancelled') ? 'badge-void' : 'badge-pending') + '">' + a.result.toUpperCase() + '</span></div>' +
           '</div>';
         }).join('') + '</div>';
     } catch (e) { container.innerHTML = ''; }

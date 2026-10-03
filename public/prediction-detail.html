@@ -162,7 +162,7 @@
     return '' +
       '<div class="prediction-card__tip" style="font-size:1.4rem;">' + ST.escapeHtml(p.tip) + '</div>' +
       '<div class="prediction-card__meta">' + badges + (p.odds ? '<span>Odds: ' + ST.formatOdds(p.odds) + '</span>' : '') +
-        (p.result !== 'pending' ? '<span class="badge badge-' + (p.result === 'won' ? 'won' : p.result === 'lost' ? 'lost' : 'pending') + '">' + p.result + '</span>' : '') +
+        (p.result !== 'pending' ? '<span class="badge badge-' + (p.result === 'won' ? 'won' : p.result === 'lost' ? 'lost' : (p.result === 'void' || p.result === 'cancelled') ? 'void' : 'pending') + '">' + (p.result === 'void' || p.result === 'cancelled' ? 'Postponed / Void' : p.result) + '</span>' : '') +
       '</div>' +
       '<div class="flex items-center gap-12" style="margin:14px 0;">' +
         gaugeSvg(p.intelligence_score) +
