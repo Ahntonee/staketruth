@@ -133,6 +133,20 @@ function startScheduler() {
   cron.schedule('0 3 * * *', safeRun('reset odds API budget', () => oddsApi.resetCallsToday()));
   cron.schedule('0 3 * * *', safeRun('reset API-Football daily cap', () => apiFootball.resetCallsToday()));
 
+  // Postponed/cancelled/abandoned matches are graded 'void' (see
+  // apiFootball.syncResults) rather than left pending forever -- that keeps
+  // them visible with an accurate "Postponed / Void" badge for a while, but
+  // nothing ever removes them afterward, so stale void rows would otherwise
+  // accumulate indefinitely exactly like the old permanently-pending backlog
+  // did. 14 days gives real visitors a fair window to still see the status
+  // before cleanup.
+  cron.schedule('30 3 * * *', safeRun('clean up stale void predictions', async () => {
+    const [result] = await pool.query(
+      `DELETE FROM predictions WHERE result = 'void' AND match_date <= DATE_SUB(NOW(), INTERVAL 14 DAY)`
+    );
+    return { deleted: result.affectedRows };
+  }));
+
   cron.schedule('*/30 * * * *', safeRun('sync bookie odds', () => oddsApi.syncOddsForTodayFixtures()));
 
   cron.schedule('*/5 * * * *', safeRun('publish scheduled blog posts', async () => {
