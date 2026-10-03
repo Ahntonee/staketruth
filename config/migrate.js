@@ -201,6 +201,26 @@ const TABLES = [
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   ) ENGINE=InnoDB`,
 
+  // Manual (crypto/bank transfer) payment claims -- unlike Paystack, there's
+  // no API to verify these automatically, so a user submits what they sent
+  // and an admin manually confirms it arrived before VIP activates (see
+  // controllers/manualPayments.js). On approval this becomes a normal
+  // subscriptions row with provider='manual', same as an admin-granted one.
+  `CREATE TABLE IF NOT EXISTS manual_payments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    plan ENUM('monthly','quarterly','annual','daypass','gold_biweekly','gold_monthly','diamond_biweekly','diamond_monthly') NOT NULL,
+    method ENUM('usdt_bep20','bank_transfer') NOT NULL,
+    amount_claimed DECIMAL(10,2),
+    reference_note VARCHAR(500),
+    status ENUM('pending','approved','rejected') DEFAULT 'pending',
+    admin_note VARCHAR(500),
+    reviewed_by INT,
+    reviewed_at DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB`,
+
   `CREATE TABLE IF NOT EXISTS blog_posts (
     id INT PRIMARY KEY AUTO_INCREMENT,
     slug VARCHAR(500) UNIQUE NOT NULL,
@@ -578,6 +598,14 @@ const SITE_SETTINGS = [
   ['last_sync_fixtures', ''],
   ['last_sync_results', ''],
   ['last_auto_push', ''],
+  // Manual payment receiving details shown to a VIP buyer who picks crypto
+  // or bank transfer instead of card (see controllers/manualPayments.js /
+  // public/pricing.html). Admin-editable via Settings, not hardcoded, so
+  // these can change without a redeploy.
+  ['payment_usdt_bep20_address', '0xBA10d89f276E9Bd7747d9e6f86356091EB20FFde'],
+  ['payment_bank_name', 'Wema Bank'],
+  ['payment_bank_account_number', '0425215395'],
+  ['payment_bank_account_name', ''],
 ];
 
 const SEO_PAGES = [

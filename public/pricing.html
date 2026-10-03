@@ -127,6 +127,29 @@
   <button class="btn btn-vip btn-sm" id="sticky-plan-btn" data-plan="diamond_monthly" data-amount="18500">Get Diamond Monthly</button>
 </div>
 
+<!-- Payment method chooser: card (Paystack, instant) vs crypto/bank transfer
+     (manual -- no API to verify these automatically, so VIP activates once
+     an admin confirms the payment arrived; see controllers/manualPayments.js) -->
+<div class="modal-overlay" id="payment-method-modal">
+  <div class="modal">
+    <div class="modal-header"><h3>Choose how to pay</h3><button class="modal-close" id="payment-method-close">&times;</button></div>
+    <div id="payment-method-step-choose">
+      <button type="button" class="btn btn-primary btn-block" id="pay-card-btn" style="margin-bottom:10px;"><span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">credit_card</span> Pay with Card (instant)</button>
+      <button type="button" class="btn btn-outline btn-block" id="pay-usdt-btn" style="margin-bottom:10px;"><span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">currency_bitcoin</span> Pay with USDT (BEP-20)</button>
+      <button type="button" class="btn btn-outline btn-block" id="pay-bank-btn"><span class="material-icons-round" style="font-size:1rem;vertical-align:middle;">account_balance</span> Pay via Bank Transfer</button>
+      <p class="text-soft" style="font-size:0.8rem;margin-top:14px;margin-bottom:0;">Card payments activate instantly. USDT/bank transfer are manually confirmed by an admin, usually within a few hours.</p>
+    </div>
+    <form id="payment-method-step-manual" style="display:none;">
+      <input type="hidden" name="plan"><input type="hidden" name="method">
+      <div class="card card-pad" style="background:var(--card-2);margin-bottom:14px;" id="manual-payment-details">Loading payment details…</div>
+      <div class="form-group"><label class="form-label" id="manual-amount-label">Amount (&#8358;)</label><input type="number" name="amount_claimed" class="form-control" required></div>
+      <div class="form-group"><label class="form-label" id="manual-reference-label">Transaction Hash</label><input type="text" name="reference_note" class="form-control" required placeholder="Paste the transaction hash / sender name here"></div>
+      <button type="button" class="btn btn-outline btn-sm" id="manual-payment-back" style="margin-right:8px;">&larr; Back</button>
+      <button type="submit" class="btn btn-primary btn-sm">Submit for Review</button>
+    </form>
+  </div>
+</div>
+
 <footer class="site-footer" id="site-footer"></footer>
 
 <script src="/js/announcement-format.js"></script>
@@ -173,9 +196,8 @@
     } catch (e) { /* not subscribed */ }
   }
 
-  function startCheckout(plan, amount) {
+  function payWithCard(plan, amount) {
     var user = ST.getUser();
-    if (!user) { ST.openAuthModal('register'); return; }
     if (typeof PaystackPop === 'undefined') { ST.showToast('Payments are not configured on this deployment yet.', 'error'); return; }
     var publicKey = '{{PAYSTACK_PUBLIC_KEY}}';
     if (!/^pk_(test|live)_/.test(publicKey)) {
@@ -198,6 +220,69 @@
       onCancel: function () { ST.showToast('Payment cancelled.', 'info'); },
       onError: function (error) { ST.showToast(error.message || 'Unable to start payment.', 'error'); },
     });
+  }
+
+  // ---- Payment method modal: card (instant) vs USDT/bank transfer (manual, admin-reviewed) --
+  var pendingPlan = null, pendingAmount = null;
+  var pmModal = document.getElementById('payment-method-modal');
+  var pmChoose = document.getElementById('payment-method-step-choose');
+  var pmManual = document.getElementById('payment-method-step-manual');
+  var paymentDetailsCache = null;
+
+  function openPaymentMethodModal(plan, amount) {
+    pendingPlan = plan; pendingAmount = amount;
+    pmChoose.style.display = ''; pmManual.style.display = 'none';
+    pmModal.classList.add('open');
+  }
+  function closePaymentMethodModal() { pmModal.classList.remove('open'); }
+  document.getElementById('payment-method-close').addEventListener('click', closePaymentMethodModal);
+
+  async function showManualStep(method) {
+    if (!paymentDetailsCache) {
+      try { paymentDetailsCache = (await ST.api('/manual-payments/details')).data; }
+      catch (e) { ST.showToast('Could not load payment details -- try again shortly.', 'error'); return; }
+    }
+    var d = paymentDetailsCache;
+    var detailsHtml = method === 'usdt_bep20'
+      ? '<p style="margin:0 0 6px;font-size:0.85rem;">Send the exact USD value of your plan in <strong>USDT</strong> on the <strong>BEP-20 (BNB Smart Chain)</strong> network to:</p><p style="word-break:break-all;font-family:monospace;background:var(--card);padding:8px;border-radius:6px;">' + ST.escapeHtml(d.usdtBep20Address) + '</p><p class="text-soft" style="font-size:0.78rem;margin:0;">Sending on any other network will result in lost funds.</p>'
+      : '<p style="margin:0 0 6px;font-size:0.85rem;">Transfer your plan amount to:</p><p style="font-size:0.9rem;margin:0;"><strong>' + ST.escapeHtml(d.bankName) + '</strong><br>Account Number: <strong>' + ST.escapeHtml(d.bankAccountNumber) + '</strong>' + (d.bankAccountName ? '<br>Account Name: ' + ST.escapeHtml(d.bankAccountName) : '') + '</p>';
+    document.getElementById('manual-payment-details').innerHTML = detailsHtml;
+    document.getElementById('manual-amount-label').textContent = method === 'usdt_bep20' ? 'Amount Sent (USDT)' : 'Amount Sent (₦)';
+    document.getElementById('manual-reference-label').textContent = method === 'usdt_bep20' ? 'Transaction Hash' : 'Sender Name / Reference';
+    pmManual.querySelector('[name="reference_note"]').placeholder = method === 'usdt_bep20' ? 'Paste the transaction hash' : 'The name/reference your bank transfer was sent under';
+    pmManual.plan.value = pendingPlan;
+    pmManual.method.value = method;
+    pmManual.amount_claimed.value = method === 'bank_transfer' ? pendingAmount : '';
+    pmChoose.style.display = 'none'; pmManual.style.display = '';
+  }
+
+  document.getElementById('pay-card-btn').addEventListener('click', function () {
+    closePaymentMethodModal();
+    payWithCard(pendingPlan, pendingAmount);
+  });
+  document.getElementById('pay-usdt-btn').addEventListener('click', function () { showManualStep('usdt_bep20'); });
+  document.getElementById('pay-bank-btn').addEventListener('click', function () { showManualStep('bank_transfer'); });
+  document.getElementById('manual-payment-back').addEventListener('click', function () {
+    pmManual.style.display = 'none'; pmChoose.style.display = '';
+  });
+
+  pmManual.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var fd = new FormData(pmManual);
+    try {
+      await ST.api('/manual-payments', {
+        method: 'POST',
+        body: { plan: fd.get('plan'), method: fd.get('method'), amount_claimed: fd.get('amount_claimed'), reference_note: fd.get('reference_note') },
+      });
+      closePaymentMethodModal();
+      ST.showToast('Submitted! Your VIP access activates once an admin confirms the payment.', 'success');
+    } catch (err) { ST.showToast(err.message, 'error'); }
+  });
+
+  function startCheckout(plan, amount) {
+    var user = ST.getUser();
+    if (!user) { ST.openAuthModal('register'); return; }
+    openPaymentMethodModal(plan, amount);
   }
 
   document.querySelectorAll('[data-plan]').forEach(function (btn) {
