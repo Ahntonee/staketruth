@@ -1,0 +1,199 @@
+/* =========================================================================
+   StakeTruth -- Glassmorphism theme (admin dashboard)
+   Loaded after style.css on every admin page. Frosted, translucent panels
+   (backdrop blur + saturation boost, thin light borders, soft coloured
+   glow) floating over a fixed gradient "mesh" background. Brand colours are
+   unchanged. Selectors are prefixed with `body` to out-rank the per-page
+   inline <style> blocks (e.g. .kpi-pro, .perf-kpi) that load later.
+
+   Deliberate exception: .modal gets a translucent fill but NO backdrop-filter.
+   A backdrop-filter makes an element the containing block for position:fixed
+   descendants, which would trap the blog editor's fullscreen mode inside
+   its modal. The modal overlay behind it is blurred instead.
+   ========================================================================= */
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-strong: rgba(255, 255, 255, 0.82);
+  --glass-input: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.75);
+  --glass-line: rgba(120, 80, 50, 0.12);
+  --glass-shadow: 0 8px 32px rgba(150, 90, 50, 0.16);
+  --glass-blur: blur(18px) saturate(165%);
+  --glass-hover: rgba(255, 255, 255, 0.5);
+  --glass-mesh:
+    radial-gradient(circle at 10% 12%, rgba(255, 107, 53, 0.40), transparent 38%),
+    radial-gradient(circle at 90% 8%, rgba(240, 185, 11, 0.36), transparent 36%),
+    radial-gradient(circle at 82% 90%, rgba(255, 138, 92, 0.30), transparent 40%),
+    radial-gradient(circle at 8% 88%, rgba(59, 130, 246, 0.20), transparent 38%);
+}
+
+[data-theme="dark"] {
+  --glass-bg: rgba(38, 38, 46, 0.55);
+  --glass-bg-strong: rgba(34, 34, 42, 0.86);
+  --glass-input: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.13);
+  --glass-line: rgba(255, 255, 255, 0.09);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --glass-hover: rgba(255, 255, 255, 0.08);
+  --glass-mesh:
+    radial-gradient(circle at 10% 12%, rgba(255, 107, 53, 0.28), transparent 38%),
+    radial-gradient(circle at 90% 8%, rgba(240, 185, 11, 0.20), transparent 36%),
+    radial-gradient(circle at 82% 90%, rgba(255, 107, 53, 0.18), transparent 40%),
+    radial-gradient(circle at 8% 88%, rgba(59, 130, 246, 0.16), transparent 38%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --glass-bg: rgba(38, 38, 46, 0.55);
+    --glass-bg-strong: rgba(34, 34, 42, 0.86);
+    --glass-input: rgba(255, 255, 255, 0.07);
+    --glass-border: rgba(255, 255, 255, 0.13);
+    --glass-line: rgba(255, 255, 255, 0.09);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    --glass-hover: rgba(255, 255, 255, 0.08);
+    --glass-mesh:
+      radial-gradient(circle at 10% 12%, rgba(255, 107, 53, 0.28), transparent 38%),
+      radial-gradient(circle at 90% 8%, rgba(240, 185, 11, 0.20), transparent 36%),
+      radial-gradient(circle at 82% 90%, rgba(255, 107, 53, 0.18), transparent 40%),
+      radial-gradient(circle at 8% 88%, rgba(59, 130, 246, 0.16), transparent 38%);
+  }
+}
+
+/* The mesh backdrop is what makes the glass read as glass. Fixed so panels
+   slide over it as the page scrolls. */
+body {
+  background-color: var(--bg);
+  background-image: var(--glass-mesh);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+}
+
+/* ---- Frosted panels ---------------------------------------------------------- */
+body .card,
+body .stat-card,
+body .kpi-pro,
+body .perf-kpi,
+body .aside-widget {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+body .card[style*="background"] { background: var(--glass-bg) !important; }
+
+body .admin-sidebar {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-right: 1px solid var(--glass-border);
+  box-shadow: 8px 0 32px rgba(150, 90, 50, 0.10);
+}
+body .admin-sidebar a { border-radius: 12px; border: 1px solid transparent; }
+body .admin-sidebar a.active,
+body .admin-sidebar a:hover {
+  background: var(--glass-hover);
+  border-color: var(--glass-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  color: var(--primary);
+}
+body .admin-overlay { background: rgba(30, 20, 12, 0.3); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+
+body .admin-topbar {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: 0 4px 24px rgba(150, 90, 50, 0.10);
+}
+
+/* ---- Tables ---------------------------------------------------------------------- */
+body .table-scroll {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  box-shadow: var(--glass-shadow);
+}
+/* a table already inside a .card shouldn't get a second frosted layer */
+body .card .table-scroll { background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+body .data-table th { background: var(--glass-hover); border-bottom: 1px solid var(--glass-line); }
+body .data-table td { border-bottom: 1px solid var(--glass-line); }
+body .data-table tbody tr:hover { background: var(--glass-hover); }
+
+/* ---- Buttons ------------------------------------------------------------------------ */
+body .btn { border-radius: 12px; transition: transform 0.15s, box-shadow 0.15s, background 0.15s; }
+body .btn:hover { transform: translateY(-1px); }
+body .btn-primary {
+  background: linear-gradient(135deg, rgba(255, 138, 92, 0.95), rgba(255, 107, 53, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+body .btn-primary:hover { box-shadow: 0 8px 26px rgba(255, 107, 53, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.5); }
+body .btn-outline {
+  background: var(--glass-input);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  color: var(--primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+body .btn-outline:hover { background: var(--glass-hover); border-color: var(--primary); }
+body .btn-danger { box-shadow: 0 6px 20px rgba(214, 69, 90, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+body .icon-btn { background: var(--glass-input); border: 1px solid var(--glass-border); border-radius: 10px; }
+body .icon-btn:hover { background: var(--glass-hover); }
+
+/* ---- Forms: translucent fields on frosted panels ---------------------------------------- */
+body .form-label { color: var(--text); }
+body .form-control {
+  background: var(--glass-input);
+  color: var(--text);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+body .form-control::placeholder { color: var(--muted); }
+body .form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--glass-bg-strong);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.25);
+}
+body select.form-control option { background: var(--card); color: var(--text); }
+
+/* ---- Modals ---------------------------------------------------------------------------------- */
+body .modal-overlay { background: rgba(30, 20, 12, 0.35); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+body .modal {
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+body .modal::before { background: var(--glass-line); }
+body .modal-close { border-radius: 50%; }
+
+/* ---- Toasts, badges, misc ------------------------------------------------------------------------ */
+body .toast {
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-left: 4px solid var(--primary);
+  box-shadow: var(--glass-shadow);
+}
+body .badge { border: 1px solid rgba(255, 255, 255, 0.35); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+body .ann-preview, body .ann-checkbox-row { background: var(--glass-input); border-color: var(--glass-border); }
+body pre#log-output { background: var(--glass-input) !important; border: 1px solid var(--glass-border); }
+body .category-tab { background: var(--glass-input); border-color: var(--glass-border); border-radius: 999px; }
+body .category-tab.active { background: var(--primary); border-color: rgba(255, 255, 255, 0.4); box-shadow: 0 4px 14px rgba(255, 107, 53, 0.35); }
+body .EasyMDEContainer .CodeMirror, body .editor-toolbar { background: var(--glass-input); border-color: var(--glass-border); }
+
+/* Browsers without backdrop-filter support get a more opaque fill so text stays legible */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --glass-bg: rgba(255, 255, 255, 0.9); }
+  [data-theme="dark"] { --glass-bg: rgba(38, 38, 46, 0.94); }
+}

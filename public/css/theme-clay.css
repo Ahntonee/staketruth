@@ -1,0 +1,215 @@
+/* =========================================================================
+   StakeTruth -- Claymorphism theme (public-facing site)
+   Loaded after style.css on every public page. Soft, puffy, "moulded clay"
+   surfaces: large radii, a light top-left highlight + darker bottom-right
+   shadow on raised elements, and inset shadows on pressed/recessed ones
+   (inputs, progress tracks, active tabs). Brand colours (orange/gold) are
+   unchanged -- only surfaces, shadows, radii and form styling move.
+   Every selector is prefixed with `body` to out-rank page-level inline
+   <style> blocks that load later and set their own background/border.
+   ========================================================================= */
+
+:root {
+  --bg: #f3eae1;
+  --bg-2: #ecdfd2;
+  --card: #fbf6f0;
+  --card-2: #f1e6db;
+  --border: rgba(150, 105, 75, 0.12);
+
+  --clay-input: #efe3d8;
+  --clay-out: 9px 9px 22px rgba(166, 118, 84, 0.26), -7px -7px 18px rgba(255, 255, 255, 0.95);
+  --clay-out-sm: 5px 5px 12px rgba(166, 118, 84, 0.24), -4px -4px 10px rgba(255, 255, 255, 0.9);
+  --clay-in: inset 4px 4px 9px rgba(166, 118, 84, 0.22), inset -4px -4px 9px rgba(255, 255, 255, 0.92);
+  --clay-puff: inset -3px -3px 7px rgba(160, 55, 15, 0.22), inset 3px 3px 7px rgba(255, 255, 255, 0.38);
+  --clay-header: 0 8px 22px rgba(166, 118, 84, 0.22);
+  --clay-rim: rgba(255, 255, 255, 0.75);
+}
+
+[data-theme="dark"] {
+  --bg: #1b1b1e;
+  --bg-2: #222226;
+  --card: #2a2a2e;
+  --card-2: #333338;
+  --border: rgba(255, 255, 255, 0.07);
+
+  --clay-input: #212125;
+  --clay-out: 9px 9px 22px rgba(0, 0, 0, 0.55), -6px -6px 16px rgba(255, 255, 255, 0.045);
+  --clay-out-sm: 5px 5px 12px rgba(0, 0, 0, 0.5), -3px -3px 9px rgba(255, 255, 255, 0.04);
+  --clay-in: inset 4px 4px 9px rgba(0, 0, 0, 0.5), inset -3px -3px 8px rgba(255, 255, 255, 0.05);
+  --clay-puff: inset -3px -3px 7px rgba(0, 0, 0, 0.35), inset 3px 3px 7px rgba(255, 255, 255, 0.16);
+  --clay-header: 0 8px 22px rgba(0, 0, 0, 0.5);
+  --clay-rim: rgba(255, 255, 255, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b1b1e;
+    --bg-2: #222226;
+    --card: #2a2a2e;
+    --card-2: #333338;
+    --border: rgba(255, 255, 255, 0.07);
+
+    --clay-input: #212125;
+    --clay-out: 9px 9px 22px rgba(0, 0, 0, 0.55), -6px -6px 16px rgba(255, 255, 255, 0.045);
+    --clay-out-sm: 5px 5px 12px rgba(0, 0, 0, 0.5), -3px -3px 9px rgba(255, 255, 255, 0.04);
+    --clay-in: inset 4px 4px 9px rgba(0, 0, 0, 0.5), inset -3px -3px 8px rgba(255, 255, 255, 0.05);
+    --clay-puff: inset -3px -3px 7px rgba(0, 0, 0, 0.35), inset 3px 3px 7px rgba(255, 255, 255, 0.16);
+    --clay-header: 0 8px 22px rgba(0, 0, 0, 0.5);
+    --clay-rim: rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* ---- Raised surfaces ------------------------------------------------------ */
+body .card,
+body .aside-widget,
+body .home-aside-widget,
+body .stat-card,
+body .recent-win-card,
+body .latest-post-full,
+body .featured-post-card,
+body .st-popup-card,
+body .toast {
+  border: 1px solid var(--clay-rim);
+  border-radius: 24px;
+  box-shadow: var(--clay-out);
+}
+body .recent-win-card, body .toast { border-radius: 20px; box-shadow: var(--clay-out-sm); }
+body .featured-post-card, body .latest-post-full { border-radius: 26px; }
+
+/* Prediction cards: shadow + radius only. Their background/border carry the
+   VIP/banker gradient-border trick (.vip-card), which a background override
+   here would destroy. */
+body .prediction-card { border-radius: 26px; box-shadow: var(--clay-out); }
+body .prediction-card:not(.vip-card):not(.banker-card) { border-color: var(--clay-rim); }
+body .home-layout #predictions-grid .prediction-card { border-radius: 20px; }
+
+body .pricing-card { border: 1px solid var(--clay-rim); border-radius: 30px; box-shadow: var(--clay-out); }
+
+/* The announcement widget already uses a gradient border; just add the lift. */
+body .announcement-outline { border-radius: 26px; box-shadow: var(--clay-out); }
+body .announcements-panel__heading, body .announcement-outline__heading { background: var(--card-2); box-shadow: var(--clay-in); }
+
+/* ---- Header / footer ------------------------------------------------------ */
+body .site-header { border-bottom: 0; border-radius: 0 0 26px 26px; box-shadow: var(--clay-header); }
+body .site-footer { border-radius: 34px 34px 0 0; box-shadow: 0 -6px 18px rgba(166, 118, 84, 0.14); }
+
+/* ---- Buttons: puffy, pressable --------------------------------------------- */
+body .btn {
+  border-radius: 18px;
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+}
+body .btn:hover { transform: translateY(-1px); }
+body .btn:active { transform: translateY(1px) scale(0.99); }
+body .btn:disabled, body .btn[disabled] { opacity: 0.55; transform: none; cursor: not-allowed; }
+
+body .btn-primary {
+  background: linear-gradient(145deg, #ff8a5c, #ff6b35 55%, #f05a22);
+  box-shadow: var(--clay-out-sm), var(--clay-puff);
+}
+body .btn-primary:hover { box-shadow: var(--clay-out), var(--clay-puff); }
+body .btn-primary:active { box-shadow: inset 4px 4px 9px rgba(160, 55, 15, 0.45), inset -3px -3px 7px rgba(255, 255, 255, 0.22); }
+
+body .btn-vip {
+  background: linear-gradient(145deg, #ffd24d, #f0b90b 55%, #f59a1a);
+  box-shadow: var(--clay-out-sm), var(--clay-puff);
+}
+body .btn-danger { box-shadow: var(--clay-out-sm), var(--clay-puff); }
+
+body .btn-outline {
+  background: var(--card);
+  border: 2px solid transparent;
+  color: var(--primary);
+  box-shadow: var(--clay-out-sm);
+}
+body .btn-outline:active { box-shadow: var(--clay-in); }
+body .btn-ghost { box-shadow: none; }
+body .pricing-card__cta { box-shadow: var(--clay-out-sm), var(--clay-puff); }
+body .btn-outline.pricing-card__cta { border-color: transparent; }
+
+body .icon-btn { border-radius: 14px; background: var(--card); box-shadow: var(--clay-out-sm); border-color: transparent; }
+
+/* ---- Tabs & pills ----------------------------------------------------------- */
+body .category-tab {
+  border-radius: 999px; border-color: transparent; background: var(--card);
+  box-shadow: var(--clay-out-sm);
+}
+body .category-tab.active { background: var(--primary); color: #fff; box-shadow: var(--clay-in); }
+body .badge { box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.45), 1px 2px 4px rgba(0, 0, 0, 0.14); }
+body .bookie-tag { background: var(--card); border-color: transparent; box-shadow: var(--clay-out-sm); }
+body .score-badge { box-shadow: var(--clay-out-sm); }
+
+/* Recessed tracks (confidence / vote bars) */
+body .confidence-bar-track { background: var(--clay-input); box-shadow: var(--clay-in); height: 10px; }
+body .confidence-bar-fill { box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.45); }
+
+/* ---- Forms: recessed "pressed into the clay" fields --------------------------- */
+body .form-label { color: var(--text); letter-spacing: 0.01em; }
+body .form-control {
+  background: var(--clay-input);
+  color: var(--text);
+  border: 0;
+  border-radius: 18px;
+  padding: 12px 18px;
+  box-shadow: var(--clay-in);
+  transition: box-shadow 0.15s;
+}
+body .form-control::placeholder { color: var(--muted); }
+body .form-control:focus {
+  outline: none;
+  box-shadow: var(--clay-in), 0 0 0 3px rgba(255, 107, 53, 0.38);
+}
+body textarea.form-control { border-radius: 22px; }
+body select.form-control { appearance: none; -webkit-appearance: none; padding-right: 40px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-soft) 50%), linear-gradient(135deg, var(--text-soft) 50%, transparent 50%);
+  background-position: calc(100% - 22px) 52%, calc(100% - 16px) 52%;
+  background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; }
+body input[type="checkbox"], body input[type="radio"] { accent-color: var(--primary); }
+body input[type="file"].form-control { padding: 10px 14px; }
+body .form-error { color: var(--danger); }
+
+/* ---- Modals (pricing checkout, generic dialogs) ------------------------------- */
+body .modal-overlay { background: rgba(70, 45, 30, 0.38); backdrop-filter: blur(5px); }
+body .modal {
+  background: var(--card);
+  border: 1px solid var(--clay-rim);
+  border-radius: 32px 32px 0 0;
+  box-shadow: var(--clay-out);
+}
+@media (min-width: 768px) { body .modal { border-radius: 32px; } }
+body .modal::before { background: var(--clay-input); box-shadow: var(--clay-in); height: 6px; }
+body .modal-close { border-radius: 50%; background: var(--card); box-shadow: var(--clay-out-sm); color: var(--text); width: 36px; height: 36px; }
+
+/* ---- Login / registration (auth modal): same clay language as every other form -- */
+body #st-auth-modal { background: rgba(70, 45, 30, 0.42); backdrop-filter: blur(6px); }
+body #st-auth-modal .st-auth-card {
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--clay-rim);
+  border-radius: 34px;
+  box-shadow: var(--clay-out), 0 30px 60px rgba(0, 0, 0, 0.18);
+}
+body .st-auth-badge {
+  color: var(--primary); background: var(--card); border: 0;
+  box-shadow: var(--clay-out-sm), var(--clay-puff);
+}
+body #st-auth-modal .modal-header h3 { color: var(--text); }
+body #st-auth-modal .modal-close { color: var(--text-soft); background: var(--card); box-shadow: var(--clay-out-sm); }
+body #st-auth-modal .modal-close:hover { color: var(--primary); background: var(--card); }
+body .st-auth-panel { background: transparent; border: 0; box-shadow: none; padding: 8px 4px 4px; }
+body .st-auth-field > .material-icons-round { color: var(--muted); }
+body #st-auth-modal .st-auth-field .form-control,
+body #st-auth-modal #st-otp-form .form-control {
+  color: var(--text); background: var(--clay-input); border: 0; border-radius: 18px; box-shadow: var(--clay-in);
+}
+body #st-auth-modal .st-auth-field .form-control::placeholder { color: var(--muted); }
+body #st-auth-modal .st-auth-field .form-control:focus {
+  outline: none; background: var(--clay-input); box-shadow: var(--clay-in), 0 0 0 3px rgba(255, 107, 53, 0.38);
+}
+body .st-auth-actions button, body .st-auth-switch button { color: var(--primary-dim); }
+body .st-auth-help, body .st-auth-switch, body .st-auth-panel > .text-soft { color: var(--text-soft); }
+body #st-auth-modal .btn-primary { border-radius: 20px; box-shadow: var(--clay-out-sm), var(--clay-puff); }
+
+/* ---- Misc ------------------------------------------------------------------------ */
+body .faq-item { border-bottom-color: var(--border); }
+body .mobile-drawer__panel { box-shadow: -10px 0 30px rgba(0, 0, 0, 0.25); }
+body .tab-row { padding: 4px 4px 12px; }   /* room so pill shadows aren't clipped by the scroll row */
