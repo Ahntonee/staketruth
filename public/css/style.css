@@ -55,8 +55,8 @@
   --gradient-red:   linear-gradient(135deg, var(--red-start), var(--red-end));      /* sunset — banker/live/urgent */
   --gradient-green: linear-gradient(135deg, var(--light-green), var(--leaf-green));  /* gold-to-orange — VIP/premium */
 
-  --font-head: 'Inter', -apple-system, sans-serif;
-  --font-body: 'Open Sans', -apple-system, sans-serif;
+  --font-head: 'Saira Condensed', -apple-system, sans-serif;
+  --font-body: 'Saira', -apple-system, sans-serif;
   --radius:    8px;
   --radius-lg: 14px;
   --radius-xl: 20px;
