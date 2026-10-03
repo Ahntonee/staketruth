@@ -10,7 +10,10 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="StakeTruth">
 <meta id="og-title" property="og:title" content="StakeTruth">
-<meta property="og:image" content="https://www.staketruth.com/images/logo.png">
+<meta id="og-description" property="og:description" content="Free and VIP football predictions from StakeTruth.">
+<meta id="og-image" property="og:image" content="https://www.staketruth.com/images/logo.png">
+<meta id="og-url" property="og:url" content="https://www.staketruth.com/">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@400;600;700;800&family=Saira:wght@400;600;700&display=swap" rel="stylesheet">
@@ -62,6 +65,9 @@
 
       document.title = page.title;
       document.querySelector('meta[name="description"]').setAttribute('content', page.meta_description || '');
+      document.getElementById('og-title').setAttribute('content', page.title);
+      document.getElementById('og-description').setAttribute('content', page.meta_description || '');
+      document.getElementById('og-url').setAttribute('content', window.location.origin + window.location.pathname);
       document.getElementById('canonical-link').setAttribute('href', window.location.origin + window.location.pathname);
       document.getElementById('breadcrumb-current').textContent = page.h1 || page.title;
 

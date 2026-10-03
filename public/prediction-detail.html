@@ -5,10 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title id="page-title">Football Prediction | StakeTruth</title>
 <meta id="meta-description" name="description" content="Detailed football prediction with confidence score, form, and analysis from StakeTruth.">
+<meta name="robots" content="noindex, follow">
 <link rel="canonical" id="canonical-link" href="https://www.staketruth.com/">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="StakeTruth">
 <meta id="og-title" property="og:title" content="Football Prediction | StakeTruth">
+<meta id="og-description" property="og:description" content="Detailed football prediction with confidence score, form, and analysis from StakeTruth.">
+<meta id="og-image" property="og:image" content="https://www.staketruth.com/images/logo.png">
+<meta id="og-url" property="og:url" content="https://www.staketruth.com/">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@400;600;700;800&family=Saira:wght@400;600;700&display=swap" rel="stylesheet">
@@ -25,6 +30,7 @@
       <nav style="font-size:0.8rem;color:var(--text-soft);margin-bottom:12px;">
         <a href="/">Home</a> &rsaquo; <a href="/predictions.html">Predictions</a> &rsaquo; <span id="breadcrumb-current">Match</span>
       </nav>
+      <h1 id="prediction-h1" style="font-size:1.3rem;margin:0 0 12px;"></h1>
       <div id="detail-container"><div class="skeleton" style="height:320px;border-radius:14px;"></div></div>
 
       <div class="card card-pad" style="margin-top:20px;">
@@ -84,11 +90,16 @@
       predictionId = p.id;
 
       document.title = p.home_team + ' vs ' + p.away_team + ' Prediction — ' + p.tip + ' | StakeTruth';
+      var metaDesc = 'StakeTruth prediction for ' + p.home_team + ' vs ' + p.away_team + ': ' + (p.lockReason ? 'full analysis available to members.' : p.analysis || p.tip);
+      if (metaDesc.length > 160) metaDesc = metaDesc.slice(0, 159) + '…';
       document.getElementById('page-title').textContent = document.title;
-      document.getElementById('meta-description').setAttribute('content', 'StakeTruth prediction for ' + p.home_team + ' vs ' + p.away_team + ': ' + (p.lockReason ? 'full analysis available to members.' : p.analysis || p.tip));
+      document.getElementById('meta-description').setAttribute('content', metaDesc);
       document.getElementById('og-title').setAttribute('content', document.title);
+      document.getElementById('og-description').setAttribute('content', metaDesc);
+      document.getElementById('og-url').setAttribute('content', window.location.origin + window.location.pathname);
       document.getElementById('canonical-link').setAttribute('href', window.location.origin + window.location.pathname);
       document.getElementById('breadcrumb-current').textContent = p.home_team + ' vs ' + p.away_team;
+      document.getElementById('prediction-h1').textContent = p.home_team + ' vs ' + p.away_team + ' Prediction';
 
       var ldJson = document.createElement('script');
       ldJson.type = 'application/ld+json';

@@ -10,7 +10,10 @@
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="StakeTruth">
 <meta id="og-title" property="og:title" content="StakeTruth Blog">
+<meta id="og-description" property="og:description" content="StakeTruth blog article.">
 <meta id="og-image" property="og:image" content="https://www.staketruth.com/images/logo.png">
+<meta id="og-url" property="og:url" content="https://www.staketruth.com/blog.html">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@400;600;700;800&family=Saira:wght@400;600;700&display=swap" rel="stylesheet">
@@ -65,7 +68,9 @@
       document.getElementById('meta-description').setAttribute('content', post.meta_description || post.excerpt || '');
       document.getElementById('meta-keywords').setAttribute('content', post.keywords || '');
       document.getElementById('og-title').setAttribute('content', post.title);
+      document.getElementById('og-description').setAttribute('content', post.meta_description || post.excerpt || '');
       if (post.featured_image) document.getElementById('og-image').setAttribute('content', post.featured_image);
+      document.getElementById('og-url').setAttribute('content', window.location.origin + window.location.pathname);
       document.getElementById('canonical-link').setAttribute('href', window.location.origin + window.location.pathname);
       document.getElementById('breadcrumb-current').textContent = post.title;
 

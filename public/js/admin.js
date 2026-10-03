@@ -73,6 +73,7 @@
   var NAV_ITEMS = [
     { key: 'dashboard', href: 'dashboard.html', icon: 'dashboard', label: 'Dashboard' },
     { key: 'intelligence', href: 'intelligence.html', icon: 'psychology', label: 'Intelligence' },
+    { key: 'weights', href: 'weights.html', icon: 'tune', label: 'Weight Tuner' },
     { key: 'predictions', href: 'predictions.html', icon: 'sports_soccer', label: 'Predictions' },
     { key: 'bet-builder', href: 'bet-builder.html', icon: 'stacked_line_chart', label: 'Bet Builder' },
     { key: 'categories', href: 'categories.html', icon: 'category', label: 'Categories' },
@@ -90,6 +91,8 @@
     { key: 'revenue', href: 'revenue.html', icon: 'payments', label: 'Revenue' },
     { key: 'backlinks', href: 'backlinks.html', icon: 'link', label: 'Backlinks' },
     { key: 'pages', href: 'pages.html', icon: 'description', label: 'Site Pages' },
+    { key: 'seo-pages', href: 'seo-pages.html', icon: 'auto_awesome_motion', label: 'SEO Pages' },
+    { key: 'seo', href: 'seo.html', icon: 'search', label: 'SEO Settings' },
     { key: 'settings', href: 'settings.html', icon: 'settings', label: 'Settings' },
   ];
 

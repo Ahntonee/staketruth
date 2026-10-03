@@ -261,11 +261,22 @@ const createPrediction = asyncHandler(async (req, res) => {
 
 const updatePrediction = asyncHandler(async (req, res) => {
   const fields = Object.keys(req.body).filter((k) => ALLOWED_FIELDS.includes(k));
-  if (!fields.length) return errorResponse(res, 'No valid fields to update', 400);
+  // bookies_available is a JSON column edited as an admin-friendly array in
+  // the form but was previously missing from ALLOWED_FIELDS entirely, so an
+  // edit to an EXISTING prediction silently discarded it (new predictions
+  // were unaffected -- createPrediction already stores it correctly above).
+  // Handled separately, like createPrediction does, rather than folded into
+  // the generic string-field loop below.
+  const hasBookies = Object.prototype.hasOwnProperty.call(req.body, 'bookies_available');
+  if (!fields.length && !hasBookies) return errorResponse(res, 'No valid fields to update', 400);
   if (req.body.vip_tier && !['gold', 'diamond'].includes(req.body.vip_tier)) return errorResponse(res, 'Invalid VIP tier', 400);
-  const setSql = fields.map((f) => `${f} = ?`).join(', ');
+  const setClauses = fields.map((f) => `${f} = ?`);
   const values = fields.map((f) => (typeof req.body[f] === 'boolean' ? (req.body[f] ? 1 : 0) : req.body[f]));
-  await pool.query(`UPDATE predictions SET ${setSql} WHERE id = ?`, [...values, req.params.id]);
+  if (hasBookies) {
+    setClauses.push('bookies_available = ?');
+    values.push(req.body.bookies_available ? JSON.stringify(req.body.bookies_available) : null);
+  }
+  await pool.query(`UPDATE predictions SET ${setClauses.join(', ')} WHERE id = ?`, [...values, req.params.id]);
   return successResponse(res, { message: 'Prediction updated' });
 });
 

@@ -30,12 +30,28 @@ function confidenceLabel(score) {
   return 'Very low confidence';
 }
 
-function injectHead(html, { title, description, canonical, robots = 'index, follow', jsonLd, ogImage }) {
+// Replaces a tag by its `id` only if that placeholder actually exists in this
+// particular template -- lets the three templates share one injector even
+// though they don't all carry identical placeholder tags (e.g. only
+// blog-post.html ships an id="og-image" today).
+function replaceById(html, id, attr, value) {
+  const re = new RegExp(`(<meta id="${id}"[^>]*${attr}=")[^"]*(")`);
+  return re.test(html) ? html.replace(re, `$1${escapeHtml(value)}$2`) : html;
+}
+
+function injectHead(html, { title, description, canonical, robots = 'index, follow', jsonLd, ogImage, ogDescription }) {
   let out = html
     .replace(/<title id="page-title">[^<]*<\/title>/, `<title id="page-title">${escapeHtml(title)}</title>`)
     .replace(/(<meta id="meta-description" name="description" content=")[^"]*(")/, `$1${escapeHtml(description)}$2`)
     .replace(/(<link rel="canonical" id="canonical-link" href=")[^"]*(")/, `$1${escapeHtml(canonical)}$2`)
     .replace(/(<meta id="og-title" property="og:title" content=")[^"]*(")/, `$1${escapeHtml(title)}$2`);
+  // og:description/og:image/og:url and the Twitter card: Twitter/X and most
+  // other link-preview bots (WhatsApp, Slack, LinkedIn) fall back to the
+  // og:* tags when no twitter:* equivalent is present, so correctly filling
+  // these four covers both without needing separate twitter:title/image tags.
+  out = replaceById(out, 'og-description', 'content', ogDescription ?? description);
+  out = replaceById(out, 'og-image', 'content', ogImage || `${process.env.SITE_URL}/images/logo.png`);
+  out = replaceById(out, 'og-url', 'content', canonical);
   const robotsTag = `<meta name="robots" content="${escapeHtml(robots)}">`;
   out = /<meta\b[^>]*name=["']robots["'][^>]*>/i.test(out)
     ? out.replace(/<meta\b[^>]*name=["']robots["'][^>]*>/i, robotsTag)
@@ -44,10 +60,19 @@ function injectHead(html, { title, description, canonical, robots = 'index, foll
   return out;
 }
 
+// Google typically truncates/rewrites a meta description past ~160 chars, so
+// anything built from free-form admin/analysis text needs a hard cap -- this
+// is the same 160-char convention renderBlogPage already uses below.
+function truncate(str, max) {
+  if (!str || str.length <= max) return str || '';
+  return str.slice(0, max - 1).trimEnd() + '…';
+}
+
 function renderPredictionPage(html, p, role, plan) {
   const lockReason = getLockReason(p, role, plan);
   const title = `${p.home_team} vs ${p.away_team} Prediction — ${lockReason ? 'VIP Pick' : p.tip} | StakeTruth`;
-  const description = `StakeTruth prediction for ${p.home_team} vs ${p.away_team}: ${lockReason ? 'full analysis available to VIP members.' : (p.analysis || p.tip)}`;
+  const rawDescription = `StakeTruth prediction for ${p.home_team} vs ${p.away_team}: ${lockReason ? 'full analysis available to VIP members.' : (p.analysis || p.tip)}`;
+  const description = truncate(rawDescription, 160);
   const canonical = absoluteUrl(process.env.SITE_URL, `/prediction/${encodePathSegment(p.slug)}`);
   const indexable = isIndexablePrediction(p);
 
@@ -60,6 +85,7 @@ function renderPredictionPage(html, p, role, plan) {
       awayTeam: { '@type': 'SportsTeam', name: p.away_team },
     },
   });
+  out = out.replace('<h1 id="prediction-h1"></h1>', `<h1 id="prediction-h1">${escapeHtml(p.home_team)} vs ${escapeHtml(p.away_team)} Prediction</h1>`);
 
   const label = confidenceLabel(p.intelligence_score);
   const body = lockReason
@@ -94,7 +120,7 @@ function renderBlogPage(html, post) {
   const canonical = absoluteUrl(process.env.SITE_URL, `/blog/${encodePathSegment(post.slug)}`);
 
   let out = injectHead(html, {
-    title, description, canonical,
+    title, description, canonical, ogImage: post.featured_image || null,
     jsonLd: {
       '@context': 'https://schema.org', '@type': 'Article',
       headline: post.title, datePublished: post.published_at, author: { '@type': 'Person', name: post.author_name || 'StakeTruth Team' },
@@ -123,7 +149,7 @@ function renderBlogPage(html, post) {
 
 function renderTopicPage(html, page) {
   const title = page.title;
-  const description = page.meta_description || '';
+  const description = truncate(page.meta_description || '', 160);
   const canonical = absoluteUrl(process.env.SITE_URL, `/tips/${encodePathSegment(page.slug)}`);
 
   let out = injectHead(html, { title, description, canonical });

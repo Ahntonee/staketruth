@@ -204,6 +204,7 @@ const ADMIN_PAGES = new Set([
   'leaderboard.html', 'blog.html', 'subscriptions.html', 'users.html', 'leagues.html',
   'moderation.html', 'ads.html', 'sync.html', 'analytics.html', 'revenue.html', 'seo.html',
   'seo-pages.html', 'backlinks.html', 'pages.html', 'settings.html',
+  'announcements.html', 'bet-builder.html', 'performance.html', 'weights.html',
 ]);
 app.get('/admin/:page', (req, res, next) => {
   if (!ADMIN_PAGES.has(req.params.page)) return res.status(404).send('Not found');
@@ -333,7 +334,13 @@ app.get('/ads.txt', async (req, res) => {
 });
 
 const sitemapCache = new Map();
-const SITEMAP_TTL_MS = 60 * 60 * 1000;
+// Was 1 hour -- the indexable/noindex window for predictions (see
+// services/seoIndexing.js) shifts in real time on every page load, so a
+// long sitemap cache could list a URL as indexable for up to an hour after
+// its own page has already started returning noindex, a contradiction
+// Google can flag in Search Console. 15 minutes shrinks that window without
+// meaningfully increasing load (sitemap generation is already cheap).
+const SITEMAP_TTL_MS = 15 * 60 * 1000;
 const sitemapPaths = ['/sitemaps/pages.xml', '/sitemaps/blog.xml', '/sitemaps/tips.xml', '/sitemaps/predictions.xml'];
 
 async function cachedSitemap(key, build) {

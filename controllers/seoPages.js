@@ -4,6 +4,19 @@ const { serializePrediction } = require('./predictions');
 
 const ALLOWED_FIELDS = ['slug', 'title', 'meta_description', 'meta_keywords', 'h1', 'intro_content', 'league_id', 'league_text_filter', 'category', 'is_published'];
 
+// A typo'd slug (stray spaces, mixed case, a leftover word like "Legit ")
+// becomes a permanent, separately-indexable URL that duplicates an existing
+// page -- this is exactly how /tips/Legit%20home-win-predictions ended up
+// live alongside /tips/home-win-predictions. Normalizing here closes that off
+// at the source rather than relying on an admin typing it correctly.
+function sanitizeSlug(slug) {
+  return String(slug || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 const adminList = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(`SELECT * FROM seo_landing_pages ORDER BY created_at DESC`);
   return successResponse(res, rows);
@@ -18,10 +31,14 @@ const adminGetById = asyncHandler(async (req, res) => {
 const create = asyncHandler(async (req, res) => {
   const b = req.body;
   if (!b.slug || !b.title) return errorResponse(res, 'slug and title are required', 400);
+  const slug = sanitizeSlug(b.slug);
+  if (!slug) return errorResponse(res, 'slug must contain at least one letter or number', 400);
+  const [existing] = await pool.query('SELECT id FROM seo_landing_pages WHERE slug = ?', [slug]);
+  if (existing.length) return errorResponse(res, `A page with slug "${slug}" already exists`, 409);
   const [result] = await pool.query(
     `INSERT INTO seo_landing_pages (slug, title, meta_description, meta_keywords, h1, intro_content, league_text_filter, category, is_published)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [b.slug, b.title, b.meta_description || null, b.meta_keywords || null, b.h1 || b.title, b.intro_content || null,
+    [slug, b.title, b.meta_description || null, b.meta_keywords || null, b.h1 || b.title, b.intro_content || null,
       b.league_text_filter || null, b.category || null, b.is_published === false ? 0 : 1]
   );
   return successResponse(res, { id: result.insertId }, undefined, 201);
@@ -30,6 +47,13 @@ const create = asyncHandler(async (req, res) => {
 const update = asyncHandler(async (req, res) => {
   const fields = Object.keys(req.body).filter((k) => ALLOWED_FIELDS.includes(k));
   if (!fields.length) return errorResponse(res, 'No valid fields to update', 400);
+  if (fields.includes('slug')) {
+    const slug = sanitizeSlug(req.body.slug);
+    if (!slug) return errorResponse(res, 'slug must contain at least one letter or number', 400);
+    const [existing] = await pool.query('SELECT id FROM seo_landing_pages WHERE slug = ? AND id != ?', [slug, req.params.id]);
+    if (existing.length) return errorResponse(res, `A page with slug "${slug}" already exists`, 409);
+    req.body.slug = slug;
+  }
   const setSql = fields.map((f) => `${f} = ?`).join(', ');
   const values = fields.map((f) => (typeof req.body[f] === 'boolean' ? (req.body[f] ? 1 : 0) : req.body[f]));
   await pool.query(`UPDATE seo_landing_pages SET ${setSql} WHERE id = ?`, [...values, req.params.id]);
