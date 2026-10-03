@@ -515,6 +515,7 @@ section { padding: 28px 0; }
 .intelligence-score__value { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.95rem; }
 
 .bookie-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--card-2); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 0.72rem; font-weight: 600; }
+.bookie-tag__icon { width: 14px; height: 14px; object-fit: contain; flex-shrink: 0; }
 .odds-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); display: inline-block; animation: pulse 1.6s infinite; }
 
 .tab-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
@@ -865,6 +866,7 @@ textarea.form-control { min-height: 120px; resize: vertical; }
   .home-layout #predictions-grid .prediction-card .flex { grid-column: 1 / -1; margin-top: 0 !important; gap: 4px; }
   .home-layout #predictions-grid .bookie-tag { font-size: .5625rem; padding: 1px 4px; }
   .home-layout #predictions-grid .odds-live-dot { width: 4px; height: 4px; }
+  .home-layout #predictions-grid .bookie-tag__icon { width: 9px; height: 9px; }
   .home-layout #predictions-grid .locked-card { min-height: 108px; }
   .home-layout #predictions-grid .locked-card__overlay { gap: 3px; }
   .home-layout #predictions-grid .locked-card__overlay .material-icons-round { font-size: 1rem; }

@@ -167,7 +167,7 @@
     return '' +
       '<div class="ticker-wrap"><div class="ticker-track" id="st-ticker"><span>Loading today\'s predictions…</span></div></div>' +
       '<div class="header-inner">' +
-        '<a href="/" class="site-logo"><img src="/images/logo.png" alt="StakeTruth" data-fallback-show-sibling><span class="brand-fallback" style="display:none">STAKETRUTH</span></a>' +
+        '<a href="/" class="site-logo"><img src="/images/logo-header.png" alt="StakeTruth" data-fallback-show-sibling><span class="brand-fallback" style="display:none">STAKETRUTH</span></a>' +
         '<nav class="main-nav">' + navHtml('nav-link') + '</nav>' +
         '<div class="header-actions">' +
           '<button class="theme-toggle" id="st-theme-toggle" aria-label="Toggle theme"><span class="material-icons-round" id="st-theme-icon">dark_mode</span></button>' +
@@ -191,7 +191,7 @@
       '<div class="container">' +
         '<div class="footer-grid">' +
           '<div class="footer-brand">' +
-            '<img src="/images/logo.png" alt="StakeTruth" data-fallback-hide>' +
+            '<img src="/images/logo-header.png" alt="StakeTruth" data-fallback-hide>' +
             '<p>Data-Driven Picks. Proven Results.</p>' +
             '<div class="social-links" id="st-social-links"></div>' +
           '</div>' +
@@ -314,18 +314,30 @@
     ST.renderAnnouncementPopup();
   };
 
-  // ---- Announcement popup: one centered modal per eligible announcement,
-  // dismissed permanently per-browser (localStorage) once closed. Audience
-  // eligibility is already filtered server-side (GET /announcements), so
-  // this only needs to pick delivery_popup=1 items and skip ones already seen.
+  // ---- Announcement popups: a queue, shown one at a time, newest first. The
+  // first appears shortly after load; each next one appears POPUP_GAP_MS
+  // after the previous was dismissed (timestamp kept in localStorage so
+  // navigating to another page doesn't reset the gap and fire the next
+  // popup instantly). A dismissed popup is remembered per-browser forever.
+  // Audience eligibility is already filtered server-side (GET /announcements),
+  // so this only picks delivery_popup=1 items that haven't been seen.
+  var POPUP_GAP_MS = 30000;
+  var POPUP_FIRST_DELAY_MS = 2000;
+
   ST.renderAnnouncementPopup = async function () {
-    if (document.getElementById('st-announcement-popup')) return; // one at a time, page-wide
+    if (ST._popupQueueStarted) return;
+    ST._popupQueueStarted = true;
     var icons = { info: 'info', success: 'check_circle', warning: 'warning', danger: 'error' };
+    var queue;
     try {
       var res = await api('/announcements');
-      var pick = (res.data || []).find(function (a) {
-        return a.delivery_popup && !localStorage.getItem('st_popup_seen_' + a.id);
-      });
+      queue = (res.data || [])
+        .filter(function (a) { return a.delivery_popup && !localStorage.getItem('st_popup_seen_' + a.id); })
+        .sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+    } catch (e) { return; /* a popup is never critical */ }
+
+    function showNext() {
+      var pick = queue.shift();
       if (!pick) return;
       var overlay = document.createElement('div');
       overlay.className = 'st-popup-overlay';
@@ -339,10 +351,21 @@
           (pick.link_url ? '<a href="' + pick.link_url + '" class="btn btn-primary btn-sm">' + ST.escapeHtml(pick.link_label || 'Learn more') + '</a>' : '') +
         '</div>';
       document.body.appendChild(overlay);
-      function dismiss() { localStorage.setItem('st_popup_seen_' + pick.id, '1'); overlay.remove(); }
+      function dismiss() {
+        try {
+          localStorage.setItem('st_popup_seen_' + pick.id, '1');
+          localStorage.setItem('st_popup_last_dismissed_at', String(Date.now()));
+        } catch (e) { /* storage blocked -- worst case it shows again next visit */ }
+        overlay.remove();
+        if (queue.length) setTimeout(showNext, POPUP_GAP_MS);
+      }
       overlay.querySelector('.st-popup-close').addEventListener('click', dismiss);
       overlay.addEventListener('click', function (e) { if (e.target === overlay) dismiss(); });
-    } catch (e) { /* skip -- a popup is never critical */ }
+    }
+
+    var lastDismissed = Number(localStorage.getItem('st_popup_last_dismissed_at')) || 0;
+    var wait = Math.max(POPUP_FIRST_DELAY_MS, POPUP_GAP_MS - (Date.now() - lastDismissed));
+    setTimeout(showNext, wait);
   };
 
   ST.injectFooter = function () {
@@ -457,8 +480,12 @@
     if (p.result === 'pending') badges += '<span class="badge badge-pending">Pending</span>';
     if (p.result === 'void' || p.result === 'cancelled') badges += '<span class="badge badge-void">Postponed / Void</span>';
 
+    // Bookie logo placeholder -- real per-bookmaker logos aren't wired up yet,
+    // so the pill uses the site's own (compressed, ~2KB) icon for now rather
+    // than showing nothing. Swap this for a real bookmaker logo URL once
+    // that data is available per-bookie.
     var bookieTags = (p.bookies_available || []).slice(0, 3).map(function (b) {
-      return '<span class="bookie-tag"><span class="odds-live-dot"></span>' + ST.escapeHtml(b) + '</span>';
+      return '<span class="bookie-tag"><img src="/images/logo-icon.png" alt="" class="bookie-tag__icon"><span class="odds-live-dot"></span>' + ST.escapeHtml(b) + '</span>';
     }).join('');
 
     // Autoscore — only ever present when intelligence_score is non-null, which
@@ -557,7 +584,7 @@
     var icons = { info: 'info', success: 'check_circle', warning: 'warning', danger: 'error' };
     try {
       var res = await api('/announcements');
-      res.data = res.data.filter(function (a) { return a.delivery_banner; });
+      res.data = res.data.filter(function (a) { return a.delivery_banner; }).slice(0, 5);
       if (!res.data.length) { container.innerHTML = ''; if (opts.hideWhenEmpty !== false) container.style.display = 'none'; return; }
       container.style.display = '';
       var heading = opts.heading !== false ? '<h3 class="announcement-outline__heading"><span class="material-icons-round" style="color:var(--accent);">campaign</span>Announcements</h3>' : '';

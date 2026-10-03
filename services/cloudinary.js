@@ -63,10 +63,22 @@ function validateImageDataUrl(dataUrl, maxBytes = 8 * 1024 * 1024) {
  * body limit on anything but a tiny image. Callers should run
  * validateImageDataUrl first; this function doesn't re-check.
  */
+// Cloudinary applies transformations at delivery time via path segments, so
+// inserting q_auto,f_auto right after /upload/ makes its CDN serve the
+// smallest sensible format (WebP/AVIF where the browser supports it) at an
+// automatically tuned quality -- the raw secure_url serves the original
+// untouched upload, which for a phone screenshot or a large blog photo is
+// often several MB. Idempotent: leaves already-transformed URLs alone.
+function optimizeUrl(url) {
+  if (!url || !/^https:\/\/res\.cloudinary\.com\/.+\/image\/upload\//.test(url)) return url;
+  if (/\/image\/upload\/[^/]*(q_auto|f_auto)/.test(url)) return url;
+  return url.replace('/image/upload/', '/image/upload/q_auto,f_auto/');
+}
+
 async function uploadImage(dataUrl, folder = 'staketruth') {
   if (!isConfigured()) throw new Error('Cloudinary is not configured (CLOUDINARY_URL missing)');
   const result = await cloudinary.uploader.upload(dataUrl, { folder });
-  return result.secure_url;
+  return optimizeUrl(result.secure_url);
 }
 
-module.exports = { isConfigured, uploadImage, validateImageDataUrl };
+module.exports = { isConfigured, uploadImage, validateImageDataUrl, optimizeUrl };

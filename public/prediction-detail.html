@@ -115,7 +115,7 @@
       if (p.is_banker) badges += '<span class="badge badge-banker">Banker</span> ';
       if (p.is_vip) badges += '<span class="badge badge-vip">VIP</span> ';
 
-      var bookieTags = (p.bookies_available || []).map(function (b) { return '<span class="bookie-tag"><span class="odds-live-dot"></span>' + ST.escapeHtml(b) + '</span>'; }).join(' ');
+      var bookieTags = (p.bookies_available || []).map(function (b) { return '<span class="bookie-tag"><img src="/images/logo-icon.png" alt="" class="bookie-tag__icon"><span class="odds-live-dot"></span>' + ST.escapeHtml(b) + '</span>'; }).join(' ');
 
       var body =
         '<div class="card card-pad ' + (p.is_banker ? 'banker-card' : p.is_vip ? 'vip-card' : '') + '">' +

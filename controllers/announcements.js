@@ -15,7 +15,7 @@ const listPublic = asyncHandler(async (req, res) => {
      FROM announcements
      WHERE status = 'published' AND (expires_at IS NULL OR expires_at > NOW())
        AND (audience = 'all' OR (audience = 'registered' AND ? IS NOT NULL) OR (audience = 'vip' AND ? IN ('vip', 'admin')))
-     ORDER BY created_at DESC LIMIT 5`,
+     ORDER BY created_at DESC LIMIT 20`,
     [role, role]
   );
   return successResponse(res, rows);
