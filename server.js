@@ -85,7 +85,7 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(cookieParser());
 
 // ---- Body parsing: small default limit, larger only for admin blog/pages ----
-app.use(['/api/blog', '/api/admin/pages', '/api/pages'], express.json({ limit: '10mb' }));
+app.use(['/api/blog', '/api/admin/pages', '/api/pages', '/api/manual-payments'], express.json({ limit: '10mb' }));
 app.use(express.json({ limit: '10kb' }));
 
 // ---- Auth/guest context + analytics -----------------------------------------

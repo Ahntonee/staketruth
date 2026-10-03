@@ -2,6 +2,20 @@ const { pool } = require('../config/db');
 const { successResponse, errorResponse, asyncHandler } = require('../utils/helpers');
 const email = require('../utils/email');
 const { PLANS } = require('../services/plans');
+const cloudinaryService = require('../services/cloudinary');
+
+// Any authenticated user can call this (not admin-only, unlike blog's image
+// upload) -- validateImageDataUrl is the real gate here: raster-only
+// allowlist, magic-byte verification against the declared type, and a size
+// cap, before anything reaches Cloudinary. See services/cloudinary.js.
+const uploadProof = asyncHandler(async (req, res) => {
+  const { dataUrl } = req.body;
+  const check = cloudinaryService.validateImageDataUrl(dataUrl, 5 * 1024 * 1024);
+  if (!check.valid) return errorResponse(res, check.reason, 400);
+  if (!cloudinaryService.isConfigured()) return errorResponse(res, 'Image hosting is not configured on the server', 500);
+  const url = await cloudinaryService.uploadImage(dataUrl, 'staketruth/payment-proofs');
+  return successResponse(res, { url });
+});
 
 const PAYMENT_DETAIL_KEYS = ['payment_usdt_bep20_address', 'payment_bank_name', 'payment_bank_account_number', 'payment_bank_account_name', 'payment_usdt_ngn_rate'];
 
@@ -45,15 +59,19 @@ const adminUpdateDetails = asyncHandler(async (req, res) => {
 // against. The user just declares what they sent; an admin manually confirms
 // it against their own bank/wallet before approving (see adminApprove).
 const create = asyncHandler(async (req, res) => {
-  const { plan, method, amount_claimed, reference_note } = req.body;
+  const { plan, method, amount_claimed, reference_note, proof_image } = req.body;
   if (!PLANS[plan]) return errorResponse(res, 'Invalid plan', 400);
   if (!['usdt_bep20', 'bank_transfer'].includes(method)) return errorResponse(res, 'Invalid payment method', 400);
   if (!reference_note || !reference_note.trim()) {
     return errorResponse(res, method === 'usdt_bep20' ? 'Enter the transaction hash you sent with' : 'Enter the sender name/reference you transferred with', 400);
   }
+  // proof_image is a Cloudinary URL from a prior call to uploadProof above --
+  // never a raw upload accepted here, so there's nothing further to sanitize
+  // on this end besides making sure it's actually one of our own URLs.
+  const proofUrl = proof_image && /^https:\/\/res\.cloudinary\.com\//.test(proof_image) ? proof_image : null;
   const [result] = await pool.query(
-    `INSERT INTO manual_payments (user_id, plan, method, amount_claimed, reference_note) VALUES (?, ?, ?, ?, ?)`,
-    [req.user.id, plan, method, amount_claimed || PLANS[plan].amount, reference_note.trim()]
+    `INSERT INTO manual_payments (user_id, plan, method, amount_claimed, reference_note, proof_image) VALUES (?, ?, ?, ?, ?, ?)`,
+    [req.user.id, plan, method, amount_claimed || PLANS[plan].amount, reference_note.trim(), proofUrl]
   );
   return successResponse(res, { id: result.insertId, message: 'Submitted -- your VIP access will activate once an admin confirms the payment.' }, undefined, 201);
 });
@@ -114,4 +132,4 @@ const adminReject = asyncHandler(async (req, res) => {
   return successResponse(res, { message: 'Rejected' });
 });
 
-module.exports = { getPaymentDetails, adminUpdateDetails, create, myClaims, adminList, adminApprove, adminReject };
+module.exports = { getPaymentDetails, adminUpdateDetails, uploadProof, create, myClaims, adminList, adminApprove, adminReject };

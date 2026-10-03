@@ -213,6 +213,7 @@ const TABLES = [
     method ENUM('usdt_bep20','bank_transfer') NOT NULL,
     amount_claimed DECIMAL(10,2),
     reference_note VARCHAR(500),
+    proof_image VARCHAR(500),
     status ENUM('pending','approved','rejected') DEFAULT 'pending',
     admin_note VARCHAR(500),
     reviewed_by INT,
@@ -714,6 +715,7 @@ async function migrate() {
   // spec) -- this column exists mainly so an unsubscribe option can be added
   // later without a further migration.
   await ensureColumn('users', 'newsletter_subscribed', "TINYINT(1) DEFAULT 1");
+  await ensureColumn('manual_payments', 'proof_image', "VARCHAR(500) NULL");
 
   // Seed admin
   const [existingAdmin] = await pool.query('SELECT id FROM users WHERE email = ?', ['admin@staketruth.com']);

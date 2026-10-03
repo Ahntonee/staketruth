@@ -142,10 +142,16 @@
     <form id="payment-method-step-manual" style="display:none;">
       <input type="hidden" name="plan"><input type="hidden" name="method">
       <div class="card card-pad" style="background:var(--card-2);margin-bottom:14px;" id="manual-payment-details">Loading payment details…</div>
-      <div class="form-group"><label class="form-label" id="manual-amount-label">Amount (&#8358;)</label><input type="number" name="amount_claimed" class="form-control" required></div>
+      <div class="form-group"><label class="form-label" id="manual-amount-label">Amount (&#8358;)</label><input type="number" step="any" min="0" name="amount_claimed" class="form-control" required></div>
       <div class="form-group"><label class="form-label" id="manual-reference-label">Transaction Hash</label><input type="text" name="reference_note" class="form-control" required placeholder="Paste the transaction hash / sender name here"></div>
+      <div class="form-group">
+        <label class="form-label">Payment Screenshot (optional)</label>
+        <input type="file" id="proof-file-input" accept="image/png,image/jpeg,image/webp,image/gif" class="form-control">
+        <p class="text-soft" style="font-size:0.75rem;margin:4px 0 0;">PNG, JPEG, GIF or WEBP, up to 5MB. Helps us confirm your payment faster.</p>
+        <div id="proof-preview" style="margin-top:8px;display:none;"><img style="max-width:140px;max-height:140px;border-radius:8px;border:1px solid var(--border);"></div>
+      </div>
       <button type="button" class="btn btn-outline btn-sm" id="manual-payment-back" style="margin-right:8px;">&larr; Back</button>
-      <button type="submit" class="btn btn-primary btn-sm">Submit for Review</button>
+      <button type="submit" class="btn btn-primary btn-sm" id="manual-submit-btn">Submit for Review</button>
     </form>
   </div>
 </div>
@@ -277,8 +283,41 @@
     pmManual.plan.value = pendingPlan;
     pmManual.method.value = method;
     pmManual.amount_claimed.value = method === 'usdt_bep20' ? (pendingAmount / (d.usdtNgnRate || 1600)).toFixed(2) : pendingAmount;
+    resetProofInput();
     pmChoose.style.display = 'none'; pmManual.style.display = '';
   }
+
+  // ---- Payment proof screenshot: read client-side, upload to our own
+  // server (which re-validates + re-encodes via Cloudinary) only at submit
+  // time, not on every file pick -- avoids uploading a file the user then
+  // swaps out or cancels. A 5MB client-side cap mirrors the server's own
+  // limit so a user sees the rejection immediately rather than after a
+  // slow upload.
+  var proofDataUrl = null;
+  var MAX_PROOF_BYTES = 5 * 1024 * 1024;
+  function resetProofInput() {
+    proofDataUrl = null;
+    document.getElementById('proof-file-input').value = '';
+    document.getElementById('proof-preview').style.display = 'none';
+  }
+  document.getElementById('proof-file-input').addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) { proofDataUrl = null; return; }
+    if (file.size > MAX_PROOF_BYTES) {
+      ST.showToast('That image is too large -- max 5MB.', 'error');
+      e.target.value = '';
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      proofDataUrl = reader.result;
+      var preview = document.getElementById('proof-preview');
+      preview.querySelector('img').src = proofDataUrl;
+      preview.style.display = '';
+    };
+    reader.onerror = function () { ST.showToast('Could not read that file -- try another image.', 'error'); };
+    reader.readAsDataURL(file);
+  });
 
   document.getElementById('pay-card-btn').addEventListener('click', function () {
     closePaymentMethodModal();
@@ -293,14 +332,27 @@
   pmManual.addEventListener('submit', async function (e) {
     e.preventDefault();
     var fd = new FormData(pmManual);
+    var submitBtn = document.getElementById('manual-submit-btn');
+    submitBtn.disabled = true;
     try {
+      var proofUrl = null;
+      if (proofDataUrl) {
+        submitBtn.textContent = 'Uploading screenshot…';
+        var uploadRes = await ST.api('/manual-payments/upload-proof', { method: 'POST', body: { dataUrl: proofDataUrl } });
+        proofUrl = uploadRes.data.url;
+      }
+      submitBtn.textContent = 'Submit for Review';
       await ST.api('/manual-payments', {
         method: 'POST',
-        body: { plan: fd.get('plan'), method: fd.get('method'), amount_claimed: fd.get('amount_claimed'), reference_note: fd.get('reference_note') },
+        body: { plan: fd.get('plan'), method: fd.get('method'), amount_claimed: fd.get('amount_claimed'), reference_note: fd.get('reference_note'), proof_image: proofUrl },
       });
       closePaymentMethodModal();
       ST.showToast('Submitted! Your VIP access activates once an admin confirms the payment.', 'success');
-    } catch (err) { ST.showToast(err.message, 'error'); }
+    } catch (err) {
+      ST.showToast(err.message, 'error');
+      submitBtn.textContent = 'Submit for Review';
+    }
+    submitBtn.disabled = false;
   });
 
   function startCheckout(plan, amount) {

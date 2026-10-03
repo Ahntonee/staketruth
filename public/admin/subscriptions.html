@@ -24,8 +24,8 @@
         <h3 class="section-title" style="font-size:1rem;"><span class="material-icons-round">account_balance_wallet</span>Pending Manual Payments (USDT / Bank Transfer)</h3>
         <p class="text-soft" style="font-size:0.85rem;">These can't be auto-verified -- check the transaction hash on-chain (BEP-20) or your bank statement before approving. Approving instantly activates VIP.</p>
         <div class="table-scroll"><table class="data-table">
-          <thead><tr><th>User</th><th>Plan</th><th>Method</th><th>Amount Claimed</th><th>Reference</th><th>Submitted</th><th>Actions</th></tr></thead>
-          <tbody id="manual-payments-tbody"><tr><td colspan="7">Loading…</td></tr></tbody>
+          <thead><tr><th>User</th><th>Plan</th><th>Method</th><th>Amount Claimed</th><th>Reference</th><th>Proof</th><th>Submitted</th><th>Actions</th></tr></thead>
+          <tbody id="manual-payments-tbody"><tr><td colspan="8">Loading…</td></tr></tbody>
         </table></div>
       </div>
 
@@ -73,10 +73,11 @@
           '<td data-label="Method">' + (MANUAL_METHOD_LABELS[m.method] || m.method) + '</td>' +
           '<td data-label="Amount Claimed">' + (m.amount_claimed ?? '—') + '</td>' +
           '<td data-label="Reference" style="max-width:200px;word-break:break-all;">' + AD.escapeHtml(m.reference_note || '') + '</td>' +
+          '<td data-label="Proof">' + (m.proof_image ? '<a href="' + AD.escapeHtml(m.proof_image) + '" target="_blank" rel="noopener"><img src="' + AD.escapeHtml(m.proof_image) + '" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"></a>' : '<span class="text-soft">None</span>') + '</td>' +
           '<td data-label="Submitted">' + AD.formatDate(m.created_at) + '</td>' +
           '<td data-label="Actions"><button class="btn btn-primary btn-sm" data-approve="' + m.id + '">Approve</button> <button class="btn btn-outline btn-sm" data-reject="' + m.id + '">Reject</button></td></tr>';
-      }).join('') || '<tr><td colspan="7">No pending manual payments.</td></tr>';
-    } catch (e) { tbody.innerHTML = '<tr><td colspan="7">Failed to load.</td></tr>'; }
+      }).join('') || '<tr><td colspan="8">No pending manual payments.</td></tr>';
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="8">Failed to load.</td></tr>'; }
   }
   document.getElementById('manual-payments-tbody').addEventListener('click', async function (e) {
     var approveId = e.target.getAttribute('data-approve');

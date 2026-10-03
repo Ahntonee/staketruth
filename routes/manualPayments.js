@@ -6,6 +6,7 @@ const { authenticate, requireAdmin } = require('../middleware/auth');
 router.get('/details', ctrl.getPaymentDetails);
 router.put('/details', requireAdmin, ctrl.adminUpdateDetails);
 
+router.post('/upload-proof', authenticate, ctrl.uploadProof);
 router.post('/', authenticate, ctrl.create);
 router.get('/mine', authenticate, ctrl.myClaims);
 

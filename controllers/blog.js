@@ -87,7 +87,8 @@ const uploadImage = asyncHandler(async (req, res) => {
   // was blowing well past nginx's request size limit for anything but a
   // tiny image, and bloated blog_posts rows for no reason.
   const { dataUrl } = req.body;
-  if (!dataUrl || !dataUrl.startsWith('data:image/')) return errorResponse(res, 'A valid image data URL is required', 400);
+  const check = cloudinaryService.validateImageDataUrl(dataUrl);
+  if (!check.valid) return errorResponse(res, check.reason, 400);
   if (!cloudinaryService.isConfigured()) return errorResponse(res, 'Image hosting is not configured on the server', 500);
   const url = await cloudinaryService.uploadImage(dataUrl, 'staketruth/blog');
   return successResponse(res, { url });
