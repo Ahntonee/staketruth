@@ -38,7 +38,9 @@
             <div class="form-group"><label class="form-label">Bank Name</label><input name="bankName" class="form-control"></div>
             <div class="form-group"><label class="form-label">Bank Account Number</label><input name="bankAccountNumber" class="form-control"></div>
             <div class="form-group"><label class="form-label">Bank Account Name (optional)</label><input name="bankAccountName" class="form-control"></div>
+            <div class="form-group"><label class="form-label">USDT Rate (&#8358; per $1)</label><input name="usdtNgnRate" type="number" step="0.01" class="form-control"></div>
           </div>
+          <p class="text-soft" style="font-size:0.78rem;margin-top:-6px;">Used to show/prefill the USDT equivalent of each plan's naira price on Pricing. Update this when the rate moves -- it's not pulled from a live feed.</p>
           <button type="submit" class="btn btn-primary btn-sm">Save Payment Details</button>
         </form>
       </div>
@@ -99,6 +101,7 @@
       form.bankName.value = res.data.bankName || '';
       form.bankAccountNumber.value = res.data.bankAccountNumber || '';
       form.bankAccountName.value = res.data.bankAccountName || '';
+      form.usdtNgnRate.value = res.data.usdtNgnRate || '';
     } catch (e) { /* leave blank */ }
   }
   document.getElementById('payment-details-form').addEventListener('submit', async function (e) {
@@ -107,7 +110,7 @@
     try {
       await AD.api('/manual-payments/details', {
         method: 'PUT',
-        body: { usdtBep20Address: fd.get('usdtBep20Address'), bankName: fd.get('bankName'), bankAccountNumber: fd.get('bankAccountNumber'), bankAccountName: fd.get('bankAccountName') },
+        body: { usdtBep20Address: fd.get('usdtBep20Address'), bankName: fd.get('bankName'), bankAccountNumber: fd.get('bankAccountNumber'), bankAccountName: fd.get('bankAccountName'), usdtNgnRate: fd.get('usdtNgnRate') },
       });
       AD.showToast('Payment details saved', 'success');
     } catch (err) { AD.showToast(err.message, 'error'); }

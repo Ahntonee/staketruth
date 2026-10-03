@@ -3,7 +3,7 @@ const { successResponse, errorResponse, asyncHandler } = require('../utils/helpe
 const email = require('../utils/email');
 const { PLANS } = require('../services/plans');
 
-const PAYMENT_DETAIL_KEYS = ['payment_usdt_bep20_address', 'payment_bank_name', 'payment_bank_account_number', 'payment_bank_account_name'];
+const PAYMENT_DETAIL_KEYS = ['payment_usdt_bep20_address', 'payment_bank_name', 'payment_bank_account_number', 'payment_bank_account_name', 'payment_usdt_ngn_rate'];
 
 // Public -- the receiving wallet/bank details shown on the pricing page
 // before a user picks crypto/bank transfer. Admin-editable (see adminUpdateDetails),
@@ -19,14 +19,16 @@ const getPaymentDetails = asyncHandler(async (req, res) => {
     bankName: map.payment_bank_name || '',
     bankAccountNumber: map.payment_bank_account_number || '',
     bankAccountName: map.payment_bank_account_name || '',
+    usdtNgnRate: Number(map.payment_usdt_ngn_rate) || 1600,
   });
 });
 
 const adminUpdateDetails = asyncHandler(async (req, res) => {
-  const { usdtBep20Address, bankName, bankAccountNumber, bankAccountName } = req.body;
+  const { usdtBep20Address, bankName, bankAccountNumber, bankAccountName, usdtNgnRate } = req.body;
   const updates = {
     payment_usdt_bep20_address: usdtBep20Address, payment_bank_name: bankName,
     payment_bank_account_number: bankAccountNumber, payment_bank_account_name: bankAccountName,
+    payment_usdt_ngn_rate: usdtNgnRate,
   };
   for (const [key, value] of Object.entries(updates)) {
     if (value === undefined) continue;

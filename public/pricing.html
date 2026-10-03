@@ -182,6 +182,28 @@
     document.getElementById('pricing-managed-section').hidden = false;
   }).catch(function () { /* optional managed article */ });
 
+  // Mirrors services/plans.js's rank order -- Diamond outranks Gold
+  // regardless of billing cycle, then duration within a tier. Keep in sync
+  // if plans ever change; only 4 fixed plans today so this is simpler than
+  // a round-trip to fetch it.
+  var PLAN_RANK = { gold_biweekly: 1, gold_monthly: 2, diamond_biweekly: 3, diamond_monthly: 4 };
+
+  // A user may only buy a STRICTLY higher-ranked plan than their current
+  // active one (an upgrade) -- disables (doesn't remove, so the card stays
+  // there for comparison) every button for their current plan or lower,
+  // replacing its label so it reads as unavailable rather than just broken.
+  function lockOutLowerPlans(currentPlan) {
+    var currentRank = PLAN_RANK[currentPlan] || 0;
+    document.querySelectorAll('[data-plan]').forEach(function (btn) {
+      var plan = btn.getAttribute('data-plan');
+      if (PLAN_RANK[plan] <= currentRank) {
+        btn.disabled = true;
+        btn.textContent = plan === currentPlan ? 'Your Active Plan' : 'Included in Your Plan';
+        btn.classList.add('btn-outline');
+      }
+    });
+  }
+
   async function checkStatus() {
     var user = ST.getUser();
     var slot = document.getElementById('vip-banner-section');
@@ -192,6 +214,7 @@
       if (sub && sub.status === 'active') {
         slot.innerHTML = '<div class="container"><div class="card card-pad text-center" style="background:var(--gradient-green);color:#241a0d;"><strong>You\'re VIP!</strong> Your ' + ST.escapeHtml(ST.formatSubscriptionPlan(sub.plan)) + ' is active until ' + new Date(sub.expires_at).toDateString() + '. <a href="/dashboard.html" style="text-decoration:underline;">View Dashboard</a></div></div>';
         document.getElementById('sticky-cta').classList.add('hidden');
+        lockOutLowerPlans(sub.plan);
       }
     } catch (e) { /* not subscribed */ }
   }
@@ -243,8 +266,9 @@
       catch (e) { ST.showToast('Could not load payment details -- try again shortly.', 'error'); return; }
     }
     var d = paymentDetailsCache;
+    var usdtAmount = (pendingAmount / (d.usdtNgnRate || 1600)).toFixed(2);
     var detailsHtml = method === 'usdt_bep20'
-      ? '<p style="margin:0 0 6px;font-size:0.85rem;">Send the exact USD value of your plan in <strong>USDT</strong> on the <strong>BEP-20 (BNB Smart Chain)</strong> network to:</p><p style="word-break:break-all;font-family:monospace;background:var(--card);padding:8px;border-radius:6px;">' + ST.escapeHtml(d.usdtBep20Address) + '</p><p class="text-soft" style="font-size:0.78rem;margin:0;">Sending on any other network will result in lost funds.</p>'
+      ? '<p style="margin:0 0 6px;font-size:0.85rem;">Send <strong>' + usdtAmount + ' USDT</strong> (&#8358;' + pendingAmount.toLocaleString() + ' at &#8358;' + Number(d.usdtNgnRate || 1600).toLocaleString() + '/USDT) on the <strong>BEP-20 (BNB Smart Chain)</strong> network to:</p><p style="word-break:break-all;font-family:monospace;background:var(--card);padding:8px;border-radius:6px;">' + ST.escapeHtml(d.usdtBep20Address) + '</p><p class="text-soft" style="font-size:0.78rem;margin:0;">Sending on any other network will result in lost funds.</p>'
       : '<p style="margin:0 0 6px;font-size:0.85rem;">Transfer your plan amount to:</p><p style="font-size:0.9rem;margin:0;"><strong>' + ST.escapeHtml(d.bankName) + '</strong><br>Account Number: <strong>' + ST.escapeHtml(d.bankAccountNumber) + '</strong>' + (d.bankAccountName ? '<br>Account Name: ' + ST.escapeHtml(d.bankAccountName) : '') + '</p>';
     document.getElementById('manual-payment-details').innerHTML = detailsHtml;
     document.getElementById('manual-amount-label').textContent = method === 'usdt_bep20' ? 'Amount Sent (USDT)' : 'Amount Sent (₦)';
@@ -252,7 +276,7 @@
     pmManual.querySelector('[name="reference_note"]').placeholder = method === 'usdt_bep20' ? 'Paste the transaction hash' : 'The name/reference your bank transfer was sent under';
     pmManual.plan.value = pendingPlan;
     pmManual.method.value = method;
-    pmManual.amount_claimed.value = method === 'bank_transfer' ? pendingAmount : '';
+    pmManual.amount_claimed.value = method === 'usdt_bep20' ? (pendingAmount / (d.usdtNgnRate || 1600)).toFixed(2) : pendingAmount;
     pmChoose.style.display = 'none'; pmManual.style.display = '';
   }
 

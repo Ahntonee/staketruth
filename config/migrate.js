@@ -606,6 +606,11 @@ const SITE_SETTINGS = [
   ['payment_bank_name', 'Wema Bank'],
   ['payment_bank_account_number', '0425215395'],
   ['payment_bank_account_name', ''],
+  // NGN per 1 USDT (USDT tracks USD ~1:1), used to show/prefill the USDT
+  // equivalent of a plan's naira price on the pricing page. Admin-editable --
+  // the rate drifts and there's no live FX API wired in, so this needs
+  // occasional manual updating rather than being hardcoded in the frontend.
+  ['payment_usdt_ngn_rate', '1600'],
 ];
 
 const SEO_PAGES = [
