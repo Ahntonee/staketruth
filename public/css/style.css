@@ -293,7 +293,7 @@ section { padding: 28px 0; }
 .footer-grid { display: grid; grid-template-columns: 1fr; gap: 28px; }
 @media (min-width: 768px) { .footer-grid { grid-template-columns: 2fr 1fr 1fr 1fr; } }
 .footer-other-sites { border-top: 1px solid var(--border); margin-top: 28px; padding-top: 20px; }
-.footer-other-sites h4 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-soft); margin-bottom: 12px; }
+.footer-other-sites h3 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-soft); margin-bottom: 12px; }
 .footer-other-sites__links { display: flex; flex-wrap: wrap; gap: 6px 0; font-size: 0.82rem; color: var(--muted); }
 .footer-other-sites__links a { color: var(--text-soft); }
 .footer-other-sites__links a:hover { color: var(--primary); }
@@ -301,7 +301,7 @@ section { padding: 28px 0; }
 .ad-slot__text-link { display: block; text-align: center; padding: 8px 12px; font-size: 0.82rem; color: var(--text-soft); background: var(--card-2); border-radius: var(--radius); }
 .ad-slot__text-link:hover { color: var(--primary); }
 .footer-brand img { height: 30px; margin-bottom: 10px; }
-.footer-grid h4 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-soft); margin-bottom: 12px; }
+.footer-grid h3 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-soft); margin-bottom: 12px; }
 .footer-grid a { display: block; padding: 4px 0; color: var(--text-soft); }
 .footer-grid a:hover { color: var(--primary); }
 .social-links { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }

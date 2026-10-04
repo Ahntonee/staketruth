@@ -118,6 +118,25 @@ app.use(/^\/api\/predictions\/\d+\/votes$/, voteReadLimiter);
 // ---- Static files -------------------------------------------------------------
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
+// ---- Cache-busting for static CSS/JS ----------------------------------------
+// Filenames aren't hashed, so a long Cache-Control would make every deploy
+// invisible to returning visitors. Instead every /css/*.css and /js/*.js
+// reference in served HTML gets ?v=<file mtime>: the URL changes exactly when
+// the file does, which lets those URLs be cached for a year (immutable, see
+// the static handler) while an edited file is picked up immediately.
+const assetVersionCache = new Map();
+function assetVersion(urlPath) {
+  const hit = assetVersionCache.get(urlPath);
+  if (hit && Date.now() - hit.at < 60 * 1000) return hit.v;
+  let v = '0';
+  try { v = Math.floor(fs.statSync(path.join(__dirname, 'public', urlPath)).mtimeMs / 1000).toString(36); } catch (e) { /* missing file: leave version 0 */ }
+  assetVersionCache.set(urlPath, { v, at: Date.now() });
+  return v;
+}
+function versionAssets(html) {
+  return html.replace(/((?:href|src)=")(\/(?:css|js)\/[^"?#]+\.(?:css|js))(")/g, (m, pre, url, post) => pre + url + '?v=' + assetVersion(url) + post);
+}
+
 // Server-side <head> injection for Google Search Console (meta tag method),
 // AdSense (auto-ads script), and Google Analytics (gtag.js) so verification/
 // tracking works without depending on JS execution or per-page edits — set
@@ -181,19 +200,28 @@ app.use((req, res, next) => {
     // Paystack's PUBLIC key is safe to expose client-side (it's designed to be) —
     // substituted here so pricing.html never hardcodes a real key in source.
     html = html.replace(/\{\{PAYSTACK_PUBLIC_KEY\}\}/g, process.env.PAYSTACK_PUBLIC_KEY || '');
-    res.type('html').send(html);
+    res.type('html').send(versionAssets(html));
   });
 });
 
 // Cache-busting is not part of this build (no hashed filenames for CSS/JS/HTML), so a
 // blanket 1y max-age would make every future fix invisible to returning visitors for up
 // to a year. HTML always revalidates; JS/CSS get a short cache; images/fonts can be long.
+// Resized team-crest cache (see routes/images.js). Own limiter: a page of
+// predictions legitimately requests a few dozen of these at once.
+app.use('/img', rateLimit({ windowMs: 60 * 1000, max: 400, standardHeaders: true, legacyHeaders: false }), require('./routes/images'));
+
 app.use(express.static(PUBLIC_DIR, {
   extensions: ['html'],
   setHeaders: (res, filePath) => {
     if (process.env.NODE_ENV !== 'production') { res.setHeader('Cache-Control', 'no-store'); return; }
     if (/\.html?$/.test(filePath)) res.setHeader('Cache-Control', 'no-store');
-    else if (/\.(js|css)$/.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=3600');
+    else if (/\.(js|css)$/.test(filePath)) {
+      // ?v=<mtime> URLs (stamped into served HTML by versionAssets) change exactly
+      // when the file does, so they're safe to cache for a year. Unstamped
+      // requests (admin pages, direct hits) keep the short cache.
+      res.setHeader('Cache-Control', res.req && res.req.query && res.req.query.v ? 'public, max-age=31536000, immutable' : 'public, max-age=3600');
+    } else if (/\.woff2$/.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     else res.setHeader('Cache-Control', 'public, max-age=2592000');
   },
 }));
@@ -284,7 +312,7 @@ app.get('/prediction/:slug', (req, res, next) => {
     } catch (e) { return next(e); }
     const inject = extraHeadTags();
     if (inject) html = html.replace('</head>', `${inject}</head>`);
-    res.type('html').send(html);
+    res.type('html').send(versionAssets(html));
   });
 });
 
@@ -298,7 +326,7 @@ app.get('/blog/:slug', (req, res, next) => {
     } catch (e) { return next(e); }
     const inject = extraHeadTags();
     if (inject) html = html.replace('</head>', `${inject}</head>`);
-    res.type('html').send(html);
+    res.type('html').send(versionAssets(html));
   });
 });
 
@@ -316,7 +344,7 @@ app.get('/tips/:slug', (req, res) => {
     } catch (e) { return res.status(500).send('Unable to load page'); }
     const inject = extraHeadTags();
     if (inject) html = html.replace('</head>', `${inject}</head>`);
-    res.type('html').send(html);
+    res.type('html').send(versionAssets(html));
   });
 });
 

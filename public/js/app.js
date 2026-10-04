@@ -128,6 +128,15 @@
   ST.clearUser = function () { ST.setUser(null); };
 
   ST.refreshAuth = async function () {
+    // A guest has nothing to refresh: logging in stores the user locally (setUser),
+    // so no stored user means no session worth checking. Calling /auth/me anyway
+    // made every anonymous page view log a 401 error in the console (hurts the
+    // Lighthouse Best Practices score) and wasted a request.
+    if (!ST.getUser()) {
+      ST.currentUser = null;
+      renderAuthUI();
+      return null;
+    }
     try {
       var res = await api('/auth/me');
       ST.setUser(res.data.user);
@@ -195,21 +204,21 @@
             '<p>Data-Driven Picks. Proven Results.</p>' +
             '<div class="social-links" id="st-social-links"></div>' +
           '</div>' +
-          '<div><h4>Quick Links</h4>' +
+          '<div><h3>Quick Links</h3>' +
             '<a href="/predictions.html">Predictions</a>' +
             '<a href="/pricing.html">VIP Subscription</a>' +
             '<a href="/statistics.html">Statistics</a>' +
             '<a href="/blog.html">Blog</a>' +
           '</div>' +
-          '<div><h4>Legal</h4>' +
+          '<div><h3>Legal</h3>' +
             '<a href="/terms.html">Terms of Service</a>' +
             '<a href="/privacy.html">Privacy Policy</a>' +
             '<a href="/contact.html">Contact</a>' +
           '</div>' +
-          '<div><h4>Reach Us</h4><div id="st-contact-links"></div></div>' +
+          '<div><h3>Reach Us</h3><div id="st-contact-links"></div></div>' +
         '</div>' +
         '<div class="footer-other-sites" id="st-other-sites" style="display:none;">' +
-          '<h4>Other Sites</h4><div class="footer-other-sites__links" id="st-other-sites-links"></div>' +
+          '<h3>Other Sites</h3><div class="footer-other-sites__links" id="st-other-sites-links"></div>' +
         '</div>' +
         '<div class="footer-bottom">' +
           '<p>&copy; ' + new Date().getFullYear() + ' StakeTruth. For entertainment only. Please gamble responsibly.</p>' +
@@ -465,6 +474,13 @@
     return 'poor';
   }
 
+  // API-Football crests are ~250px PNGs; our /img/team route serves a cached 96px WebP
+  // of the same crest (see routes/images.js). Anything else passes through untouched.
+  ST.teamLogo = function (url) {
+    var m = /^https:\/\/media\.api-sports\.io\/football\/teams\/(\d+)\.png$/.exec(url || '');
+    return m ? '/img/team/' + m[1] + '.webp' : (url || '');
+  };
+
   ST.buildPredictionCard = function (p) {
     var isLocked = !!p.lockReason;
     var cardClasses = 'prediction-card';
@@ -497,9 +513,9 @@
     var innerContent = scoreBadge +
       '<div class="prediction-card__league"><span>' + ST.escapeHtml(p.league_name || 'Football') + '</span><span>' + ST.formatDate(p.match_date) + '</span></div>' +
       '<div class="prediction-card__teams">' +
-        '<div class="prediction-card__team"><img src="' + (p.home_team_logo || '') + '" alt="" width="32" height="32" loading="lazy" decoding="async" data-fallback-hide><span>' + ST.escapeHtml(p.home_team) + '</span></div>' +
+        '<div class="prediction-card__team"><img src="' + ST.teamLogo(p.home_team_logo) + '" alt="" width="32" height="32" loading="lazy" decoding="async" data-fallback-hide><span>' + ST.escapeHtml(p.home_team) + '</span></div>' +
         '<div class="prediction-card__vs">VS</div>' +
-        '<div class="prediction-card__team"><img src="' + (p.away_team_logo || '') + '" alt="" width="32" height="32" loading="lazy" decoding="async" data-fallback-hide><span>' + ST.escapeHtml(p.away_team) + '</span></div>' +
+        '<div class="prediction-card__team"><img src="' + ST.teamLogo(p.away_team_logo) + '" alt="" width="32" height="32" loading="lazy" decoding="async" data-fallback-hide><span>' + ST.escapeHtml(p.away_team) + '</span></div>' +
       '</div>' +
       '<div class="prediction-card__tip">' + ST.escapeHtml(p.tip) + '</div>' +
       '<div class="prediction-card__meta">' + badges +
@@ -587,7 +603,7 @@
       res.data = res.data.filter(function (a) { return a.delivery_banner; }).slice(0, 5);
       if (!res.data.length) { container.innerHTML = ''; if (opts.hideWhenEmpty !== false) container.style.display = 'none'; return; }
       container.style.display = '';
-      var heading = opts.heading !== false ? '<h3 class="announcement-outline__heading"><span class="material-icons-round" style="color:var(--accent);">campaign</span>Announcements</h3>' : '';
+      var heading = opts.heading !== false ? '<h2 class="announcement-outline__heading"><span class="material-icons-round" style="color:var(--accent);">campaign</span>Announcements</h2>' : '';
       container.innerHTML = '<div class="announcement-outline">' + heading + '<div class="announcement-outline__body">' + res.data.map(function (a) {
         return '<div class="announcement-card announcement-card--' + a.type + '">' +
           '<div style="display:flex;align-items:flex-start;gap:8px;">' +
