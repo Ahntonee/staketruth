@@ -801,7 +801,7 @@ textarea.form-control { min-height: 120px; resize: vertical; }
    into the responsive More menu by ST.initCategoryOverflow. */
 #category-tabs { flex-wrap: wrap; overflow: visible; position: relative; }
 #category-tabs .category-tab { text-decoration: none; color: var(--text); }
-#category-tabs .category-tab.active { color: #fff; }
+#category-tabs .category-tab.active { color: #241a0d; }
 .category-overflow { flex: 0 0 auto; position: relative; }
 .category-overflow[hidden], #category-tabs .category-tab[hidden] { display: none; }
 .category-overflow__toggle { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
