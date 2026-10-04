@@ -16,6 +16,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://media.api-sports.io">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@400;600;700;800&family=Saira:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap-reboot.min.css" rel="stylesheet">
@@ -122,9 +124,9 @@
         '<div class="card card-pad ' + (p.is_banker ? 'banker-card' : p.is_vip ? 'vip-card' : '') + '">' +
           '<div class="prediction-card__league"><span>' + ST.escapeHtml(p.league_name || 'Football') + '</span><span>' + ST.formatDate(p.match_date, { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</span></div>' +
           '<div class="prediction-card__teams" style="margin:16px 0;">' +
-            '<div class="prediction-card__team"><img src="' + (p.home_team_logo || '') + '" data-fallback-hide style="width:48px;height:48px;"><span>' + ST.escapeHtml(p.home_team) + '</span>' + (p.home_form && !p.lockReason ? '<div>' + formBadges(p.home_form) + '</div>' : '') + '</div>' +
+            '<div class="prediction-card__team"><img src="' + (p.home_team_logo || '') + '" alt="" width="48" height="48" decoding="async" data-fallback-hide style="width:48px;height:48px;"><span>' + ST.escapeHtml(p.home_team) + '</span>' + (p.home_form && !p.lockReason ? '<div>' + formBadges(p.home_form) + '</div>' : '') + '</div>' +
             '<div class="prediction-card__vs">VS</div>' +
-            '<div class="prediction-card__team"><img src="' + (p.away_team_logo || '') + '" data-fallback-hide style="width:48px;height:48px;"><span>' + ST.escapeHtml(p.away_team) + '</span>' + (p.away_form && !p.lockReason ? '<div>' + formBadges(p.away_form) + '</div>' : '') + '</div>' +
+            '<div class="prediction-card__team"><img src="' + (p.away_team_logo || '') + '" alt="" width="48" height="48" decoding="async" data-fallback-hide style="width:48px;height:48px;"><span>' + ST.escapeHtml(p.away_team) + '</span>' + (p.away_form && !p.lockReason ? '<div>' + formBadges(p.away_form) + '</div>' : '') + '</div>' +
           '</div>' +
           (p.lockReason ? renderLocked(p) : renderUnlocked(p, badges, bookieTags)) +
         '</div>' +

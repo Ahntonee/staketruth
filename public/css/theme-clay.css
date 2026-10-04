@@ -118,7 +118,7 @@ body .btn-danger { box-shadow: var(--clay-out-sm), var(--clay-puff); }
 body .btn-outline {
   background: var(--card);
   border: 2px solid transparent;
-  color: var(--primary);
+  color: var(--primary-ink);
   box-shadow: var(--clay-out-sm);
 }
 body .btn-outline:active { box-shadow: var(--clay-in); }
@@ -133,7 +133,7 @@ body .category-tab {
   border-radius: 999px; border-color: transparent; background: var(--card);
   box-shadow: var(--clay-out-sm);
 }
-body .category-tab.active { background: var(--primary); color: #fff; box-shadow: var(--clay-in); }
+body .category-tab.active { background: var(--primary); color: #241a0d; box-shadow: var(--clay-in); }
 body .badge { box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.45), 1px 2px 4px rgba(0, 0, 0, 0.14); }
 body .bookie-tag { background: var(--card); border-color: transparent; box-shadow: var(--clay-out-sm); }
 body .score-badge { box-shadow: var(--clay-out-sm); }

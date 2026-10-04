@@ -139,7 +139,7 @@ body .btn-outline {
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
-  color: var(--primary);
+  color: var(--primary-ink);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 body .btn-outline:hover { background: var(--glass-hover); border-color: var(--primary); }

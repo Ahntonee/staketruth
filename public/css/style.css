@@ -873,3 +873,21 @@ textarea.form-control { min-height: 120px; resize: vertical; }
   .home-layout #predictions-grid .locked-card__overlay p { font-size: .7rem; }
   .home-layout #predictions-grid .locked-card__overlay .btn { font-size: .7rem; padding: 6px 10px; min-height: 30px; }
 }
+
+/* ---- Performance / accessibility fixes (from a Lighthouse audit) --------------
+   Icon font: before the Material Icons font loads, each icon renders as its
+   ligature TEXT ("campaign", "lock_open"...), which is much wider than the glyph,
+   so layout jumps when the font arrives (the homepage's CLS was 1.04 -- 10x the
+   "good" threshold). Clamping each icon to a 1em box keeps layout identical
+   before and after, and hides the raw text flash. */
+.material-icons-round { width: 1em; height: 1em; overflow: hidden; flex-shrink: 0; }
+
+/* Orange TEXT on light surfaces failed WCAG AA contrast (~3:1). --primary-ink is a
+   deeper orange for text only; backgrounds and brand buttons keep the vivid orange. */
+:root { --primary-ink: #c2410c; }
+[data-theme="dark"] { --primary-ink: #ff8a5c; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --primary-ink: #ff8a5c; } }
+.prediction-card__tip { color: var(--primary-ink); }
+.prediction-card__vs { color: var(--text-soft); }
+.btn-outline { color: var(--primary-ink); }
+.category-tab.active { color: #241a0d; }   /* dark on orange: 5.9:1 vs white's 2.8:1 */

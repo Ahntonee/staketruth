@@ -167,7 +167,7 @@
     return '' +
       '<div class="ticker-wrap"><div class="ticker-track" id="st-ticker"><span>Loading today\'s predictions…</span></div></div>' +
       '<div class="header-inner">' +
-        '<a href="/" class="site-logo"><img src="/images/logo-header.png" alt="StakeTruth" data-fallback-show-sibling><span class="brand-fallback" style="display:none">STAKETRUTH</span></a>' +
+        '<a href="/" class="site-logo"><img src="/images/logo-header.png" width="231" height="126" alt="StakeTruth" data-fallback-show-sibling><span class="brand-fallback" style="display:none">STAKETRUTH</span></a>' +
         '<nav class="main-nav">' + navHtml('nav-link') + '</nav>' +
         '<div class="header-actions">' +
           '<button class="theme-toggle" id="st-theme-toggle" aria-label="Toggle theme"><span class="material-icons-round" id="st-theme-icon">dark_mode</span></button>' +
@@ -191,7 +191,7 @@
       '<div class="container">' +
         '<div class="footer-grid">' +
           '<div class="footer-brand">' +
-            '<img src="/images/logo-header.png" alt="StakeTruth" data-fallback-hide>' +
+            '<img src="/images/logo-header.png" width="231" height="126" alt="StakeTruth" data-fallback-hide>' +
             '<p>Data-Driven Picks. Proven Results.</p>' +
             '<div class="social-links" id="st-social-links"></div>' +
           '</div>' +
@@ -497,9 +497,9 @@
     var innerContent = scoreBadge +
       '<div class="prediction-card__league"><span>' + ST.escapeHtml(p.league_name || 'Football') + '</span><span>' + ST.formatDate(p.match_date) + '</span></div>' +
       '<div class="prediction-card__teams">' +
-        '<div class="prediction-card__team"><img src="' + (p.home_team_logo || '') + '" data-fallback-hide><span>' + ST.escapeHtml(p.home_team) + '</span></div>' +
+        '<div class="prediction-card__team"><img src="' + (p.home_team_logo || '') + '" alt="" width="32" height="32" loading="lazy" decoding="async" data-fallback-hide><span>' + ST.escapeHtml(p.home_team) + '</span></div>' +
         '<div class="prediction-card__vs">VS</div>' +
-        '<div class="prediction-card__team"><img src="' + (p.away_team_logo || '') + '" data-fallback-hide><span>' + ST.escapeHtml(p.away_team) + '</span></div>' +
+        '<div class="prediction-card__team"><img src="' + (p.away_team_logo || '') + '" alt="" width="32" height="32" loading="lazy" decoding="async" data-fallback-hide><span>' + ST.escapeHtml(p.away_team) + '</span></div>' +
       '</div>' +
       '<div class="prediction-card__tip">' + ST.escapeHtml(p.tip) + '</div>' +
       '<div class="prediction-card__meta">' + badges +
